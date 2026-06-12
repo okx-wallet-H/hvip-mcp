@@ -1,0 +1,38 @@
+name: Build & Publish
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Self-check
+        run: |
+          node -e "
+          const s=require('fs').readFileSync('./dist/index.js','utf8');
+          const tools=(s.match(/server\\.tool\\(/g)||[]).length;
+          const tsIso=(s.match(/tsIso/g)||[]).length;
+          const instRefs=(s.match(/INST_TYPE_/g)||[]).length;
+          console.log('Tools:'+tools+' tsIso:'+tsIso+' INST_TYPE:'+instRefs);
+          if(tools<100||tsIso<10){console.log('FAIL');process.exit(1)}
+          console.log('PASS');
+          "
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
