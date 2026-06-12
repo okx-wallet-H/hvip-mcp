@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import { publicApi } from "../adapters/okx.js"
-import { getHRailsClient, toResult, toError } from "./shared.js"
+import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
+import { getAuth, getHRailsClient, toResult, toError, AUTH_REQUIRED } from "./shared.js"
 
 export function registerOutcomesTools(server: McpServer): void {
   server.tool(
@@ -333,4 +333,76 @@ export function registerOutcomesTools(server: McpServer): void {
       } catch (e) { return toError(e) }
     }
   )
+
+  // ══ T-005: 事件合约交易 ═══════════════════════════════════════════════
+
+  server.tool("okx_event_place_order",
+    "## 功能：下事件合约订单\n## 场景：用于对事件合约（instType=EVENTS）下单\n## 关键词：事件合约, event, place order, 下单\n## 参数：\n##   - instId: 合约ID\n##   - side: buy/sell\n##   - outcome: yes/no（必填）\n##   - sz: 数量\n##   - px: 限价（可选）\n##   - ordType: market/limit/post_only（可选）\n## 鉴权：需要 API Key（交易权限）\n## 风险：WRITE — 下单操作，需用户确认\n## 返回量：微小 ~500B\n## 关联：本工具 → okx_event_cancel_order 撤单",
+    { instId: z.string().describe("合约ID"), side: z.enum(["buy","sell"]).describe("买卖方向"),
+      outcome: z.enum(["yes","no"]).describe("结果方向"), sz: z.string().describe("数量"),
+      px: z.string().optional().describe("限价"), ordType: z.enum(["market","limit","post_only"]).optional().describe("订单类型") },
+    async ({ instId, side, outcome, sz, px, ordType }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body = { instId, side, sz, outcome, instType: "EVENTS" } as Record<string, unknown>
+        if (px) body.px = px
+        if (ordType) body.ordType = ordType
+        if (ordType !== "post_only") body.speedBump = "1"
+        const d = await privateApi.placeOrder(auth, body)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_event_cancel_order",
+    "## 功能：撤销事件合约订单\n## 场景：用于取消已下但未成交的事件合约订单\n## 关键词：事件合约, cancel, 撤单\n## 参数：\n##   - instId: 合约ID\n##   - ordId: 订单ID\n## 鉴权：需要 API Key（交易权限）\n## 风险：WRITE — 撤单操作，需用户确认\n## 返回量：微小 ~300B\n## 关联：okx_event_place_order → 本工具",
+    { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID") },
+    async ({ instId, ordId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.cancelOrder(auth, instId, ordId)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_event_amend_order",
+    "## 功能：修改事件合约订单\n## 场景：用于修改已下但未成交的事件合约订单\n## 关键词：事件合约, amend, 改单\n## 参数：\n##   - instId: 合约ID\n##   - ordId: 订单ID\n##   - newSz: 新数量（可选）\n##   - newPx: 新价格（可选）\n## 鉴权：需要 API Key（交易权限）\n## 风险：WRITE — 改单操作，需用户确认\n## 返回量：微小 ~300B\n## 关联：okx_event_place_order → 本工具",
+    { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID"),
+      newSz: z.string().optional().describe("新数量"), newPx: z.string().optional().describe("新价格") },
+    async ({ instId, ordId, newSz, newPx }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body = { instId, ordId } as Record<string, unknown>
+        if (newSz) body.newSz = newSz
+        if (newPx) body.newPx = newPx
+        const d = await privateApi.amendOrder(auth, body)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_event_fills",
+    "## 功能：查询事件合约成交记录\n## 场景：用于查看事件合约的历史成交明细\n## 关键词：事件合约, fills, 成交记录\n## 参数：\n##   - instId: 合约ID（可选）\n##   - limit: 返回条数（可选）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_event_place_order → 本工具",
+    { instId: z.string().optional().describe("合约ID"), limit: z.number().int().min(1).max(100).optional().describe("返回条数") },
+    async ({ instId, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.getFills(auth, "EVENTS", instId, limit)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_event_instruments",
+    "## 功能：查询可交易的事件合约列表\n## 场景：用于浏览所有可用的事件合约品种\n## 关键词：事件合约, instruments, 合约列表\n## 参数：\n##   - seriesId: 事件系列ID（可选）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：本工具 → okx_event_place_order 下单",
+    { seriesId: z.string().optional().describe("事件系列ID") },
+    async ({ seriesId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await publicApi.getInstruments("EVENTS", seriesId)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
 }
