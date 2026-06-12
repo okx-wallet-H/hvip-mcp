@@ -13,15 +13,16 @@
       "Bash(npm root *)",
       "Bash(npm run build)",
       "Bash(npm start)",
-      "Bash(gh pr list *)",
-      "Bash(gh pr view *)",
-      "Bash(gh pr diff *)",
-      "Bash(gh pr checks *)",
-      "Bash(gh pr status *)",
-      "Bash(gh pr review *)",
-      "Bash(gh pr merge *)",
+      "Bash(git fetch *)",
+      "Bash(git branch *)",
+      "Bash(git diff *)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(git log *)",
+      "Bash(git pull *)",
       "Bash(gh issue list *)",
       "Bash(gh issue view *)",
+      "Bash(gh issue comment *)",
       "Bash(gh repo view *)"
     ]
   }
