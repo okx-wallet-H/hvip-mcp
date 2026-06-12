@@ -1007,4 +1007,24 @@ export const privateApi = {
 
   movePositions: (auth: Auth, body: Record<string, unknown>) =>
     request<unknown[]>("POST", "/api/v5/account/move-positions", { body, auth }),
+
+  // ── T-004: Outcomes 持仓 & 账户 ────────────────────────────────────
+
+  predictionsPositions: (auth: Auth, marketId?: string, status?: string) =>
+    request<unknown[]>("GET", "/api/v5/predictions/positions", { params: { marketId, status }, auth }),
+
+  predictionsSplit: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown[]>("POST", "/api/v5/predictions/positions/split", { body, auth }),
+
+  predictionsMerge: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown[]>("POST", "/api/v5/predictions/positions/merge", { body, auth }),
+
+  predictionsRedeem: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown[]>("POST", "/api/v5/predictions/positions/redeem", { body, auth }),
+
+  predictionsBalance: (auth: Auth) =>
+    request<unknown[]>("GET", "/api/v5/predictions/balance", { auth }),
+
+  predictionsTrades: (auth: Auth, marketId?: string, limit?: number) =>
+    request<unknown[]>("GET", "/api/v5/predictions/trades", { params: { marketId, limit }, auth }),
 }
