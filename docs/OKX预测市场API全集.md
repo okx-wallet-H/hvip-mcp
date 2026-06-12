@@ -60,19 +60,19 @@ Base：`https://www.okx.com` · 鉴权：OKX API Key **+ EIP-712 签名**（需 
 
 | # | 端点 | 方法 | 说明 | 已接 |
 |---|------|------|------|:---:|
-| 1 | `/api/v5/predictions/events` | GET | 事件列表（分页/筛选） | ❌ |
-| 2 | `/api/v5/predictions/events/search` | GET | 全文搜索事件 | ❌ |
-| 3 | `/api/v5/predictions/events/{eventId}` | GET | 事件详情（含所有市场） | ❌ |
-| 4 | `/api/v5/predictions/events/{eventId}/markets` | GET | 事件下所有市场 | ❌ |
-| 5 | `/api/v5/predictions/markets/{marketId}` | GET | 单个市场详情 | ❌ |
+| 1 | `/api/v5/predictions/events` | GET | 事件列表（分页/筛选） | ✅ `okx_predictions_list_events` |
+| 2 | `/api/v5/predictions/events/search` | GET | 全文搜索事件 | ✅ `okx_predictions_search_events` |
+| 3 | `/api/v5/predictions/events/{eventId}` | GET | 事件详情（含所有市场） | ✅ `okx_predictions_get_event` |
+| 4 | `/api/v5/predictions/events/{eventId}/markets` | GET | 事件下所有市场 | ✅ `okx_predictions_get_event_markets` |
+| 5 | `/api/v5/predictions/markets/{marketId}` | GET | 单个市场详情 | ✅ `okx_predictions_get_market` |
 
 ### 市场数据（用 `yesAssetId` 作 instId）
 
 | # | 端点 | 方法 | 说明 | 已接 |
 |---|------|------|------|:---:|
-| 6 | `/api/v5/market/ticker?instId={yesAssetId}` | GET | 行情 | ❌ |
-| 7 | `/api/v5/market/candles?instId={yesAssetId}` | GET | K 线 | ❌ |
-| 8 | `/api/v5/market/pm-books?instId={yesAssetId}&sz=400` | GET | 深度（最多 400 档） | ❌ |
+| 6 | `/api/v5/market/ticker?instId={yesAssetId}` | GET | 行情 | ✅ `okx_predictions_ticker` |
+| 7 | `/api/v5/market/candles?instId={yesAssetId}` | GET | K 线 | ✅ `okx_predictions_candles` |
+| 8 | `/api/v5/market/pm-books?instId={yesAssetId}&sz=400` | GET | 深度（最多 400 档） | ✅ `okx_predictions_orderbook` |
 
 ### 订单
 
@@ -108,15 +108,15 @@ Base：`https://www.okx.com` · 鉴权：OKX API Key **+ EIP-712 签名**（需 
 | 体系 | 总端点数 | 已接 | 缺口 |
 |------|:--:|:--:|:--:|
 | 事件合约 (event-contract) | 15 | 3 | 12 |
-| Outcomes (predictions) | 20 | 0 | 20 |
-| H Rails (staging) | 8 | 7 | 1 |
-| **合计** | **43** | **10** | **33** |
+| Outcomes (predictions) | 20 | 8 | 12 |
+| H Rails (staging) | 8 | 8 | 0 |
+| **合计** | **43** | **19** | **24** |
 
 ---
 
 ## 四、当前已有工具（10 个）
 
-### H Rails API（7 个）
+### H Rails API（8 个）
 - `outcomes_list_events` — 事件列表
 - `outcomes_get_event` — 事件详情
 - `outcomes_get_market` — 市场详情
@@ -124,8 +124,19 @@ Base：`https://www.okx.com` · 鉴权：OKX API Key **+ EIP-712 签名**（需 
 - `outcomes_get_orderbook` — 深度
 - `outcomes_get_candles` — K 线
 - `outcomes_check_arbitrage` — 套利检测
+- `outcomes_list_markets` — 市场列表
 
 ### OKX 事件合约（3 个）
 - `okx_get_event_series` — 系列列表
 - `okx_get_event_markets` — 市场列表
 - `okx_get_event_events` — 事件列表
+
+### OKX Predictions 查询（8 个）
+- `okx_predictions_list_events` — 事件列表
+- `okx_predictions_search_events` — 事件搜索
+- `okx_predictions_get_event` — 事件详情
+- `okx_predictions_get_event_markets` — 事件市场
+- `okx_predictions_get_market` — 市场详情
+- `okx_predictions_ticker` — 行情
+- `okx_predictions_candles` — K 线
+- `okx_predictions_orderbook` — 深度
