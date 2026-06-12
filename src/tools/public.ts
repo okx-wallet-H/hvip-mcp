@@ -41,7 +41,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_get_mark_price",
-    "获取标记价格。标记价格用于计算浮动盈亏和强平价格，与指数价格偏差过大时存在套利空间。不传instId返回全量(~30KB)，已自动截断top20。",
+    "## 功能：获取合约标记价格，用于计算浮动盈亏和强平价格\n## 场景：用于查看合约当前标记价、判断与指数价格偏差、发现套利空间、批量监控标记价格\n## 关键词：标记价格, mark price, 标记价, 强平价格, 浮动盈亏, 套利空间\n## 参数：\n##   - instType: 产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权\n##   - instId: 产品ID，不填则返回该类型全量（~30KB，已自动截断top20）\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：单产品 ~500B，全量 ~30KB（已自动截断 top 20）\n## 关联：okx_get_index_price 看指数价 → 本工具看标记价 → 对比基差 → okx_get_ticker 看最新价",
     {
       instType: z.enum(INST_TYPE_PUBLIC).describe("产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       instId: z.string().optional().describe("产品ID，不填则返回该类型全量"),
@@ -61,7 +61,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_get_index_price",
-    "获取指数价格（多交易所加权均价）。用于判断现货市场整体价格基准，与标记价格对比可发现偏差。",
+    "## 功能：获取指数价格（多交易所加权均价），反映现货市场整体价格基准\n## 场景：用于判断现货市场整体价格、与标记价格对比发现偏差、评估合约溢价/折价\n## 关键词：指数价格, index price, 加权均价, 现货基准, 指数价, 多交易所均价\n## 参数：\n##   - instId: 指数产品ID，如 BTC-USDT\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~500B\n## 关联：本工具看指数价 → okx_get_mark_price 看标记价 → 对比偏差 → 判断套利空间",
     { instId: z.string().describe("指数产品ID，如 BTC-USDT") },
     async ({ instId }) => {
       try {
@@ -77,7 +77,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_get_open_interest",
-    "获取合约持仓量。持仓量快速增加通常意味着新资金入场，结合价格方向可判断趋势强度。不传instId返回全量(~77KB)，已自动截断top20。",
+    "## 功能：获取合约持仓量数据，反映市场参与度和资金流向\n## 场景：用于判断新资金入场（持仓量快速增加）、分析趋势强度、批量监控合约持仓\n## 关键词：持仓量, open interest, OI, 未平仓量, 资金流入, 市场参与度, 合约持仓\n## 参数：\n##   - instType: 产品类型。SWAP=永续, FUTURES=交割, OPTION=期权\n##   - instId: 产品ID，不填则返回全量（~77KB，已自动截断top20）\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：单产品 ~500B，全量 ~77KB（已自动截断 top 20）\n## 关联：okx_get_ticker 看价格方向 → 本工具看持仓量变化 → 量价结合判断趋势",
     {
       instType: z.enum(INST_TYPE_CONTRACTS).describe("产品类型。SWAP=永续, FUTURES=交割, OPTION=期权"),
       instId: z.string().optional().describe("产品ID，不填则返回全量"),
@@ -97,7 +97,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_get_system_time",
-    "获取OKX服务器当前时间戳。用于校准本地时间偏差，确保签名请求的时间戳在有效范围内（±30秒）。",
+    "## 功能：获取OKX服务器当前时间戳\n## 场景：用于校准本地时间偏差、确保签名请求的时间戳在有效范围内（±30秒）、排查鉴权失败\n## 关键词：服务器时间, system time, 时间戳, 时间校准, 签名时间, 鉴权时间\n## 参数：无\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~200B\n## 关联：本工具校准时间 → 所有鉴权接口依赖正确时间戳 → okx_place_order 等下单",
     {},
     async () => {
       try {
@@ -109,7 +109,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_get_opt_summary",
-    "获取期权市场摘要数据，含各到期日的隐含波动率（IV）、未平仓量和成交量分布。用于期权交易前的整体市场扫描。",
+    "## 功能：获取期权市场摘要数据，含各到期日的隐含波动率（IV）、未平仓量和成交量分布\n## 场景：用于期权交易前市场扫描、分析波动率期限结构、发现异常IV、按到期日筛选\n## 关键词：期权摘要, opt summary, 隐含波动率, IV, 期权未平仓, 波动率曲线, 期权市场\n## 参数：\n##   - uly: 标的指数，如 BTC-USD、ETH-USD\n##   - expTime: 到期日筛选，格式 YYYYMMDD，如 20250101\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：本工具扫描期权市场 → okx_get_instruments(instType=OPTION) 获取具体合约 → okx_get_ticker 查期权行情",
     {
       uly:     z.string().describe("标的指数，如 BTC-USD、ETH-USD"),
       expTime: z.string().optional().describe("到期日筛选，格式 YYYYMMDD，如 20250101"),
@@ -128,7 +128,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_get_insurance_fund",
-    "获取OKX保险基金余额变动历史。保险基金规模反映交易所抵御极端行情的能力，也是衡量平台风险的指标。",
+    "## 功能：获取OKX保险基金余额变动历史，反映交易所抵御极端行情的能力\n## 场景：用于评估平台风险、监控保险基金规模变化、极端行情前后对比基金消耗\n## 关键词：保险基金, insurance fund, 平台风险, 极端行情, 交易所保障, 风险指标\n## 参数：\n##   - instType: 产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权\n##   - uly: 标的指数，如 BTC-USD（SWAP/FUTURES/OPTION必填）\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_get_instruments 获取产品 → 本工具看保险基金 → 评估平台健康度",
     {
       instType: z.enum(INST_TYPE_MARGIN_PUB).describe("产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       uly:      z.string().optional().describe("标的指数，如 BTC-USD（SWAP/FUTURES/OPTION必填）"),
@@ -147,7 +147,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_convert_contract_coin",
-    "合约张数与币数互换计算。下合约单时先用此接口换算张数，避免数量填错。",
+    "## 功能：合约张数与币数互换计算，下合约单前换算数量\n## 场景：用于下单前将币数换算为合约张数、张数换币数、避免数量填错导致订单失败\n## 关键词：张数换算, 币数换算, convert contract, 合约换算, 张数计算, 下单准备\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT-SWAP\n##   - sz: 数量（张数或币数，取决于unit参数的设置）\n##   - unit: sz的单位。coin=币，contracts=张\n##   - opType: 开仓或平仓。open=开仓, close=平仓\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~300B\n## 关联：下单前必调 → 本工具换算数量 → okx_place_order 下单",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP"),
       sz:      z.string().describe("数量（张数或币数，取决于unit）"),
@@ -164,7 +164,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   server.tool(
     "okx_get_announcements",
-    "获取OKX官方公告列表（维护通知、新币上线、活动等）。定期查询可及时了解平台变化，提前做好风险准备。",
+    "## 功能：获取OKX官方公告列表（维护通知、新币上线、活动等）\n## 场景：用于及时了解平台维护计划、跟踪新币上线信息、提前做好风险准备\n## 关键词：公告, announcements, 维护通知, 新币上线, 平台公告, 活动通知\n## 参数：\n##   - annType: 公告类型ID，不填返回全部。可先调用 okx_get_announcement_types 查询可用类型\n##   - lang: 语言。zh-Hans=中文, en-US=英文。默认中文\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_get_announcement_types 获取类型列表 → 本工具按类型筛选公告 → 评估对交易的影响",
     {
       annType: z.string().optional().describe("公告类型ID，不填返回全部。可先调用 okx_get_announcement_types 查询可用类型"),
       lang:    z.enum(["zh-Hans","en-US"]).optional().describe("语言，默认中文"),

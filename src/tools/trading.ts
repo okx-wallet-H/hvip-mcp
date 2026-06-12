@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE } from "./shared.js"
 export function registerTradingTools(server: McpServer, auth: Auth | null): void {
   server.tool(
     "okx_place_order",
-    "在OKX下单。⚠️ 此操作会产生真实订单，调用前必须向用户明确确认产品、方向、数量和价格。需要API Key鉴权。",
+    "## 功能：在OKX下单（市价/限价/只挂/全部成交或取消/立即成交并取消剩余）\n## 场景：用于开仓做多/做空、限价挂单、市价快速成交、只挂单不成交（post_only）\n## 关键词：下单, place order, 市价单, 限价单, 开仓, 平仓, 买入, 卖出\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT\n##   - tdMode: 交易模式。cash=现货, isolated=逐仓, cross=全仓\n##   - side: 买卖方向。buy=买入, sell=卖出\n##   - ordType: 订单类型。market=市价, limit=限价, post_only=只挂, fok=全成或取消, ioc=立即成交并取消\n##   - sz: 委托数量（根据产品不同可为张数或币数，下单前建议先用 okx_convert_contract_coin 换算）\n##   - px: 委托价格（限价单必填）\n## 鉴权：🔴 需要 API Key（交易）- 会产生真实订单，调用前必须向用户明确确认\n## 风险：WRITE — 创建真实订单，调用前必须向用户确认产品、方向、数量和价格\n## 返回量：微小 ~500B\n## 关联：okx_get_ticker 看价格 → okx_get_balance 确认余额 → 本工具下单 → okx_get_order 确认成交",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT"),
       tdMode:  z.enum(["cash","isolated","cross"]).describe("交易模式：cash=现货，isolated=逐仓，cross=全仓"),
@@ -28,7 +28,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_cancel_order",
-    "撤销指定订单。⚠️ 需要API Key鉴权。",
+    "## 功能：撤销指定订单\n## 场景：用于取消未成交的限价单、纠正误下单、清空某产品挂单\n## 关键词：撤单, cancel order, 撤销订单, 取消挂单, 取消委托\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT\n##   - ordId: 订单ID，由 okx_place_order 返回\n## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认\n## 风险：WRITE — 撤销订单，调用前必须向用户确认\n## 返回量：微小 ~300B\n## 关联：okx_place_order 下单 → okx_get_orders_pending 查看挂单 → 本工具撤单 → okx_get_order 确认撤销",
     {
       instId: z.string().describe("产品ID"),
       ordId:  z.string().describe("订单ID"),
@@ -44,7 +44,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_amend_order",
-    "修改未成交订单的价格或数量。⚠️ 需要API Key鉴权。",
+    "## 功能：修改未成交订单的价格或数量\n## 场景：用于调整限价单价格跟进市场、减少委托数量、修改挂单参数\n## 关键词：改单, amend order, 修改订单, 改价, 改量, 调整委托\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT\n##   - ordId: 订单ID\n##   - newSz: 新委托数量（可选）\n##   - newPx: 新委托价格（可选）\n## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认\n## 风险：WRITE — 修改订单，调用前必须向用户确认\n## 返回量：微小 ~300B\n## 关联：okx_get_orders_pending 查看挂单 → 本工具改单 → okx_get_order 确认修改",
     {
       instId: z.string().describe("产品ID"),
       ordId:  z.string().describe("订单ID"),
@@ -65,7 +65,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_orders_pending",
-    "查询当前所有未成交挂单列表。用于监控未成交订单、检查限价单是否仍在队列中。⚠️ 需要API Key鉴权。",
+    "## 功能：查询当前所有未成交挂单列表\n## 场景：用于监控未成交订单、检查限价单是否仍在队列中、批量查看挂单状态\n## 关键词：挂单查询, orders pending, 未成交订单, 限价单状态, 委托列表, 当前挂单\n## 参数：\n##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部\n##   - instId: 产品ID，精确筛选\n##   - ordType: 订单类型筛选。market/limit/post_only/fok/ioc\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：okx_place_order 下单 → 本工具查看挂单 → okx_cancel_order 撤单 / okx_amend_order 改单",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部"),
       instId:   z.string().optional().describe("产品ID，精确筛选"),
@@ -82,7 +82,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_fills",
-    "查询最近的成交明细（逐笔成交），含成交价、成交量和手续费。比订单历史更细粒度，可用于精确计算均价。⚠️ 需要API Key鉴权。",
+    "## 功能：查询最近的成交明细（逐笔成交），含成交价、成交量和手续费\n## 场景：用于精确计算成交均价、核对每笔成交手续费、比订单历史更细粒度地复盘\n## 关键词：成交明细, fills, 逐笔成交, 成交记录, 手续费明细, 均价计算\n## 参数：\n##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权\n##   - instId: 产品ID\n##   - limit: 返回条数，默认100，最大100\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：100条 ~10KB — 中等\n## 关联：okx_place_order 下单 → 本工具看成交明细 → okx_get_fills_history 查历史成交",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       instId:   z.string().optional().describe("产品ID"),
@@ -99,7 +99,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_orders_history_archive",
-    "查询3个月以前的完整历史订单（归档数据）。用于长期交易记录分析。⚠️ 需要API Key鉴权。",
+    "## 功能：查询3个月以前的完整历史订单（归档数据）\n## 场景：用于长期交易记录分析、年度交易复盘、审计归档数据\n## 关键词：归档订单, orders history archive, 历史归档, 长期记录, 订单存档\n## 参数：\n##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权\n##   - limit: 返回条数，默认50，最大100\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：okx_get_orders_history 查近期订单 → 本工具查归档 → 完整交易复盘",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       limit:    z.number().int().min(1).max(100).optional().describe("返回条数，默认50"),
