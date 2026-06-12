@@ -206,4 +206,131 @@ export function registerOutcomesTools(server: McpServer): void {
       } catch (e) { return toError(e) }
     }
   )
+
+  // ── T-001: OKX Predictions 公共查询（5 端点） ────────────────────────────
+
+  server.tool(
+    "okx_predictions_list_events",
+    "## 功能：获取 OKX 预测市场事件列表\n## 场景：用于浏览可选事件、发现热门预测主题\n## 关键词：预测市场, predictions, events, 事件列表\n## 参数：\n##   - limit: 返回数量，默认20\n##   - sort: 排序字段\n##   - category: 分类筛选\n##   - status: 状态筛选\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：微小 ~3KB\n## 关联：本工具 → okx_predictions_get_event 看详情 → okx_predictions_get_event_markets 看市场",
+    {
+      limit:    z.number().int().min(1).max(100).optional().describe("返回数量"),
+      sort:     z.string().optional().describe("排序字段"),
+      category: z.string().optional().describe("分类筛选"),
+      status:   z.string().optional().describe("状态筛选"),
+    },
+    async ({ limit, sort, category, status }) => {
+      try {
+        const params: Record<string, unknown> = {}
+        if (limit !== undefined) params.limit = limit
+        if (sort)     params.sort = sort
+        if (category) params.category = category
+        if (status)   params.status = status
+        const data = await publicApi.getPredictionsEvents(params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_search_events",
+    "## 功能：全文关键词搜索预测市场事件\n## 场景：快速找到特定主题的预测事件（如某选举、比赛）\n## 关键词：预测市场, predictions, 搜索事件, 关键词搜索\n## 参数：\n##   - keyword: 搜索关键词，必填\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：微小 ~3KB\n## 关联：okx_predictions_list_events 列表 → 本工具搜索 → okx_predictions_get_event 详情",
+    {
+      keyword: z.string().describe("搜索关键词，必填"),
+    },
+    async ({ keyword }) => {
+      try {
+        const data = await publicApi.searchPredictionsEvents(keyword)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_event",
+    "## 功能：获取单个预测市场事件详情\n## 场景：查看事件描述、状态、关联市场概览\n## 关键词：预测事件, event 详情, predictions\n## 参数：\n##   - eventId: 事件ID，必填\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：微小 ~2KB\n## 关联：列表/搜索 → 本工具 → okx_predictions_get_event_markets 看市场",
+    {
+      eventId: z.string().describe("事件ID，必填"),
+    },
+    async ({ eventId }) => {
+      try {
+        const data = await publicApi.getPredictionsEvent(eventId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_event_markets",
+    "## 功能：获取事件下所有交易市场\n## 场景：查看某事件包含的多个预测市场（胜/负/比分等）\n## 关键词：事件市场, 预测市场列表, predictions markets\n## 参数：\n##   - eventId: 事件ID，必填\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：中等 ~5KB\n## 关联：okx_predictions_get_event → 本工具 → okx_predictions_get_market 单个市场",
+    {
+      eventId: z.string().describe("事件ID，必填"),
+    },
+    async ({ eventId }) => {
+      try {
+        const data = await publicApi.getPredictionsEventMarkets(eventId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_market",
+    "## 功能：获取单个预测市场详情\n## 场景：查看具体市场赔率、成交量、结算信息\n## 关键词：预测市场, market 详情, predictions\n## 参数：\n##   - marketId: 市场ID，必填\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：微小 ~2KB\n## 关联：okx_predictions_get_event_markets → 本工具 → 行情查询",
+    {
+      marketId: z.string().describe("市场ID，必填"),
+    },
+    async ({ marketId }) => {
+      try {
+        const data = await publicApi.getPredictionsMarket(marketId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ── T-002: Outcomes 市场数据（3 端点，复用 ticker/candles + 新 pm-books） ──
+
+  server.tool(
+    "okx_predictions_ticker",
+    "## 功能：获取预测市场 YES/NO 资产行情报价\n## 场景：实时价格、买卖价、成交量，用于判断市场温度\n## 关键词：预测行情, ticker, predictions, 报价\n## 参数：\n##   - instId: YES 或 NO 的 instId（yesAssetId）\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：微小 ~1KB\n## 关联：okx_predictions_get_market → 本工具 → okx_predictions_orderbook 深度",
+    {
+      instId: z.string().describe("YES/NO 资产的 instId（yesAssetId），必填"),
+    },
+    async ({ instId }) => {
+      try {
+        const data = await publicApi.getTicker(instId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_candles",
+    "## 功能：获取预测市场 K 线\n## 场景：分析概率走势、量能变化\n## 关键词：预测K线, candles, predictions, 趋势\n## 参数：\n##   - instId: YES/NO instId\n##   - bar: K线周期，默认1H\n##   - limit: 返回条数，默认100\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：中等\n## 关联：ticker → 本工具 → 分析",
+    {
+      instId: z.string().describe("YES/NO 资产 instId"),
+      bar:    z.string().optional().describe("K线周期，默认1H"),
+      limit:  z.number().int().min(1).max(300).optional().describe("返回条数"),
+    },
+    async ({ instId, bar, limit }) => {
+      try {
+        const data = await publicApi.getCandles(instId, bar, limit)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_orderbook",
+    "## 功能：获取预测市场深度（pm-books，最多400档）\n## 场景：分析买卖盘、流动性、可能的套利空间\n## 关键词：预测深度, orderbook, pm-books, 挂单\n## 参数：\n##   - instId: YES/NO instId\n##   - sz: 深度档位，默认400\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：中等 ~10KB+\n## 关联：ticker → 本工具 深度分析",
+    {
+      instId: z.string().describe("YES/NO 资产 instId"),
+      sz:     z.number().int().min(1).max(400).optional().describe("深度档位，默认400"),
+    },
+    async ({ instId, sz }) => {
+      try {
+        const data = await publicApi.getPredictionsOrderbook(instId, sz)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
 }
