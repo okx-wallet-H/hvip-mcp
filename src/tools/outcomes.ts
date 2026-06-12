@@ -1,9 +1,9 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import { publicApi } from "../adapters/okx.js"
-import { getHRailsClient, toResult, toError } from "./shared.js"
+import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
+import { getHRailsClient, toResult, toError, AUTH_REQUIRED } from "./shared.js"
 
-export function registerOutcomesTools(server: McpServer): void {
+export function registerOutcomesTools(server: McpServer, auth: Auth | null): void {
   server.tool(
     "outcomes_list_events",
     "## 功能：列出OKX预测市场所有事件（世界杯、选举等）\n## 场景：用于浏览可交易的预测市场、按关键词搜索事件、了解各事件成交量和活跃度\n## 关键词：预测市场, 事件列表, outcomes, 世界杯, 选举, 概率交易\n## 参数：\n##   - pageSize: 每页数量，默认20\n##   - search: 关键词搜索事件标题\n##   - includeMarkets: 是否附带每个事件的市场列表\n## 鉴权：⚠️ 需要 HRAILS API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~3KB\n## 关联：本工具浏览事件 → outcomes_get_event 查看单个事件详情 → outcomes_get_market 查看市场",
@@ -187,6 +187,221 @@ export function registerOutcomesTools(server: McpServer): void {
         const data = await publicApi.getEventEvents(seriesId)
         return toResult(data)
       } catch (e) { return toError(e) }
+    }
+  )
+  // ══════════════════════════════════════════════════════════════════════
+  // T-001: Outcomes 事件市场查询（5 个公开端点）
+  // ══════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    "okx_predictions_list_events",
+    "## 功能：获取 OKX 预测市场事件列表\n## 场景：用于浏览所有可交易的预测事件、按分类筛选\n## 关键词：预测市场, 事件列表, predictions\n## 参数：\n##   - limit: 返回条数，默认20，最大100\n##   - sort: 排序方式。newest=最新, volume=成交量\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：本工具浏览事件 → okx_predictions_get_event 查看详情",
+    {
+      limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认20，最大100"),
+      sort: z.enum(["newest","volume"]).optional().describe("排序方式"),
+    },
+    async ({ limit, sort }) => {
+      try {
+        const params: Record<string, string | number | boolean | undefined> = {}
+        if (limit !== undefined) params.limit = limit
+        if (sort !== undefined) params.sort = sort
+        const data = await publicApi.getPredictionsEvents(params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_search_events",
+    "## 功能：关键词搜索预测市场事件\n## 场景：用于按关键词查找特定预测事件\n## 参数：\n##   - keyword: 搜索关键词。必填\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：微小 ~3KB\n## 关联：本工具搜索 → okx_predictions_get_event",
+    { keyword: z.string().min(1).describe("搜索关键词") },
+    async ({ keyword }) => {
+      try {
+        const data = await publicApi.searchPredictionsEvents(keyword)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_event",
+    "## 功能：获取单个预测市场事件详情\n## 参数：\n##   - eventId: 事件ID。必填\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：微小 ~2KB\n## 关联：okx_predictions_list_events → 本工具 → okx_predictions_get_event_markets",
+    { eventId: z.string().describe("事件ID") },
+    async ({ eventId }) => {
+      try {
+        const data = await publicApi.getPredictionsEvent(eventId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_event_markets",
+    "## 功能：获取预测事件下的所有可交易市场\n## 参数：\n##   - eventId: 事件ID\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：中等 ~5KB\n## 关联：okx_predictions_get_event → 本工具 → okx_predictions_get_market",
+    { eventId: z.string().describe("事件ID") },
+    async ({ eventId }) => {
+      try {
+        const data = await publicApi.getPredictionsEventMarkets(eventId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_market",
+    "## 功能：获取单个预测市场详情\n## 参数：\n##   - marketId: 市场ID\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：微小 ~1KB\n## 关联：okx_predictions_get_event_markets → 本工具",
+    { marketId: z.string().describe("市场ID") },
+    async ({ marketId }) => {
+      try {
+        const data = await publicApi.getPredictionsMarket(marketId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // T-002: Outcomes 市场数据（行情/深度）
+  // ══════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    "okx_predictions_ticker",
+    "## 功能：获取预测市场标的实时报价\n## 参数：\n##   - instId: 预测市场标的ID\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：微小 ~1KB\n## 关联：本工具 → okx_predictions_candles 看走势",
+    { instId: z.string().describe("预测市场标的ID") },
+    async ({ instId }) => {
+      try {
+        const data = await publicApi.getTicker(instId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_candles",
+    "## 功能：获取预测市场K线数据\n## 参数：\n##   - instId: 预测市场标的ID\n##   - bar: K线周期，默认1H\n##   - limit: 返回条数，默认100\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：5KB\n## 关联：okx_predictions_ticker → 本工具",
+    {
+      instId: z.string().describe("预测市场标的ID"),
+      bar: z.enum(["1m","3m","5m","15m","30m","1H","4H","1D"]).optional().describe("K线周期，默认1H"),
+      limit: z.number().int().min(1).max(300).optional().describe("返回条数，默认100"),
+    },
+    async ({ instId, bar, limit }) => {
+      try {
+        const data = await publicApi.getCandles(instId, bar, limit)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_orderbook",
+    "## 功能：获取预测市场订单簿深度\n## 参数：\n##   - instId: 标的ID\n##   - depth: 档位，默认20\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：~3KB\n## 关联：okx_predictions_ticker → 本工具",
+    {
+      instId: z.string().describe("标的ID"),
+      depth: z.number().int().min(1).max(400).optional().describe("档位，默认20"),
+    },
+    async ({ instId, depth }) => {
+      try {
+        const data = await publicApi.getPredictionsOrderbook(instId, depth)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // T-005: 事件合约交易（5 个端点）
+  // ══════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    "okx_event_place_order",
+    "## 功能：下事件合约订单\n## 场景：事件合约下单，需传入 outcome 和 instType=EVENTS\n## 参数：\n##   - instId: 合约ID\n##   - side: buy/sell\n##   - outcome: yes/no\n##   - sz: 数量\n##   - px: 限价（可选）\n##   - ordType: market/limit/post_only\n## 鉴权：⚠️ 需要 API Key（交易权限）\n## 风险：WRITE\n## 返回量：~500B\n## 关联：本工具 → okx_event_cancel_order",
+    {
+      instId: z.string().describe("合约ID"),
+      side: z.enum(["buy","sell"]).describe("方向"),
+      outcome: z.enum(["yes","no"]).describe("结果方向"),
+      sz: z.string().describe("数量"),
+      px: z.string().optional().describe("限价"),
+      ordType: z.enum(["market","limit","post_only"]).optional().describe("订单类型"),
+    },
+    async ({ instId, side, outcome, sz, px, ordType }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = { instId, side, sz, outcome, instType: "EVENTS" }
+        if (px) body.px = px
+        if (ordType) body.ordType = ordType
+        if (ordType !== "post_only") body.speedBump = "1"
+        return toResult(await privateApi.placeOrder(auth, body))
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_cancel_order",
+    "## 功能：撤销事件合约订单\n## 参数：\n##   - instId: 合约ID\n##   - ordId: 订单ID\n## 鉴权：需要 API Key\n## 风险：WRITE\n## 关联：okx_event_place_order → 本工具",
+    { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID") },
+    async ({ instId, ordId }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await privateApi.cancelOrder(auth, instId, ordId)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_amend_order",
+    "## 功能：修改事件合约订单\n## 参数：\n##   - instId: 合约ID\n##   - ordId: 订单ID\n##   - newSz: 新数量\n##   - newPx: 新价格\n## 鉴权：需要 API Key\n## 风险：WRITE\n## 关联：okx_event_place_order → 本工具",
+    {
+      instId: z.string().describe("合约ID"),
+      ordId: z.string().describe("订单ID"),
+      newSz: z.string().optional().describe("新数量"),
+      newPx: z.string().optional().describe("新价格"),
+    },
+    async ({ instId, ordId, newSz, newPx }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = { instId, ordId }
+        if (newSz) body.newSz = newSz
+        if (newPx) body.newPx = newPx
+        return toResult(await privateApi.amendOrder(auth, body))
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_fills",
+    "## 功能：查询事件合约成交记录\n## 参数：\n##   - instId: 合约ID（可选）\n##   - limit: 返回条数\n## 鉴权：需要 API Key（只读）\n## 风险：READ\n## 返回量：~5KB\n## 关联：okx_event_place_order → 本工具",
+    {
+      instId: z.string().optional().describe("合约ID"),
+      limit: z.number().int().min(1).max(100).optional().describe("返回条数"),
+    },
+    async ({ instId, limit }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await privateApi.getFills(auth, "EVENTS", instId, limit)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_instruments",
+    "## 功能：查询可交易的事件合约列表\n## 参数：\n##   - seriesId: 事件系列ID（可选）\n## 鉴权：需要 API Key（只读）\n## 风险：READ\n## 返回量：~5KB\n## 关联：本工具 → okx_event_place_order",
+    { seriesId: z.string().optional().describe("事件系列ID") },
+    async ({ seriesId }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await publicApi.getInstruments("EVENTS", seriesId)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // T-006: H Rails 市场列表
+  // ══════════════════════════════════════════════════════════════════════
+
+  server.tool(
+    "outcomes_list_markets",
+    "## 功能：列出 H Rails 预测市场的所有可交易市场\n## 参数：\n##   - pageSize: 每页数量，默认20\n## 鉴权：需要 HRAILS_API_KEY\n## 风险：READ\n## 返回量：~5KB\n## 关联：outcomes_list_events → 本工具 → outcomes_get_market",
+    { pageSize: z.number().int().min(1).max(100).optional().describe("每页数量") },
+    async ({ pageSize }) => {
+      const client = getHRailsClient()
+      if (!client) return toError(new Error("未配置 HRAILS_API_KEY"))
+      try { return toResult(await client.listMarkets({ pageSize })) }
+      catch (e) { return toError(e) }
     }
   )
 }
