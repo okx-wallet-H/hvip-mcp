@@ -1,0 +1,715 @@
+window.__STATUS__ = {
+  "lastRun": "2026-06-11T21:09:28.168Z",
+  "summary": {
+    "passed": 73,
+    "failed": 0,
+    "skipped": 15,
+    "total": 88
+  },
+  "results": [
+    {
+      "id": "okx_get_ticker",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instType\":\"SPOT\",\"instId\":\"BTC-USDT\",\"last\":\"63488.6\",\"lastSz\":\"0.00274459\",\"askPx\":\"63488.7\",\"as",
+      "durationMs": 391
+    },
+    {
+      "id": "okx_get_tickers",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instType\":\"SPOT\",\"instId\":\"PEOPLE-EUR\",\"last\":\"0.00464\",\"lastSz\":\"100\",\"askPx\":\"0.00466\",\"askSz\":",
+      "durationMs": 230
+    },
+    {
+      "id": "okx_get_orderbook",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"asks\":[[\"63488.7\",\"1.51155384\",\"0\",\"13\"],[\"63488.8\",\"0.03211116\",\"0\",\"2\"],[\"63488.9\",\"0.07285217\"",
+      "durationMs": 164
+    },
+    {
+      "id": "okx_get_candles",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781211600000\",\"63393.5\",\"63494.3\",\"63392.3\",\"63488.6\",\"34.68369748\",\"2200632.918370545\",\"2200632",
+      "durationMs": 123
+    },
+    {
+      "id": "okx_get_trades",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instId\":\"BTC-USDT\",\"side\":\"sell\",\"sz\":\"0.00274459\",\"px\":\"63488.6\",\"source\":\"0\",\"tradeId\":\"1019551",
+      "durationMs": 116
+    },
+    {
+      "id": "okx_get_history_candles",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781211600000\",\"63393.5\",\"63494.3\",\"63392.3\",\"63488.6\",\"34.68369748\",\"2200632.918370545\",\"2200632",
+      "durationMs": 137
+    },
+    {
+      "id": "okx_get_history_trades",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instId\":\"BTC-USDT\",\"side\":\"sell\",\"sz\":\"0.00274459\",\"px\":\"63488.6\",\"source\":\"0\",\"tradeId\":\"1019551",
+      "durationMs": 121
+    },
+    {
+      "id": "okx_get_block_tickers",
+      "category": "OKX 公共行情",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instType\":\"SPOT\",\"instId\":\"PEOPLE-EUR\",\"vol24h\":\"0\",\"volCcy24h\":\"0\",\"ts\":\"1781212145157\"},{\"instT",
+      "durationMs": 144
+    },
+    {
+      "id": "okx_get_system_status",
+      "category": "OKX 系统状态",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 131
+    },
+    {
+      "id": "okx_get_system_time",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"ts\":\"1781212158050\"}]",
+      "durationMs": 264
+    },
+    {
+      "id": "okx_get_instruments",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"alias\":\"\",\"auctionEndTime\":\"\",\"baseCcy\":\"BTC\",\"category\":\"1\",\"contTdSwTime\":\"\",\"ctMult\":\"\",\"ctTyp",
+      "durationMs": 134
+    },
+    {
+      "id": "okx_get_funding_rate",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"formulaType\":\"withRate\",\"fundingRate\":\"0.0000210026430358\",\"fundingTime\":\"1781222400000\",\"impactV",
+      "durationMs": 114
+    },
+    {
+      "id": "okx_get_mark_price",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instId\":\"BTC-USDT-SWAP\",\"instType\":\"SWAP\",\"markPx\":\"63457.5\",\"ts\":\"1781212158424\"}]",
+      "durationMs": 128
+    },
+    {
+      "id": "okx_get_index_price",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instId\":\"BTC-USDT\",\"idxPx\":\"63486.5\",\"high24h\":\"63915.2\",\"sodUtc0\":\"61511.2\",\"open24h\":\"61624.8\",",
+      "durationMs": 138
+    },
+    {
+      "id": "okx_get_open_interest",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instId\":\"BTC-USDT-SWAP\",\"instType\":\"SWAP\",\"oi\":\"3008999.18000001095\",\"oiCcy\":\"30089.9918000001095",
+      "durationMs": 114
+    },
+    {
+      "id": "okx_get_opt_summary",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"askVol\":\"0\",\"bidVol\":\"0\",\"buyApr\":\"\",\"delta\":\"0.999672120696483\",\"deltaBS\":\"0.999672120696483\",\"d",
+      "durationMs": 329
+    },
+    {
+      "id": "okx_get_insurance_fund",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"details\":[{\"adlType\":\"\",\"amt\":\"0\",\"balance\":\"3861.7093\",\"ccy\":\"BTC\",\"decRate\":\"\",\"maxBal\":\"\",\"max",
+      "durationMs": 207
+    },
+    {
+      "id": "okx_convert_contract_coin",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"instId\":\"BTC-USDT-SWAP\",\"px\":\"\",\"sz\":\"100\",\"type\":\"1\",\"unit\":\"coin\"}]",
+      "durationMs": 128
+    },
+    {
+      "id": "okx_get_announcements",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"details\":[{\"annType\":\"announcements-delistings\",\"title\":\"OKX to support TON crypto migration\",\"ur",
+      "durationMs": 132
+    },
+    {
+      "id": "okx_get_announcement_types",
+      "category": "OKX 公共数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"annType\":\"announcements-new-listings\",\"annTypeDesc\":\"New listings\"},{\"annType\":\"announcements-del",
+      "durationMs": 134
+    },
+    {
+      "id": "okx_get_long_short_ratio",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781211900000\",\"1.44\"],[\"1781211600000\",\"1.44\"],[\"1781211300000\",\"1.44\"],[\"1781211000000\",\"1.44\"]",
+      "durationMs": 119
+    },
+    {
+      "id": "okx_get_taker_volume",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781211900000\",\"3631009.9907\",\"8657252.563\"],[\"1781211600000\",\"4439235.2826\",\"2379948.8048\"],[\"17",
+      "durationMs": 124
+    },
+    {
+      "id": "okx_get_open_interest_volume",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781211900000\",\"2628575278.4102\",\"12288262.5537\"],[\"1781211600000\",\"2629702054.3997\",\"6819184.087",
+      "durationMs": 138
+    },
+    {
+      "id": "okx_get_margin_lending_ratio",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781211900000\",\"9.4523\"],[\"1781211600000\",\"9.4572\"],[\"1781211300000\",\"9.4631\"],[\"1781211000000\",\"",
+      "durationMs": 125
+    },
+    {
+      "id": "okx_get_stats_support_coin",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"contract\":[\"BTC\",\"ETH\",\"OKB\",\"LTC\",\"XRP\",\"BCH\",\"SOL\",\"PEPE\",\"DOGE\",\"FIL\",\"0G\",\"1INCH\",\"2Z\",\"A\",\"AA",
+      "durationMs": 118
+    },
+    {
+      "id": "okx_get_top_trader_long_short",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781211900000\",\"1.0186836518046709\"],[\"1781211600000\",\"1.0161153519932146\"],[\"1781211300000\",\"1.0",
+      "durationMs": 126
+    },
+    {
+      "id": "okx_get_put_call_ratio",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[[\"1781193600000\",\"0.7312\",\"1.302\"],[\"1781164800000\",\"0.7186\",\"0.8039\"],[\"1781136000000\",\"0.7223\",\"0",
+      "durationMs": 762
+    },
+    {
+      "id": "okx_get_lending_rate_summary",
+      "category": "OKX 交易大数据",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"avgAmt\":\"\",\"avgAmtUsd\":\"\",\"avgRate\":\"0.025\",\"ccy\":\"USDT\",\"estRate\":\"0.025\",\"preRate\":\"0.025\"}]",
+      "durationMs": 131
+    },
+    {
+      "id": "okx_get_balance",
+      "category": "OKX 交易账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"adjEq\":\"\",\"availEq\":\"\",\"borrowFroz\":\"\",\"delta\":\"\",\"deltaLever\":\"\",\"deltaNeutralStatus\":\"\",\"detail",
+      "durationMs": 201
+    },
+    {
+      "id": "okx_get_positions",
+      "category": "OKX 交易账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 123
+    },
+    {
+      "id": "okx_get_order_history",
+      "category": "OKX 交易账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"accFillSz\":\"2.505393\",\"algoClOrdId\":\"\",\"algoId\":\"\",\"attachAlgoClOrdId\":\"\",\"attachAlgoOrds\":[],\"av",
+      "durationMs": 142
+    },
+    {
+      "id": "okx_get_account_bills",
+      "category": "OKX 交易账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"bal\":\"0.0000005513797\",\"balChg\":\"-4.2989600000000\",\"billId\":\"3646075587041746944\",\"ccy\":\"USDT\",\"c",
+      "durationMs": 147
+    },
+    {
+      "id": "okx_get_account_config",
+      "category": "OKX 交易账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"acctLv\":\"2\",\"acctStpMode\":\"cancel_maker\",\"autoLoan\":false,\"ctIsoMode\":\"automatic\",\"enableSpotBorr",
+      "durationMs": 120
+    },
+    {
+      "id": "okx_get_leverage_info",
+      "category": "OKX 交易账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"ccy\":\"\",\"instId\":\"BTC-USDT-SWAP\",\"lever\":\"100\",\"mgnMode\":\"cross\",\"posSide\":\"long\"},{\"ccy\":\"\",\"ins",
+      "durationMs": 119
+    },
+    {
+      "id": "okx_get_orders_pending",
+      "category": "OKX 撮合交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 118
+    },
+    {
+      "id": "okx_get_fills",
+      "category": "OKX 撮合交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 143
+    },
+    {
+      "id": "okx_get_orders_history_archive",
+      "category": "OKX 撮合交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"accFillSz\":\"2.505393\",\"algoClOrdId\":\"\",\"algoId\":\"\",\"attachAlgoClOrdId\":\"\",\"attachAlgoOrds\":[],\"av",
+      "durationMs": 145
+    },
+    {
+      "id": "okx_place_order",
+      "category": "OKX 撮合交易",
+      "status": "skip",
+      "error": "写操作，需人工确认后测试",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_cancel_order",
+      "category": "OKX 撮合交易",
+      "status": "skip",
+      "error": "写操作，需人工确认后测试",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_amend_order",
+      "category": "OKX 撮合交易",
+      "status": "skip",
+      "error": "写操作，需人工确认后测试",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_funding_balance",
+      "category": "OKX 资金账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"availBal\":\"0.0000002043783505\",\"bal\":\"0.0000002043783505\",\"ccy\":\"USDT\",\"frozenBal\":\"0\"}]",
+      "durationMs": 142
+    },
+    {
+      "id": "okx_get_currencies",
+      "category": "OKX 资金账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"burningFeeRate\":\"\",\"canDep\":true,\"canInternal\":true,\"canWd\":true,\"ccy\":\"USDT\",\"chain\":\"USDT-Arbit",
+      "durationMs": 176
+    },
+    {
+      "id": "okx_get_deposit_address",
+      "category": "OKX 资金账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"chain\":\"USDT-X Layer (USDT0)\",\"ctAddr\":\"713736\",\"ccy\":\"USDT\",\"to\":\"6\",\"verifiedName\":\"\",\"addr\":\"0",
+      "durationMs": 211
+    },
+    {
+      "id": "okx_get_deposit_history",
+      "category": "OKX 资金账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"actualDepBlkConfirm\":\"41\",\"amt\":\"0.06034422\",\"areaCodeFrom\":\"\",\"ccy\":\"OKB\",\"chain\":\"OKB-X Layer\",",
+      "durationMs": 165
+    },
+    {
+      "id": "okx_get_withdrawal_history",
+      "category": "OKX 资金账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"note\":\"\",\"chain\":\"USDT-TRC20\",\"areaCodeFrom\":\"855\",\"clientId\":\"\",\"toAddrType\":\"\",\"fee\":\"1.5\",\"amt",
+      "durationMs": 373
+    },
+    {
+      "id": "okx_transfer",
+      "category": "OKX 资金账户",
+      "status": "skip",
+      "error": "写操作，需人工确认后测试",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_algo_orders",
+      "category": "OKX 策略交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 138
+    },
+    {
+      "id": "okx_get_algo_orders_history",
+      "category": "OKX 策略交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"activePx\":\"\",\"actualPx\":\"\",\"actualSide\":\"sl\",\"actualSz\":\"90.25\",\"advanceOrdType\":\"\",\"aggressivene",
+      "durationMs": 142
+    },
+    {
+      "id": "okx_place_algo_order",
+      "category": "OKX 策略交易",
+      "status": "skip",
+      "error": "写操作，需人工确认后测试",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_cancel_algo_order",
+      "category": "OKX 策略交易",
+      "status": "skip",
+      "error": "写操作，需人工确认后测试",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_grid_ai_param",
+      "category": "OKX 交易机器人",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"algoOrdType\":\"grid\",\"annualizedRate\":\"0.2752\",\"ccy\":\"USDT\",\"direction\":\"\",\"duration\":\"7D\",\"gridNu",
+      "durationMs": 134
+    },
+    {
+      "id": "okx_get_grid_orders_pending",
+      "category": "OKX 交易机器人",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 118
+    },
+    {
+      "id": "okx_get_grid_orders_history",
+      "category": "OKX 交易机器人",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"actualLever\":\"\",\"algoClOrdId\":\"\",\"algoId\":\"3631568985969278976\",\"algoOrdType\":\"grid\",\"arbitrageNu",
+      "durationMs": 142
+    },
+    {
+      "id": "okx_get_recurring_orders_pending",
+      "category": "OKX 交易机器人",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 141
+    },
+    {
+      "id": "okx_get_recurring_orders_history",
+      "category": "OKX 交易机器人",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"algoClOrdId\":\"\",\"algoId\":\"3627350452381077504\",\"algoOrdType\":\"recurring\",\"amt\":\"150\",\"cTime\":\"178",
+      "durationMs": 102
+    },
+    {
+      "id": "okx_get_lead_trader_positions",
+      "category": "OKX 跟单",
+      "status": "skip",
+      "error": "需要真实带单员uniqueCode，用OKX App获取后调用",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_lead_trader_history",
+      "category": "OKX 跟单",
+      "status": "skip",
+      "error": "需要真实带单员uniqueCode",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_lead_trader_stats",
+      "category": "OKX 跟单",
+      "status": "skip",
+      "error": "需要真实带单员uniqueCode",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_my_lead_positions",
+      "category": "OKX 跟单",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 125
+    },
+    {
+      "id": "okx_get_my_lead_history",
+      "category": "OKX 跟单",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 121
+    },
+    {
+      "id": "okx_get_copy_instruments",
+      "category": "OKX 跟单",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"enabled\":false,\"instId\":\"ETH-USDT-SWAP\"},{\"enabled\":false,\"instId\":\"BTC-USDT-SWAP\"},{\"enabled\":fa",
+      "durationMs": 119
+    },
+    {
+      "id": "okx_get_profit_sharing_total",
+      "category": "OKX 跟单",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"ccy\":\"USDT\",\"instType\":\"SPOT\",\"totalProfitSharingAmt\":\"0\"},{\"ccy\":\"USDT\",\"instType\":\"SWAP\",\"total",
+      "durationMs": 132
+    },
+    {
+      "id": "okx_get_profit_sharing_details",
+      "category": "OKX 跟单",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 128
+    },
+    {
+      "id": "okx_get_signal_bots_pending",
+      "category": "OKX 信号交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 125
+    },
+    {
+      "id": "okx_get_signal_bots_history",
+      "category": "OKX 信号交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 131
+    },
+    {
+      "id": "okx_get_signal_positions",
+      "category": "OKX 信号交易",
+      "status": "skip",
+      "error": "需要运行中的信号机器人ID",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_signal_positions_history",
+      "category": "OKX 信号交易",
+      "status": "skip",
+      "error": "需要信号机器人algoId",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_signal_sub_orders",
+      "category": "OKX 信号交易",
+      "status": "skip",
+      "error": "需要信号机器人algoId",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_signal_event_history",
+      "category": "OKX 信号交易",
+      "status": "skip",
+      "error": "需要信号机器人algoId",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_spreads",
+      "category": "OKX 价差交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"sprdId\":\"BTC-USD-SWAP_BTC-USD-260925\",\"sprdType\":\"inverse\",\"state\":\"live\",\"baseCcy\":\"BTC\",\"szCcy\"",
+      "durationMs": 134
+    },
+    {
+      "id": "okx_get_spread_ticker",
+      "category": "OKX 价差交易",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"sprdId\":\"BTC-USD-SWAP_BTC-USD-260925\",\"lastSz\":\"100\",\"askPx\":\"598\",\"askSz\":\"500\",\"bidPx\":\"597.5\",",
+      "durationMs": 137
+    },
+    {
+      "id": "okx_list_subaccounts",
+      "category": "OKX 子账户",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"canTransOut\":false,\"enable\":true,\"firstLvSubAcct\":\"apphwallet\",\"frozenFunc\":[],\"gAuth\":false,\"ifD",
+      "durationMs": 146
+    },
+    {
+      "id": "okx_get_subaccount_balance",
+      "category": "OKX 子账户",
+      "status": "skip",
+      "error": "需要有效子账户名称，跳过避免参数错误",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_transfer_subaccount",
+      "category": "OKX 子账户",
+      "status": "skip",
+      "error": "写操作，需人工确认后测试",
+      "preview": "",
+      "durationMs": 0
+    },
+    {
+      "id": "okx_get_savings_balance",
+      "category": "OKX 金融产品",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"amt\":\"0.00489979\",\"ccy\":\"TRX\",\"earnings\":\"0.00489978\",\"loanAmt\":\"0\",\"pendingAmt\":\"0.00489979\",\"ra",
+      "durationMs": 150
+    },
+    {
+      "id": "okx_get_savings_history",
+      "category": "OKX 金融产品",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"amt\":\"1.7383242994547097\",\"ccy\":\"PENGU\",\"earnings\":\"0.00000237\",\"rate\":\"0.0141\",\"ts\":\"17812118660",
+      "durationMs": 200
+    },
+    {
+      "id": "okx_get_staking_offers",
+      "category": "OKX 金融产品",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"ccy\":\"BTC\",\"productId\":\"4998\",\"protocol\":\"On-Chain Defi\",\"protocolType\":\"defi\",\"term\":\"0\",\"apy\":\"",
+      "durationMs": 215
+    },
+    {
+      "id": "okx_get_eth_staking_balance",
+      "category": "OKX 金融产品",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"amt\":\"0.00000000\",\"ccy\":\"BETH\",\"latestInterestAccrual\":\"0.00000000\",\"totalInterestAccrual\":\"0.000",
+      "durationMs": 148
+    },
+    {
+      "id": "okx_get_eth_staking_history",
+      "category": "OKX 金融产品",
+      "status": "pass",
+      "error": null,
+      "preview": "[]",
+      "durationMs": 129
+    },
+    {
+      "id": "okx_get_sol_staking_balance",
+      "category": "OKX 金融产品",
+      "status": "pass",
+      "error": null,
+      "preview": "[{\"amt\":\"0\",\"ccy\":\"OKSOL\",\"latestInterestAccrual\":\"0\",\"totalInterestAccrual\":\"0\"}]",
+      "durationMs": 159
+    },
+    {
+      "id": "hrails_health",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"code\":\"0\",\"message\":\"ok\",\"data\":{\"service\":\"h-rails-api\",\"phase\":\"P1-market-data-gateway\",\"status\"",
+      "durationMs": 323
+    },
+    {
+      "id": "hrails_list_events",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"items\":[{\"eventId\":\"17301233925261376\",\"source\":\"okx_outcomes\",\"title\":\"Mexico vs. South Africa\",\"",
+      "durationMs": 324
+    },
+    {
+      "id": "hrails_get_event",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"event\":{\"eventId\":\"17301233925261376\",\"source\":\"okx_outcomes\",\"title\":\"Mexico vs. South Africa\",\"d",
+      "durationMs": 123
+    },
+    {
+      "id": "hrails_get_market",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"market\":{\"marketId\":\"101494\",\"eventId\":\"17301233925261376\",\"source\":\"okx_outcomes\",\"question\":\"Wil",
+      "durationMs": 90
+    },
+    {
+      "id": "hrails_get_ticker_YES",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"ticker\":{\"marketId\":\"101494\",\"outcome\":\"YES\",\"instId\":\"101494000\",\"derived\":false,\"last\":\"0.999\",\"",
+      "durationMs": 149
+    },
+    {
+      "id": "hrails_get_ticker_NO",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"ticker\":{\"marketId\":\"101494\",\"outcome\":\"NO\",\"instId\":\"101494000\",\"derived\":true,\"last\":\"0.001\",\"be",
+      "durationMs": 120
+    },
+    {
+      "id": "hrails_get_orderbook",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"orderbook\":{\"marketId\":\"101494\",\"outcome\":\"YES\",\"instId\":\"101494000\",\"bookType\":\"raw_yes_book\",\"de",
+      "durationMs": 157
+    },
+    {
+      "id": "hrails_get_candles",
+      "category": "H Rails 预测市场",
+      "status": "pass",
+      "error": null,
+      "preview": "{\"marketId\":\"101494\",\"outcome\":\"YES\",\"candles\":[{\"marketId\":\"101494\",\"outcome\":\"YES\",\"instId\":\"10149",
+      "durationMs": 137
+    }
+  ]
+};

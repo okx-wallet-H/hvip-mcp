@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hvip · 接口对接进度</title>
+<style>
+  :root {
+    --bg:      #0a0b0d;
+    --bg2:     #111318;
+    --bg3:     #1a1d24;
+    --border:  #2a2f3a;
+    --text:    #e6e8ed;
+    --text2:   #9299a5;
+    --text3:   #5c6370;
+    --green:   #0ecb81;
+    --red:     #f6465d;
+    --yellow:  #f0b90b;
+    --blue:    #3d72f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", monospace; font-size: 13px; }
+
+  header {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 20px 32px; display: flex; align-items: center; gap: 16px;
+  }
+  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo span { color: var(--blue); }
+  .domain { color: var(--text3); font-size: 12px; }
+  header .spacer { flex: 1; }
+  .last-run { color: var(--text3); font-size: 12px; }
+  .refresh-btn {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+    padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    transition: border-color .15s;
+  }
+  .refresh-btn:hover { border-color: var(--blue); color: var(--text); }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 32px; }
+
+  /* ── 汇总卡片 ── */
+  .summary {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .stat-card .label { color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; }
+  .stat-card.pass  .value { color: var(--green); }
+  .stat-card.fail  .value { color: var(--red); }
+  .stat-card.skip  .value { color: var(--yellow); }
+  .stat-card.total .value { color: var(--text); }
+
+  /* ── 进度条 ── */
+  .progress-wrap { margin-bottom: 32px; }
+  .progress-label { display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text2); font-size: 12px; }
+  .progress-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--green); border-radius: 3px; transition: width .4s; }
+
+  /* ── 分组 ── */
+  .category { margin-bottom: 24px; }
+  .cat-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--text3); margin-bottom: 8px; padding: 0 4px;
+  }
+  .tool-list { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .tool-row {
+    display: grid; grid-template-columns: 28px 1fr 80px 60px;
+    align-items: center; gap: 12px;
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .tool-row:last-child { border-bottom: none; }
+  .tool-row:hover { background: var(--bg3); }
+
+  .status-icon { font-size: 14px; text-align: center; }
+  .tool-name { font-family: monospace; font-size: 13px; color: var(--text); }
+  .tool-error { font-size: 11px; color: var(--red); margin-top: 2px; }
+  .tool-preview { font-size: 11px; color: var(--text3); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 500px; }
+  .duration { color: var(--text3); font-size: 11px; text-align: right; }
+  .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+    text-align: center; white-space: nowrap;
+  }
+  .badge-pass { background: rgba(14,203,129,.15); color: var(--green); }
+  .badge-fail { background: rgba(246,70,93,.15);  color: var(--red); }
+  .badge-skip { background: rgba(240,185,11,.15); color: var(--yellow); }
+
+  /* ── 空状态 ── */
+  .empty {
+    text-align: center; padding: 80px 32px; color: var(--text3);
+  }
+  .empty h3 { font-size: 16px; color: var(--text2); margin-bottom: 8px; }
+  .empty code {
+    background: var(--bg3); border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 6px; display: inline-block;
+    margin-top: 12px; color: var(--text); font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">hvip<span>.</span></div>
+    <div class="domain">hvip.one · OKX 生态全景图 MCP</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="last-run" id="lastRun">—</span>
+  <button class="refresh-btn" onclick="load()">↻ 刷新</button>
+</header>
+
+<div class="container">
+  <div id="app"><div class="empty"><h3>加载中…</h3></div></div>
+</div>
+
+<script src="./status-data.js" onerror="window.__STATUS__=null"></script>
+<script>
+async function load() {
+  // 优先用内嵌数据（本地打开 file:// 时无法 fetch）
+  if (window.__STATUS__) { render(window.__STATUS__); return }
+  try {
+    const res = await fetch('./status.json?t=' + Date.now())
+    if (!res.ok) throw new Error('status.json 不存在')
+    const data = await res.json()
+    render(data)
+  } catch {
+    document.getElementById('app').innerHTML = `
+      <div class="empty">
+        <h3>尚未运行测试</h3>
+        <p>请在项目目录执行：</p>
+        <code>npm run verify</code>
+        <p style="margin-top:12px;font-size:12px">运行后刷新此页面即可查看结果</p>
+      </div>`
+    document.getElementById('lastRun').textContent = '未运行'
+  }
+}
+
+function render(data) {
+  const { summary, results, lastRun } = data
+  const passed  = summary.passed  ?? 0
+  const failed  = summary.failed  ?? 0
+  const skipped = summary.skipped ?? 0
+  const total   = summary.total   ?? results.length
+  const pct     = total ? Math.round(passed / total * 100) : 0
+
+  document.getElementById('lastRun').textContent =
+    '上次运行：' + new Date(lastRun).toLocaleString('zh-CN')
+
+  // 按 category 分组
+  const groups = {}
+  for (const r of results) {
+    if (!groups[r.category]) groups[r.category] = []
+    groups[r.category].push(r)
+  }
+
+  const html = `
+    <div class="summary">
+      <div class="stat-card pass">  <div class="label">通过</div><div class="value">${passed}</div></div>
+      <div class="stat-card fail">  <div class="label">失败</div><div class="value">${failed}</div></div>
+      <div class="stat-card skip">  <div class="label">跳过</div><div class="value">${skipped}</div></div>
+      <div class="stat-card total"> <div class="label">总计</div><div class="value">${total}</div></div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>接口验证进度</span>
+        <span>${passed} / ${total} (${pct}%)</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>
+
+    ${Object.entries(groups).map(([cat, items]) => `
+      <div class="category">
+        <div class="cat-title">${cat}</div>
+        <div class="tool-list">
+          ${items.map(r => `
+            <div class="tool-row">
+              <div class="status-icon">${r.status==='pass'?'✅':r.status==='fail'?'❌':'⏭'}</div>
+              <div>
+                <div class="tool-name">${r.id}</div>
+                ${r.status==='fail' ? `<div class="tool-error">${r.error}</div>` : ''}
+                ${r.status==='pass' && r.preview ? `<div class="tool-preview">${r.preview}</div>` : ''}
+                ${r.status==='skip' ? `<div class="tool-preview">${r.error}</div>` : ''}
+              </div>
+              <div><span class="badge badge-${r.status}">${r.status==='pass'?'通过':r.status==='fail'?'失败':'跳过'}</span></div>
+              <div class="duration">${r.durationMs > 0 ? r.durationMs + 'ms' : '—'}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `
+
+  document.getElementById('app').innerHTML = html
+}
+
+load()
+</script>
+</body>
+</html>
