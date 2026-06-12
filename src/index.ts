@@ -19,6 +19,7 @@ import { registerRfqTools }        from "./tools/rfq.js"
 import { registerAffiliateTools }  from "./tools/affiliate.js"
 import { registerFiatTools }     from "./tools/fiat.js"
 import { registerAgentUtils }    from "./tools/agent-utils.js"
+import { registerXLayerWSTools } from "./tools/xlayer-ws.js"
 import { getAuth } from "./tools/shared.js"
 
 async function main() {
@@ -47,6 +48,8 @@ async function main() {
   registerFiatTools(server, auth)
   registerRfqTools(server, auth)
   registerAgentUtils(server, auth)
+
+  registerXLayerWSTools(server)
 
   const transport = new StdioServerTransport()
   await server.connect(transport)

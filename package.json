@@ -10,7 +10,16 @@
   "bugs": {
     "url": "https://github.com/okx-wallet-H/hvip-mcp/issues"
   },
-  "keywords": ["okx", "mcp", "modelcontextprotocol", "trading", "ai-agent", "crypto", "bitcoin", "prediction-market"],
+  "keywords": [
+    "okx",
+    "mcp",
+    "modelcontextprotocol",
+    "trading",
+    "ai-agent",
+    "crypto",
+    "bitcoin",
+    "prediction-market"
+  ],
   "author": "okx-wallet-H",
   "license": "MIT",
   "bin": {
@@ -32,10 +41,12 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "dotenv": "^16.4.0",
+    "ws": "^8.21.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "esbuild": "^0.28.0",
