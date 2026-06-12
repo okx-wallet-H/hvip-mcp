@@ -763,6 +763,26 @@ export const privateApi = {
   getEventEvents: (seriesId: string) =>
     request<unknown[]>("GET", "/api/v5/public/event-contract/events", { params: { seriesId } }),
 
+  // ── T-001: OKX Predictions (public, no auth) ───────────────────────────
+  getPredictionsEvents: (params?: Record<string, unknown>) =>
+    request<unknown>("GET", "/api/v5/predictions/events", params ? { params } : undefined),
+
+  searchPredictionsEvents: (keyword: string) =>
+    request<unknown>("GET", "/api/v5/predictions/events/search", { params: { keyword } }),
+
+  getPredictionsEvent: (eventId: string) =>
+    request<unknown>("GET", `/api/v5/predictions/events/${eventId}`),
+
+  getPredictionsEventMarkets: (eventId: string) =>
+    request<unknown>("GET", `/api/v5/predictions/events/${eventId}/markets`),
+
+  getPredictionsMarket: (marketId: string) =>
+    request<unknown>("GET", `/api/v5/predictions/markets/${marketId}`),
+
+  // T-002 support
+  getPredictionsOrderbook: (instId: string, sz?: number) =>
+    request<unknown>("GET", "/api/v5/market/pm-books", { params: { instId, sz: sz ?? 400 } }),
+
   // ── 新增批：fiat ──────────────────────────────────────────────────────
   getFiatBuySellPair: (auth: Auth) =>
     request<unknown[]>("GET", "/api/v5/fiat/buy-sell/currency-pair", { auth }),
