@@ -148,6 +148,23 @@ export function registerOutcomesTools(server: McpServer): void {
     }
   )
 
+  server.tool(
+    "outcomes_list_markets",
+    "## 功能：列出所有预测市场\n## 场景：用于浏览全部可用市场、发现交易机会\n## 关键词：预测市场, markets, 市场列表\n## 参数：\n##   - pageSize: 每页数量，默认20\n## 鉴权：需要 HRAILS_API_KEY\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~3KB\n## 关联：outcomes_list_events → 本工具 → outcomes_get_market 看详情",
+    {
+      pageSize: z.number().int().min(1).max(100).optional().describe("每页数量"),
+    },
+    async ({ pageSize }) => {
+      const client = getHRailsClient()
+      if (!client) return toError(new Error("未配置 HRAILS_API_KEY"))
+      try {
+        const params = pageSize !== undefined ? { pageSize } : undefined
+        const data = await client.listMarkets(params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
   // ── 预测市场事件合约（v0.2.26 新缺口） ────────────────────────────────────
 
   server.tool(
