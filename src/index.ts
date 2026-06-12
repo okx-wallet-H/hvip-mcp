@@ -29,7 +29,7 @@ async function main() {
   registerPublicTools(server, auth)
   registerStatsTools(server)
   registerSpreadTools(server, auth)
-  registerOutcomesTools(server)
+  registerOutcomesTools(server, auth)
   registerAccountTools(server, auth)
   registerTradingTools(server, auth)
   registerAlgoTools(server, auth)

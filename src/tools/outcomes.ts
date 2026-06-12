@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi } from "../adapters/okx.js"
 import { getHRailsClient, toResult, toError } from "./shared.js"
 
-export function registerOutcomesTools(server: McpServer): void {
+export function registerOutcomesTools(server: McpServer, auth: Auth | null): void {
   server.tool(
     "outcomes_list_events",
     "## 功能：列出OKX预测市场所有事件（世界杯、选举等）\n## 场景：用于浏览可交易的预测市场、按关键词搜索事件、了解各事件成交量和活跃度\n## 关键词：预测市场, 事件列表, outcomes, 世界杯, 选举, 概率交易\n## 参数：\n##   - pageSize: 每页数量，默认20\n##   - search: 关键词搜索事件标题\n##   - includeMarkets: 是否附带每个事件的市场列表\n## 鉴权：⚠️ 需要 HRAILS API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~3KB\n## 关联：本工具浏览事件 → outcomes_get_event 查看单个事件详情 → outcomes_get_market 查看市场",
@@ -189,4 +189,74 @@ export function registerOutcomesTools(server: McpServer): void {
       } catch (e) { return toError(e) }
     }
   )
+
+  // ══ T-003: Outcomes 订单管理（EIP-712）════════════════════════════════
+
+  server.tool("okx_predictions_place_order", "## 功能：下 Outcomes 预测市场订单\n## 场景：用于对预测市场（YES/NO）下买单或卖单\n## 关键词：预测订单, place order, outcomes, 下单, YES, NO\n## 参数：\n##   - marketId: 市场ID（必填）\n##   - side: buy=买入, sell=卖出（必填）\n##   - outcome: yes=看涨结果, no=看跌结果（必填）\n##   - size: 合约张数（必填）\n##   - price: 限价，不填则市价\n## 鉴权：需要 API Key（交易权限+EIP-712）\n## 风险：WRITE — 下单操作，需用户确认\n## 返回量：微小 ~500B\n## 关联：本工具 → okx_predictions_cancel_order 撤单", {
+    marketId: z.string().describe("市场ID（必填）"),
+    side: z.enum(["buy","sell"]).describe("买卖方向"),
+    outcome: z.enum(["yes","no"]).describe("结果方向"),
+    size: z.string().describe("合约张数"),
+    price: z.string().optional().describe("限价，不填则市价")
+  }, async ({ marketId, side, outcome, size, price }) => {
+    if (!auth) return toError(AUTH_REQUIRED)
+    try {
+      const body: Record<string, unknown> = { marketId, side, outcome, size }
+      if (price) body.price = price
+      return toResult(await privateApi.predictionsPlaceOrder(auth, body))
+    } catch (e) { return toError(e) }
+  })
+
+  server.tool("okx_predictions_cancel_order", "## 功能：撤销 Outcomes 预测市场订单\n## 参数：\n##   - orderId: 订单ID（可选）\n## 鉴权：需要 API Key（EIP-712）\n## 风险：WRITE — 撤单操作，需用户确认\n## 关联：okx_predictions_place_order → 本工具",
+    { orderId: z.string().optional().describe("订单ID") },
+    async ({ orderId }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = {}
+        if (orderId) body.orderId = orderId
+        return toResult(await privateApi.predictionsCancelOrder(auth, body))
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool("okx_predictions_cancel_all", "## 功能：撤销 Outcomes 所有订单\n## 参数：\n##   - assetIds: 资产ID列表，逗号分隔（可选）\n## 鉴权：需要 API Key（EIP-712）\n## 风险：WRITE — 批量撤单，需用户确认\n## 关联：本工具 → okx_predictions_order_list 查看全部",
+    { assetIds: z.string().optional().describe("资产ID列表，逗号分隔") },
+    async ({ assetIds }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = {}
+        if (assetIds) body.assetIds = assetIds
+        return toResult(await privateApi.predictionsCancelAll(auth, body))
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool("okx_predictions_heartbeat", "## 功能：Outcomes 心跳保活，防止系统自动撤单\n## 参数：无\n## 鉴权：需要 API Key（EIP-712）\n## 风险：WRITE — 发送心跳，Agent 可自动调用\n## 关联：本工具 → okx_predictions_place_order 保持连接",
+    {},
+    async () => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await privateApi.predictionsHeartbeat(auth)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool("okx_predictions_get_order", "## 功能：查询单个 Outcomes 订单详情\n## 参数：\n##   - orderId: 订单ID（必填）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~1KB\n## 关联：okx_predictions_order_list → 本工具",
+    { orderId: z.string().describe("订单ID（必填）") },
+    async ({ orderId }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await privateApi.predictionsGetOrder(auth, orderId)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool("okx_predictions_order_list", "## 功能：查询 Outcomes 订单列表\n## 参数：\n##   - marketId: 市场ID（可选）\n##   - status: 订单状态（可选）\n##   - limit: 返回条数（可选）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：本工具 → okx_predictions_get_order 查看详情", {
+    marketId: z.string().optional().describe("市场ID"),
+    status: z.string().optional().describe("订单状态"),
+    limit: z.number().int().min(1).max(100).optional().describe("返回条数")
+  }, async ({ marketId, status, limit }) => {
+    if (!auth) return toError(AUTH_REQUIRED)
+    try { return toResult(await privateApi.predictionsOrderList(auth, marketId, status, limit)) }
+    catch (e) { return toError(e) }
+  })
+
 }
