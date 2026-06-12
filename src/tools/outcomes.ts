@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi } from "../adapters/okx.js"
 import { getHRailsClient, toResult, toError } from "./shared.js"
 
-export function registerOutcomesTools(server: McpServer): void {
+export function registerOutcomesTools(server: McpServer, auth: Auth | null): void {
   server.tool(
     "outcomes_list_events",
     "## 功能：列出OKX预测市场所有事件（世界杯、选举等）\n## 场景：用于浏览可交易的预测市场、按关键词搜索事件、了解各事件成交量和活跃度\n## 关键词：预测市场, 事件列表, outcomes, 世界杯, 选举, 概率交易\n## 参数：\n##   - pageSize: 每页数量，默认20\n##   - search: 关键词搜索事件标题\n##   - includeMarkets: 是否附带每个事件的市场列表\n## 鉴权：⚠️ 需要 HRAILS API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~3KB\n## 关联：本工具浏览事件 → outcomes_get_event 查看单个事件详情 → outcomes_get_market 查看市场",
@@ -333,4 +333,62 @@ export function registerOutcomesTools(server: McpServer): void {
       } catch (e) { return toError(e) }
     }
   )
+
+  // T-005: 事件合约交易
+
+  server.tool("okx_event_place_order", "## 功能：下事件合约订单\n## 参数：\n##   - instId: 合约ID\n##   - side: buy/sell\n##   - outcome: yes/no（必填）\n##   - sz: 数量\n##   - px: 限价\n##   - ordType: market/limit/post_only\n## 鉴权：需要 API Key（交易权限）\n## 风险：WRITE\n## 返回量：~500B\n## 关联：本工具 → okx_event_cancel_order", {
+    instId: z.string().describe("合约ID"), side: z.enum(["buy","sell"]).describe("买卖方向"),
+    outcome: z.enum(["yes","no"]).describe("结果方向"), sz: z.string().describe("数量"),
+    px: z.string().optional().describe("限价"), ordType: z.enum(["market","limit","post_only"]).optional().describe("订单类型")
+  }, async ({ instId, side, outcome, sz, px, ordType }) => {
+    if (!auth) return toError(AUTH_REQUIRED)
+    try {
+      const body = { instId, side, sz, outcome, instType: "EVENTS" } as Record<string, unknown>
+      if (px) body.px = px
+      if (ordType) body.ordType = ordType
+      if (ordType !== "post_only") body.speedBump = "1"
+      return toResult(await privateApi.placeOrder(auth, body))
+    } catch (e) { return toError(e) }
+  })
+
+  server.tool("okx_event_cancel_order", "## 功能：撤销事件合约订单\n## 参数：\n##   - instId: 合约ID\n##   - ordId: 订单ID\n## 鉴权：需要 API Key\n## 风险：WRITE\n## 关联：okx_event_place_order → 本工具",
+    { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID") },
+    async ({ instId, ordId }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await privateApi.cancelOrder(auth, instId, ordId)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool("okx_event_amend_order", "## 功能：修改事件合约订单\n## 参数：\n##   - instId: 合约ID\n##   - ordId: 订单ID\n##   - newSz: 新数量\n##   - newPx: 新价格\n## 鉴权：需要 API Key\n## 风险：WRITE\n## 关联：okx_event_place_order → 本工具", {
+    instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID"),
+    newSz: z.string().optional().describe("新数量"), newPx: z.string().optional().describe("新价格")
+  }, async ({ instId, ordId, newSz, newPx }) => {
+    if (!auth) return toError(AUTH_REQUIRED)
+    try {
+      const body = { instId, ordId } as Record<string, unknown>
+      if (newSz) body.newSz = newSz
+      if (newPx) body.newPx = newPx
+      return toResult(await privateApi.amendOrder(auth, body))
+    } catch (e) { return toError(e) }
+  })
+
+  server.tool("okx_event_fills", "## 功能：查询事件合约成交记录\n## 参数：\n##   - instId: 合约ID\n##   - limit: 返回条数\n## 鉴权：需要 API Key\n## 风险：READ\n## 返回量：~5KB\n## 关联：okx_event_place_order → 本工具",
+    { instId: z.string().optional().describe("合约ID"), limit: z.number().int().min(1).max(100).optional().describe("返回条数") },
+    async ({ instId, limit }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await privateApi.getFills(auth, "EVENTS", instId, limit)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool("okx_event_instruments", "## 功能：查询可交易的事件合约列表\n## 参数：\n##   - seriesId: 事件系列ID\n## 鉴权：需要 API Key\n## 风险：READ\n## 返回量：~5KB\n## 关联：本工具 → okx_event_place_order",
+    { seriesId: z.string().optional().describe("事件系列ID") },
+    async ({ seriesId }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try { return toResult(await publicApi.getInstruments("EVENTS", seriesId)) }
+      catch (e) { return toError(e) }
+    }
+  )
+
 }
