@@ -207,6 +207,314 @@ export function registerOutcomesTools(server: McpServer): void {
     }
   )
 
+  // ── T-003 Outcomes 订单 (EIP-712) ───────────────────────────────────────
+  server.tool(
+    "okx_predictions_place_order",
+    "## 功能：Outcomes 预测市场下单（需要 EIP-712 签名）\n## 场景：下 YES/NO 仓位\n## 关键词：预测下单, predictions order, EIP712\n## 参数：\n##   - marketId: 市场ID\n##   - side: buy/sell\n##   - size: 数量\n##   - outcome: yes/no\n##   - price: 限价时必填\n## 鉴权：需要 OKX Key + AGENT_PRIVATE_KEY (EVM)\n## 风险：真实下单，有资金风险\n## 返回量：订单结果\n## 关联：先 outcomes_get_market → 本工具下单 → okx_predictions_get_order 查状态",
+    {
+      marketId: z.string().describe("市场ID"),
+      side: z.enum(["buy", "sell"]).describe("buy/sell"),
+      size: z.string().describe("数量"),
+      outcome: z.enum(["yes", "no"]).describe("yes/no"),
+      price: z.string().optional().describe("限价价格"),
+    },
+    async ({ marketId, side, size, outcome, price }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      const privateKey = process.env.AGENT_PRIVATE_KEY
+      if (!privateKey) return toError(new Error("未配置 AGENT_PRIVATE_KEY"))
+      try {
+        const body: any = { marketId, side, size, outcome }
+        if (price) body.price = price
+        const data = await privateApi.createPredictionsOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_cancel_order",
+    "## 功能：撤销 Outcomes 订单\n## 场景：撤单\n## 关键词：预测撤单\n## 参数：\n##   - orderId: 订单ID\n## 鉴权：需要 Key\n## 风险：撤单\n## 返回量：结果\n## 关联：place → 本工具撤单",
+    { orderId: z.string().describe("订单ID") },
+    async ({ orderId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.cancelPredictionsOrder(auth, { orderId })
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_cancel_all",
+    "## 功能：撤销全部 Outcomes 订单\n## 场景：清仓\n## 关键词：预测全撤\n## 参数：\n##   - assetIds: 可选\n## 鉴权：需要 Key\n## 风险：全撤\n## 返回量：结果\n## 关联：批量撤单",
+    { assetIds: z.string().optional().describe("可选资产ID列表") },
+    async ({ assetIds }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body = assetIds ? { assetIds } : {}
+        const data = await privateApi.cancelAllPredictionsOrders(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_heartbeat",
+    "## 功能：Outcomes 心跳保活\n## 场景：防止断线撤单\n## 关键词：预测心跳\n## 参数：无\n## 鉴权：需要 Key\n## 风险：无\n## 返回量：结果\n## 关联：下单后定时调用",
+    {},
+    async () => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.predictionsHeartbeat(auth)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_order",
+    "## 功能：查询 Outcomes 订单详情\n## 场景：查单\n## 关键词：预测订单详情\n## 参数：\n##   - orderId\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：订单信息\n## 关联：place → 本工具",
+    { orderId: z.string().describe("订单ID") },
+    async ({ orderId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.getPredictionsOrder(auth, orderId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_order_list",
+    "## 功能：查询 Outcomes 订单列表\n## 场景：查历史单\n## 关键词：预测订单列表\n## 参数：\n##   - marketId?, status?, limit?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：列表\n## 关联：place → 本工具",
+    {
+      marketId: z.string().optional().describe("可选市场ID"),
+      status: z.string().optional().describe("可选状态"),
+      limit: z.number().optional().describe("可选数量"),
+    },
+    async ({ marketId, status, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (marketId) params.marketId = marketId
+        if (status) params.status = status
+        if (limit) params.limit = limit
+        const data = await privateApi.getPredictionsOrders(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ── T-004 Outcomes 持仓 & 账户 ─────────────────────────────────────────
+  server.tool(
+    "okx_predictions_positions",
+    "## 功能：查询 Outcomes 持仓\n## 场景：查仓位\n## 关键词：预测持仓\n## 参数：\n##   - marketId?, status?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：持仓列表\n## 关联：place → 本工具",
+    {
+      marketId: z.string().optional().describe("可选"),
+      status: z.string().optional().describe("可选"),
+    },
+    async ({ marketId, status }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (marketId) params.marketId = marketId
+        if (status) params.status = status
+        const data = await privateApi.getPredictionsPositions(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_split",
+    "## 功能：xp 拆分为 YES+NO\n## 场景：持仓转换\n## 关键词：预测 split\n## 参数：\n##   - amount\n## 鉴权：需要 Key + EIP712\n## 风险：资金操作\n## 返回量：结果\n## 关联：positions → 本工具",
+    { amount: z.string().describe("金额") },
+    async ({ amount }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.splitPredictionsPosition(auth, { amount })
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_merge",
+    "## 功能：YES+NO 合并为 xp\n## 场景：持仓转换\n## 关键词：预测 merge\n## 参数：\n##   - amount\n## 鉴权：需要 Key + EIP712\n## 风险：资金操作\n## 返回量：结果\n## 关联：split 逆操作",
+    { amount: z.string().describe("金额") },
+    async ({ amount }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.mergePredictionsPosition(auth, { amount })
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_redeem",
+    "## 功能：事件结算后赎回赢家代币\n## 场景：结算赎回\n## 关键词：预测 redeem\n## 参数：\n##   - assetId?\n## 鉴权：需要 Key + EIP712\n## 风险：资金操作\n## 返回量：结果\n## 关联：事件结束后调用",
+    { assetId: z.string().optional().describe("可选资产ID") },
+    async ({ assetId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body = assetId ? { assetId } : {}
+        const data = await privateApi.redeemPredictions(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_balance",
+    "## 功能：查询 xp 余额\n## 场景：查预测账户余额\n## 关键词：预测余额\n## 参数：无\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：余额\n## 关联：positions 相关",
+    {},
+    async () => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.getPredictionsBalance(auth)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_trades",
+    "## 功能：查询 Outcomes 成交记录\n## 场景：查 fills\n## 关键词：预测成交\n## 参数：\n##   - marketId?, limit?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：成交列表\n## 关联：order 相关",
+    {
+      marketId: z.string().optional().describe("可选"),
+      limit: z.number().optional().describe("可选"),
+    },
+    async ({ marketId, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (marketId) params.marketId = marketId
+        if (limit) params.limit = limit
+        const data = await privateApi.getPredictionsTrades(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ── T-005 Event Contracts (EVENTS instType) ────────────────────────────
+  server.tool(
+    "okx_event_place_order",
+    "## 功能：事件合约下单\n## 场景：主站 EVENTS 合约交易\n## 关键词：event contract, EVENTS, outcome\n## 参数：\n##   - instId, side, sz, outcome, px?, ordType?\n## 鉴权：需要 Key\n## 风险：真实交易\n## 返回量：订单结果\n## 关联：okx_event_instruments → 本工具 (必须 outcome+speedBump)",
+    {
+      instId: z.string().describe("合约ID"),
+      side: z.enum(["buy", "sell"]).describe("buy/sell"),
+      sz: z.string().describe("数量"),
+      outcome: z.enum(["yes", "no"]).describe("必填 yes/no"),
+      px: z.string().optional().describe("价格"),
+      ordType: z.string().optional().describe("订单类型"),
+    },
+    async ({ instId, side, sz, outcome, px, ordType }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body: any = { instId, side, sz, outcome, speedBump: "1" }
+        if (px) body.px = px
+        if (ordType) body.ordType = ordType
+        const data = await privateApi.placeOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_cancel_order",
+    "## 功能：事件合约撤单\n## 场景：撤 EVENTS 单\n## 关键词：event cancel\n## 参数：\n##   - instId?, ordId?\n## 鉴权：需要 Key\n## 风险：撤单\n## 返回量：结果\n## 关联：place → cancel",
+    {
+      instId: z.string().optional().describe("可选"),
+      ordId: z.string().optional().describe("可选"),
+    },
+    async ({ instId, ordId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body: any = {}
+        if (instId) body.instId = instId
+        if (ordId) body.ordId = ordId
+        const data = await privateApi.cancelOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_amend_order",
+    "## 功能：事件合约改单\n## 场景：改 EVENTS 单\n## 关键词：event amend\n## 参数：\n##   - instId?, ordId?, newSz?, newPx?\n## 鉴权：需要 Key\n## 风险：改单\n## 返回量：结果\n## 关联：place → amend",
+    {
+      instId: z.string().optional().describe("可选"),
+      ordId: z.string().optional().describe("可选"),
+      newSz: z.string().optional().describe("新数量"),
+      newPx: z.string().optional().describe("新价格"),
+    },
+    async ({ instId, ordId, newSz, newPx }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body: any = {}
+        if (instId) body.instId = instId
+        if (ordId) body.ordId = ordId
+        if (newSz) body.newSz = newSz
+        if (newPx) body.newPx = newPx
+        const data = await privateApi.amendOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_fills",
+    "## 功能：事件合约成交记录\n## 场景：查 fills\n## 关键词：event fills\n## 参数：\n##   - instId?, limit?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：fills\n## 关联：place → fills",
+    {
+      instId: z.string().optional().describe("可选"),
+      limit: z.number().optional().describe("可选"),
+    },
+    async ({ instId, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (instId) params.instId = instId
+        if (limit) params.limit = limit
+        const data = await privateApi.getFills(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_instruments",
+    "## 功能：查询可交易事件合约\n## 场景：发现 EVENTS 品种\n## 关键词：event instruments\n## 参数：\n##   - seriesId?\n## 鉴权：PUBLIC\n## 风险：只读\n## 返回量：合约列表\n## 关联：本工具 → place event order",
+    {
+      seriesId: z.string().optional().describe("可选系列ID"),
+    },
+    async ({ seriesId }) => {
+      try {
+        const params: any = { instType: "EVENTS" }
+        if (seriesId) params.seriesId = seriesId
+        const data = await publicApi.getInstruments("EVENTS", seriesId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+}
+
   // ── T-001: OKX Predictions 公共查询（5 端点） ────────────────────────────
 
   server.tool(
@@ -333,4 +641,310 @@ export function registerOutcomesTools(server: McpServer): void {
       } catch (e) { return toError(e) }
     }
   )
-}
+
+  // ── T-003 Outcomes 订单 (EIP-712) ───────────────────────────────────────
+  server.tool(
+    "okx_predictions_place_order",
+    "## 功能：Outcomes 预测市场下单（需要 EIP-712 签名）\n## 场景：下 YES/NO 仓位\n## 关键词：预测下单, predictions order, EIP712\n## 参数：\n##   - marketId: 市场ID\n##   - side: buy/sell\n##   - size: 数量\n##   - outcome: yes/no\n##   - price: 限价时必填\n## 鉴权：需要 OKX Key + AGENT_PRIVATE_KEY (EVM)\n## 风险：真实下单，有资金风险\n## 返回量：订单结果\n## 关联：先 outcomes_get_market → 本工具下单 → okx_predictions_get_order 查状态",
+    {
+      marketId: z.string().describe("市场ID"),
+      side: z.enum(["buy", "sell"]).describe("buy/sell"),
+      size: z.string().describe("数量"),
+      outcome: z.enum(["yes", "no"]).describe("yes/no"),
+      price: z.string().optional().describe("限价价格"),
+    },
+    async ({ marketId, side, size, outcome, price }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      const privateKey = process.env.AGENT_PRIVATE_KEY
+      if (!privateKey) return toError(new Error("未配置 AGENT_PRIVATE_KEY"))
+      try {
+        const body: any = { marketId, side, size, outcome }
+        if (price) body.price = price
+        const data = await privateApi.createPredictionsOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_cancel_order",
+    "## 功能：撤销 Outcomes 订单\n## 场景：撤单\n## 关键词：预测撤单\n## 参数：\n##   - orderId: 订单ID\n## 鉴权：需要 Key\n## 风险：撤单\n## 返回量：结果\n## 关联：place → 本工具撤单",
+    { orderId: z.string().describe("订单ID") },
+    async ({ orderId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.cancelPredictionsOrder(auth, { orderId })
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_cancel_all",
+    "## 功能：撤销全部 Outcomes 订单\n## 场景：清仓\n## 关键词：预测全撤\n## 参数：\n##   - assetIds: 可选\n## 鉴权：需要 Key\n## 风险：全撤\n## 返回量：结果\n## 关联：批量撤单",
+    { assetIds: z.string().optional().describe("可选资产ID列表") },
+    async ({ assetIds }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body = assetIds ? { assetIds } : {}
+        const data = await privateApi.cancelAllPredictionsOrders(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_heartbeat",
+    "## 功能：Outcomes 心跳保活\n## 场景：防止断线撤单\n## 关键词：预测心跳\n## 参数：无\n## 鉴权：需要 Key\n## 风险：无\n## 返回量：结果\n## 关联：下单后定时调用",
+    {},
+    async () => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.predictionsHeartbeat(auth)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_get_order",
+    "## 功能：查询 Outcomes 订单详情\n## 场景：查单\n## 关键词：预测订单详情\n## 参数：\n##   - orderId\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：订单信息\n## 关联：place → 本工具",
+    { orderId: z.string().describe("订单ID") },
+    async ({ orderId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.getPredictionsOrder(auth, orderId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_order_list",
+    "## 功能：查询 Outcomes 订单列表\n## 场景：查历史单\n## 关键词：预测订单列表\n## 参数：\n##   - marketId?, status?, limit?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：列表\n## 关联：place → 本工具",
+    {
+      marketId: z.string().optional().describe("可选市场ID"),
+      status: z.string().optional().describe("可选状态"),
+      limit: z.number().optional().describe("可选数量"),
+    },
+    async ({ marketId, status, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (marketId) params.marketId = marketId
+        if (status) params.status = status
+        if (limit) params.limit = limit
+        const data = await privateApi.getPredictionsOrders(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ── T-004 Outcomes 持仓 & 账户 ─────────────────────────────────────────
+  server.tool(
+    "okx_predictions_positions",
+    "## 功能：查询 Outcomes 持仓\n## 场景：查仓位\n## 关键词：预测持仓\n## 参数：\n##   - marketId?, status?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：持仓列表\n## 关联：place → 本工具",
+    {
+      marketId: z.string().optional().describe("可选"),
+      status: z.string().optional().describe("可选"),
+    },
+    async ({ marketId, status }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (marketId) params.marketId = marketId
+        if (status) params.status = status
+        const data = await privateApi.getPredictionsPositions(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_split",
+    "## 功能：xp 拆分为 YES+NO\n## 场景：持仓转换\n## 关键词：预测 split\n## 参数：\n##   - amount\n## 鉴权：需要 Key + EIP712\n## 风险：资金操作\n## 返回量：结果\n## 关联：positions → 本工具",
+    { amount: z.string().describe("金额") },
+    async ({ amount }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.splitPredictionsPosition(auth, { amount })
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_merge",
+    "## 功能：YES+NO 合并为 xp\n## 场景：持仓转换\n## 关键词：预测 merge\n## 参数：\n##   - amount\n## 鉴权：需要 Key + EIP712\n## 风险：资金操作\n## 返回量：结果\n## 关联：split 逆操作",
+    { amount: z.string().describe("金额") },
+    async ({ amount }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.mergePredictionsPosition(auth, { amount })
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_redeem",
+    "## 功能：事件结算后赎回赢家代币\n## 场景：结算赎回\n## 关键词：预测 redeem\n## 参数：\n##   - assetId?\n## 鉴权：需要 Key + EIP712\n## 风险：资金操作\n## 返回量：结果\n## 关联：事件结束后调用",
+    { assetId: z.string().optional().describe("可选资产ID") },
+    async ({ assetId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body = assetId ? { assetId } : {}
+        const data = await privateApi.redeemPredictions(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_balance",
+    "## 功能：查询 xp 余额\n## 场景：查预测账户余额\n## 关键词：预测余额\n## 参数：无\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：余额\n## 关联：positions 相关",
+    {},
+    async () => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const data = await privateApi.getPredictionsBalance(auth)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_predictions_trades",
+    "## 功能：查询 Outcomes 成交记录\n## 场景：查 fills\n## 关键词：预测成交\n## 参数：\n##   - marketId?, limit?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：成交列表\n## 关联：order 相关",
+    {
+      marketId: z.string().optional().describe("可选"),
+      limit: z.number().optional().describe("可选"),
+    },
+    async ({ marketId, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (marketId) params.marketId = marketId
+        if (limit) params.limit = limit
+        const data = await privateApi.getPredictionsTrades(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ── T-005 Event Contracts (EVENTS instType) ────────────────────────────
+  server.tool(
+    "okx_event_place_order",
+    "## 功能：事件合约下单\n## 场景：主站 EVENTS 合约交易\n## 关键词：event contract, EVENTS, outcome\n## 参数：\n##   - instId, side, sz, outcome, px?, ordType?\n## 鉴权：需要 Key\n## 风险：真实交易\n## 返回量：订单结果\n## 关联：okx_event_instruments → 本工具 (必须 outcome+speedBump)",
+    {
+      instId: z.string().describe("合约ID"),
+      side: z.enum(["buy", "sell"]).describe("buy/sell"),
+      sz: z.string().describe("数量"),
+      outcome: z.enum(["yes", "no"]).describe("必填 yes/no"),
+      px: z.string().optional().describe("价格"),
+      ordType: z.string().optional().describe("订单类型"),
+    },
+    async ({ instId, side, sz, outcome, px, ordType }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body: any = { instId, side, sz, outcome, speedBump: "1" }
+        if (px) body.px = px
+        if (ordType) body.ordType = ordType
+        const data = await privateApi.placeOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_cancel_order",
+    "## 功能：事件合约撤单\n## 场景：撤 EVENTS 单\n## 关键词：event cancel\n## 参数：\n##   - instId?, ordId?\n## 鉴权：需要 Key\n## 风险：撤单\n## 返回量：结果\n## 关联：place → cancel",
+    {
+      instId: z.string().optional().describe("可选"),
+      ordId: z.string().optional().describe("可选"),
+    },
+    async ({ instId, ordId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body: any = {}
+        if (instId) body.instId = instId
+        if (ordId) body.ordId = ordId
+        const data = await privateApi.cancelOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_amend_order",
+    "## 功能：事件合约改单\n## 场景：改 EVENTS 单\n## 关键词：event amend\n## 参数：\n##   - instId?, ordId?, newSz?, newPx?\n## 鉴权：需要 Key\n## 风险：改单\n## 返回量：结果\n## 关联：place → amend",
+    {
+      instId: z.string().optional().describe("可选"),
+      ordId: z.string().optional().describe("可选"),
+      newSz: z.string().optional().describe("新数量"),
+      newPx: z.string().optional().describe("新价格"),
+    },
+    async ({ instId, ordId, newSz, newPx }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const body: any = {}
+        if (instId) body.instId = instId
+        if (ordId) body.ordId = ordId
+        if (newSz) body.newSz = newSz
+        if (newPx) body.newPx = newPx
+        const data = await privateApi.amendOrder(auth, body)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_fills",
+    "## 功能：事件合约成交记录\n## 场景：查 fills\n## 关键词：event fills\n## 参数：\n##   - instId?, limit?\n## 鉴权：需要 Key\n## 风险：只读\n## 返回量：fills\n## 关联：place → fills",
+    {
+      instId: z.string().optional().describe("可选"),
+      limit: z.number().optional().describe("可选"),
+    },
+    async ({ instId, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(new Error("AUTH_REQUIRED"))
+      try {
+        const params: any = {}
+        if (instId) params.instId = instId
+        if (limit) params.limit = limit
+        const data = await privateApi.getFills(auth, params)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_event_instruments",
+    "## 功能：查询可交易事件合约\n## 场景：发现 EVENTS 品种\n## 关键词：event instruments\n## 参数：\n##   - seriesId?\n## 鉴权：PUBLIC\n## 风险：只读\n## 返回量：合约列表\n## 关联：本工具 → place event order",
+    {
+      seriesId: z.string().optional().describe("可选系列ID"),
+    },
+    async ({ seriesId }) => {
+      try {
+        const params: any = { instType: "EVENTS" }
+        if (seriesId) params.seriesId = seriesId
+        const data = await publicApi.getInstruments("EVENTS", seriesId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )

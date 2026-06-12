@@ -1,4 +1,5 @@
 import crypto from "node:crypto"
+import { signTypedData, SignTypedDataVersion } from "@metamask/eth-sig-util"
 
 const BASE = "https://www.okx.com"
 
@@ -9,6 +10,19 @@ function sign(ts: string, method: string, path: string, body: string, secret: st
 
 function timestamp(): string {
   return new Date().toISOString().replace(/(\.\d{3})\d*Z/, "$1Z")
+}
+
+// EIP-712 signing for Outcomes predictions (T-003/T-004)
+function eip712Sign(privateKeyHex: string, typedData: any): string {
+  if (!privateKeyHex) {
+    throw new Error("未配置 AGENT_PRIVATE_KEY (EVM 私钥)，无法进行 EIP-712 签名")
+  }
+  const privateKey = Buffer.from(privateKeyHex.replace(/^0x/, ""), "hex")
+  return signTypedData({
+    privateKey,
+    data: typedData,
+    version: SignTypedDataVersion.V4,
+  })
 }
 
 function buildQuery(params: Record<string, string | number | boolean | undefined>): string {
@@ -962,6 +976,47 @@ export const privateApi = {
 
   getFlexibleLoanInfo: (auth: Auth) =>
     request<unknown[]>("GET", "/api/v5/finance/flexible-loan/loan-info", { auth }),
+
+  // ── Outcomes Predictions private (T-003/T-004 EIP-712) ─────────────────
+  // NOTE: 签名在工具层使用 eip712Sign 准备后传入 body 或单独处理
+  createPredictionsOrder: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown>("POST", "/api/v5/predictions/orders", { body, auth }),
+
+  cancelPredictionsOrder: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown>("POST", "/api/v5/predictions/orders/cancel", { body, auth }),
+
+  cancelAllPredictionsOrders: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown>("POST", "/api/v5/predictions/orders/cancel-all", { body, auth }),
+
+  predictionsHeartbeat: (auth: Auth) =>
+    request<unknown>("POST", "/api/v5/predictions/heartbeat", { auth }),
+
+  getPredictionsOrder: (auth: Auth, orderId: string) =>
+    request<unknown>("GET", `/api/v5/predictions/orders/${orderId}`, { auth }),
+
+  getPredictionsOrders: (auth: Auth, params?: Record<string, unknown>) =>
+    request<unknown[]>("GET", "/api/v5/predictions/orders", { params, auth }),
+
+  getPredictionsPositions: (auth: Auth, params?: Record<string, unknown>) =>
+    request<unknown[]>("GET", "/api/v5/predictions/positions", { params, auth }),
+
+  splitPredictionsPosition: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown>("POST", "/api/v5/predictions/positions/split", { body, auth }),
+
+  mergePredictionsPosition: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown>("POST", "/api/v5/predictions/positions/merge", { body, auth }),
+
+  redeemPredictions: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown>("POST", "/api/v5/predictions/positions/redeem", { body, auth }),
+
+  getPredictionsBalance: (auth: Auth) =>
+    request<unknown>("GET", "/api/v5/predictions/balance", { auth }),
+
+  getPredictionsTrades: (auth: Auth, params?: Record<string, unknown>) =>
+    request<unknown[]>("GET", "/api/v5/predictions/trades", { params, auth }),
+
+  // ── Event Contracts (T-005, reuse + extra params) ──────────────────────
+  // 复用 placeOrder 等，但工具层注入 outcome + speedBump
 
   getFlexibleLoanHistory: (auth: Auth) =>
     request<unknown[]>("GET", "/api/v5/finance/flexible-loan/loan-history", { auth }),
