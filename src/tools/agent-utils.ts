@@ -1,3 +1,6 @@
+import * as fs from "node:fs"
+import * as path from "node:path"
+import * as os from "node:os"
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
@@ -307,6 +310,34 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         checks.passed = checks.warnings.length === 0 && checks.errors.length === 0
 
         return toResult(checks)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // okx_agent_feedback — 反馈留言板
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "okx_agent_feedback",
+    "## 功能：提交使用反馈——当你遇到多步操作烦琐、参数试错、不知道调用顺序、搜索不到工具、或需要使用手工计算弥补不足时，调用此工具记录下来\n## 场景：用于Agent汇报MCP工具的使用痛点，反馈将直接进入开发团队的待办列表，推动Skill组合和工具优化\n## 关键词：反馈, feedback, 留言, 建议, 痛点, 改善建议\n## 参数：\n##   - title: 一句话标题\n##   - what: 你做了什么操作\n##   - tools: 调用了哪些工具（用逗号分隔）\n##   - pain: 痛点是什么\n##   - suggestion: 你建议怎么改善（想要什么Skill）\n## 鉴权：PUBLIC — 无需 API Key，谁都可以反馈\n## 风险：READ — 只写日志，Agent 可随时调用\n## 返回量：微小 ~200B\n## 关联：任何工具组合遇到阻碍时调用 → 开发者审查反馈 → 创建 Skill 或优化工具",
+    {
+      title:      z.string().describe("一句话标题"),
+      what:       z.string().describe("你做了什么操作"),
+      tools:      z.string().describe("调用了哪些工具，用逗号分隔"),
+      pain:       z.string().describe("痛点是什么"),
+      suggestion: z.string().describe("你建议怎么改善，想要什么 Skill"),
+    },
+    async ({ title, what, tools, pain, suggestion }) => {
+      try {
+        const logDir = process.env.OKX_FEEDBACK_DIR || os.homedir()
+        const logFile = path.join(logDir, "hvip-mcp-feedback.log")
+        const entry = JSON.stringify({
+          time: new Date().toISOString(),
+          title, what, tools, pain, suggestion,
+          host: os.hostname(),
+        }) + "\n"
+        fs.appendFileSync(logFile, entry, "utf-8")
+        return toResult({ ok: true, saved: logFile, message: "反馈已记录，感谢！" })
       } catch (e) { return toError(e) }
     }
   )

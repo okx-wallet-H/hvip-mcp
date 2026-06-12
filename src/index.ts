@@ -22,7 +22,7 @@ import { registerAgentUtils }    from "./tools/agent-utils.js"
 import { getAuth } from "./tools/shared.js"
 
 async function main() {
-  const server = new McpServer({ name: "hvip", version: "0.2.1" })
+  const server = new McpServer({ name: "hvip", version: "0.2.35" })
   const auth   = getAuth()
 
   registerMarketTools(server)
