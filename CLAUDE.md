@@ -1,8 +1,39 @@
 # CLAUDE.md — AI Agent 项目指南
 
-## 这是什么
+## 快速索引
 
-**hvip-mcp-server** — 把 OKX 交易所全部 REST API 包装成 MCP 工具（301 个），让任何 AI Agent 都能调用 OKX。
+```
+hvip-mcp-server v0.2.35 · 304 MCP 工具 · 97.7% OKX REST 覆盖
+
+入口 → src/index.ts → 注册全部 19 个模块
+共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
+适配 → src/adapters/okx.ts    （OKX REST 签名 + 请求）
+
+┌─────────────────────────────────────────────────────┐
+│ 原子层 (301 工具)                                    │
+├────────────┬────────────┬────────────┬──────────────┤
+│ 交易类     │ 行情类     │ 数据类     │ 资金类       │
+│ trading   │ market     │ public     │ funding      │
+│ algo      │            │ stats      │ account      │
+│ sprd      │            │ rubik      │ subaccount   │
+│ rfq       │            │ outcomes   │ fiat         │
+├────────────┴────────────┴────────────┴──────────────┤
+│ 策略类     │ bot(grid) │ signal │ copy │ finance   │
+│            │ affiliate │        │      │            │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│ Skill 组合层 (3 个)                                  │
+│ okx_account_overview — balance+positions+config+val │
+│ okx_quick_market     — ticker+depth+fundingRate     │
+│ okx_preflight_check  — maxSize+limit+convert+price  │
+└─────────────────────────────────────────────────────┘
+
+📋 反馈留言板 → SKILL_FEEDBACK.md（遇到繁琐操作在此留言）
+📖 对接标准 → docs/OKX-MCP-API对接标准-v0.1.8.md
+🔧 防幻觉 SOP → docs/OKX-MCP-防幻觉对接SOP-v1.0.md
+🧠 代码知识图谱 → .codegraph/（496 节点 / 2,027 边）
+```
 
 ## ⚠️ 使用反馈（每次执行交易操作后必做）
 
@@ -23,17 +54,17 @@
 **建议的 Skill**：
 ```
 
-这样我们知道哪里最需要做 Skill 组合。每 5 条反馈就是下一个 Skill 的 input。
+每 5 条反馈就是下一个 Skill 的 input。
 
 ## 目录结构
 
 ```
 src/
-├── index.ts           ← 入口，注册全部 18 个模块
+├── index.ts           ← 入口，注册全部 19 个模块
 ├── shared.ts          ← 共享常量（INST_TYPE_*枚举、toResult/toError、错误三统一）
 ├── adapters/okx.ts    ← OKX REST API 适配层（签名、请求）
 ├── adapters/hrails.ts ← 预测市场适配层
-└── tools/             ← 18 个工具模块，按 OKX API 模块划分
+└── tools/             ← 19 个工具模块，按 OKX API 模块划分
     ├── market.ts      ← 行情（ticker/candles/orderbook）
     ├── public.ts      ← 公共数据（instruments/funding/price-limit）
     ├── trading.ts     ← 交易（下单/撤单/改单/批量）
@@ -50,8 +81,10 @@ src/
     ├── subaccount.ts  ← 子账户
     ├── fiat.ts        ← 法币
     ├── affiliate.ts   ← 推广
-    └── outcomes.ts    ← 预测市场
+    ├── outcomes.ts    ← 预测市场
+    └── agent-utils.ts ← Skill 组合层
 docs/                  ← SOP、对接标准、审计报告
+SKILL_FEEDBACK.md      ← Agent 反馈留言板
 ```
 
 ## 代码知识图谱
@@ -77,4 +110,4 @@ npm start              # 启动 MCP Server
 
 ## 当前状态
 
-v0.2.34 · 301 个 MCP 工具 · 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
+v0.2.35 · 304 MCP 工具（301 原子 + 3 Skill）· 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
