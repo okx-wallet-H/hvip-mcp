@@ -36,7 +36,7 @@ async function main() {
   registerPublicTools(server, auth)
   registerStatsTools(server)
   registerSpreadTools(server, auth)
-  registerOutcomesTools(server, auth)
+  registerOutcomesTools(server)
   registerAccountTools(server, auth)
   registerTradingTools(server, auth)
   registerAlgoTools(server, auth)
