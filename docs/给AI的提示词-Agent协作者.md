@@ -48,11 +48,21 @@ npm install
 - `CONTRIBUTING.md` — 分支协作流程
 - `src/tools/outcomes.ts` — 照这个写
 
+**⚠️ 每次新建分支前必须 rebase master：**
+```bash
+git checkout master
+git pull origin master
+git checkout -b task/T-XXX
+```
+不 rebase 会导致代码重复、冲突，审核直接关。
+
 **红线**：
 - 描述必须用 8 字段模板：`## 功能 / ## 场景 / ## 关键词 / ## 参数 / ## 鉴权 / ## 风险 / ## 返回量 / ## 关联`
 - 错误统一 `toResult()` / `toError()`
 - 时间戳必须加 `tsIso`
 - 枚举用 `INST_TYPE_*` 常量
+- **公开 API 方法放 `publicApi`，鉴权的方法才放 `privateApi`**
+- **新增 npm 依赖时必须同时改 `package.json`**
 
 ## 第三步：认领任务
 
@@ -67,14 +77,16 @@ npm install
 ## 第四步：写代码
 
 ```bash
+git checkout master && git pull origin master      # ⚠️ 先拉最新
 git checkout -b task/T-XXX
 ```
 
 **改 2 个文件**：
-- `src/adapters/okx.ts` — 在 `publicApi` 或 `privateApi` 加 API 方法
-- `src/tools/outcomes.ts` — 在文件末尾加 `server.tool()` 注册
+- `src/adapters/okx.ts` — 公开端点加在 `publicApi` 下，鉴权端点加在 `privateApi` 下
+- `src/tools/outcomes.ts` — 在文件末尾 `}` 之前加 `server.tool()` 注册
 
 参数用 Zod schema，API 调用用 async/await，参考已有工具照抄。
+**每个 `toResult()` 返回必须包含 `tsIso: new Date().toISOString()`。**
 
 ## 第五步：自检 + Push
 
@@ -110,3 +122,16 @@ git push origin task/T-XXX
 ```
 
 超时 2 分钟无心跳自动下线。
+
+## ⚠️ 任务速查（接任务前先看）
+
+| 编号 | 状态 |
+|------|:--:|
+| T-001 | ✅ 已完成，**别碰** |
+| T-002 | ✅ 已完成，**别碰** |
+| T-006 | ✅ 已完成，**别碰** |
+| T-003 | 🟢 可接 |
+| T-004 | 🟢 可接 |
+| T-005 | 🟢 可接 |
+
+**不要碰已完成的任务。它们对应的文件已被别人改过，再改会导致重复代码，审核直接关。**
