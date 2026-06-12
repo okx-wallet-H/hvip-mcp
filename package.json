@@ -1,6 +1,6 @@
 {
   "name": "hvip-mcp-server",
-  "version": "0.2.39",
+  "version": "0.2.40",
   "description": "OKX ecosystem MCP server - full API coverage for AI agents",
   "homepage": "https://hvip.one",
   "license": "MIT",
