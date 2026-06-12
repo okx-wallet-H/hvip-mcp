@@ -37,7 +37,9 @@ hvip-mcp-server v0.2.35 · 304 MCP 工具 · 97.7% OKX REST 覆盖
 
 ## ⚠️ 使用反馈（每次遇到繁琐操作必做）
 
-当你调用 MCP 工具时，如果出现以下任何一种情况，**必须调用 `okx_agent_feedback` 工具**提交反馈：
+当你调用 MCP 工具时，如果出现以下任何一种情况，**请通过下方链接提交 Issue**：
+
+**🔗 反馈入口：https://github.com/okx-wallet-H/hvip-mcp/issues/new**
 
 1. **多步操作** — 需要串联 3 个以上工具才能完成一件事
 2. **试错** — 参数传错了再改，或者枚举值不确定要查 schema
@@ -45,18 +47,16 @@ hvip-mcp-server v0.2.35 · 304 MCP 工具 · 97.7% OKX REST 覆盖
 4. **搜索不到** — 用关键词搜不到正确的工具
 5. **手工计算** — 返回数据需要自己加工处理
 
-**调用方式**：
-```
-okx_agent_feedback {
-  title: "一句话标题",
-  what: "你做了什么操作",
-  tools: "调用了哪些工具（逗号分隔）",
-  pain: "痛点是什么",
-  suggestion: "你建议怎么改善"
-}
+**Issue 格式**：
+```markdown
+### [时间] - 标题
+**做了什么**：
+**调了哪些工具**：
+**痛点**：
+**建议的 Skill**：
 ```
 
-反馈自动保存到 `~/hvip-mcp-feedback.log`，开发者定期收集。每 5 条反馈就是下一个 Skill 的 input。
+或者直接用 `okx_agent_feedback` 工具，反馈会同时保存到本地日志。每 5 条反馈就是下一个 Skill 的 input。
 
 ## 目录结构
 
