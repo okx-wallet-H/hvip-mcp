@@ -5,8 +5,10 @@
 ## 你的工作流程
 
 ```
-连接 Hub → 注册技能 → 领取任务 → 写代码 → 提 PR → 汇报完成 → 等审核
+连接 Hub → 注册技能 → 领取任务 → 写代码 → push 分支 → 汇报完成 → 等审核
 ```
+
+不走 PR，审核员本地 review 后直接合并。
 
 ---
 
@@ -21,19 +23,17 @@ Hub 地址：**`ws://localhost:9321`**（审核员运行 hvip-mcp-server 后就�
   "type": "agent:hello",
   "agentId": "你的Agent名字-编号",
   "name": "显示名称",
-  "capabilities": ["T-001", "T-002"]
+  "capabilities": ["T-003", "T-004"]
 }
 ```
 
-`capabilities` 填你能做的任务编号（从 T-001 到 T-006）。
-
-收到 `agent:registered` 说明注册成功。Hub 会自动给你派发匹配的任务。
+`capabilities` 填你能做的任务编号。收到 `agent:registered` 说明注册成功。
 
 ---
 
 ## 第二步：阅读任务
 
-收到 `task:dispatch` 后，里面的 `url` 就是你的任务文档：
+收到 `task:dispatch` 后，里面的 `url` 就是任务文档：
 
 ```
 https://github.com/okx-wallet-H/hvip-mcp/blob/master/tasks/T-XXX.md
@@ -41,10 +41,10 @@ https://github.com/okx-wallet-H/hvip-mcp/blob/master/tasks/T-XXX.md
 
 任务文档里有：API 端点表、工具规划、代码模板、验收标准。
 
-发送认领确认：
+发送认领：
 
 ```json
-{ "type": "task:claim", "taskId": "T-001", "agentId": "你的ID" }
+{ "type": "task:claim", "taskId": "T-003", "agentId": "你的ID" }
 ```
 
 ---
@@ -58,11 +58,7 @@ git checkout -b task/T-XXX
 npm install
 ```
 
-**改 2 个文件**：
-- `src/adapters/okx.ts` — 在 `publicApi` 或 `privateApi` 对象里加 API 方法
-- `src/tools/outcomes.ts` — 加 `server.tool()` 注册
-
-**代码规范**（照着已有工具抄就行）：
+**代码规范**（照着已有工具抄）：
 - 描述：8 字段模板（功能/场景/关键词/参数/鉴权/风险/返回量/关联）
 - 错误：`toResult()` / `toError()`
 - 时间戳：加 `tsIso`
@@ -70,16 +66,16 @@ npm install
 
 ---
 
-## 第四步：自检 + 提 PR
+## 第四步：自检 + Push
 
 ```bash
-npm run build          # 必须通过
+npm run build
 git add src/adapters/okx.ts src/tools/outcomes.ts
 git commit -m "Skill: T-XXX — 功能描述"
 git push origin task/T-XXX
 ```
 
-到 GitHub 提 PR，标题 `Skill: T-XXX — 功能描述`，描述按模板填。
+**不需要提 PR。** Push 完通知审核员即可。
 
 ---
 
@@ -88,14 +84,14 @@ git push origin task/T-XXX
 ```json
 {
   "type": "task:done",
-  "taskId": "T-001",
+  "taskId": "T-003",
   "agentId": "你的ID",
-  "result": "PR #42",
-  "branch": "task/T-001"
+  "branch": "task/T-003",
+  "result": "push 完成，待审核"
 }
 ```
 
-审核员会在 1 小时内 review，通过则合并。不通过会收到 `task:review` 反馈。
+审核员 1 小时内会 `git fetch` + `diff` + `merge --squash`。通过则直接合入 master，不通过会通过 WS Hub 发 `task:review` 反馈。
 
 ---
 
@@ -113,25 +109,11 @@ git push origin task/T-XXX
 
 ## 任务速查
 
-| 编号 | 内容 | 难度 |
-|------|------|:--:|
-| T-001 | Outcomes 事件市场查询 (5 端点) | ⭐ |
-| T-002 | Outcomes 市场数据 (3 端点) | ⭐ |
-| T-003 | Outcomes 订单管理 (6 端点, EIP-712) | ⭐⭐ |
-| T-004 | Outcomes 持仓 & 账户 (6 端点) | ⭐⭐ |
-| T-005 | 事件合约交易 (5 端点, EVENTS) | ⭐⭐⭐ |
-| T-006 | H Rails /markets 列表 (1 端点) | ⭐ |
-
-新手建议从 T-001 或 T-006 开始。
-
----
-
-## 遇到问题？
-
-在连接中发：
-
-```json
-{ "type": "agent:hello", "agentId": "你的ID", "name": "你的名字", "capabilities": ["T-006"] }
-```
-
-消息类型不对 Hub 会回 `error`。
+| 编号 | 内容 | 难度 | 状态 |
+|------|------|:--:|:--:|
+| T-001 | Outcomes 事件市场查询 | ⭐ | ✅ 已合并 |
+| T-002 | Outcomes 市场数据 | ⭐ | ✅ 已合并 |
+| T-003 | Outcomes 订单管理 (EIP-712) | ⭐⭐ | 🟢 |
+| T-004 | Outcomes 持仓 & 账户 | ⭐⭐ | 🟢 |
+| T-005 | 事件合约交易 (EVENTS) | ⭐⭐⭐ | 🟢 |
+| T-006 | H Rails /markets 列表 | ⭐ | ✅ 已合并 |

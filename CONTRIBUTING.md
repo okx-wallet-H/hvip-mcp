@@ -11,45 +11,65 @@
 如果你是 AI Agent，克隆本项目后：
 
 1. **先读** [`CLAUDE.md`](./CLAUDE.md) — 项目架构、开发规范、8 字段描述模板
-2. **再看** 本文档 — 提 PR 流程和 Review 标准
-3. **找需求** — 从 [`SKILL_FEEDBACK.md`](./SKILL_FEEDBACK.md) 或 [GitHub Issues](https://github.com/okx-wallet-H/hvip-mcp/issues) 找 "Skill 需求" 标签
-4. **动手** — 按下面的 Skill 实现规范写代码
-5. **提 PR** — 按 PR 模板填写
+2. **再看** 本文档 — 分支协作流程和 Review 标准
+3. **找需求** — 从 `tasks/` 目录或 [GitHub Issues](https://github.com/okx-wallet-H/hvip-mcp/issues) 找任务
+4. **动手** — 按下面的规范写代码
+5. **Push 分支** — 审核员会本地 review 后合并
 
 ---
 
-## Skill 贡献流程
+## 分支协作流程（不走 PR）
 
-### 1. 发现需求
-
-- 查看 [`SKILL_FEEDBACK.md`](./SKILL_FEEDBACK.md) 留言板
-- 浏览 [GitHub Issues](https://github.com/okx-wallet-H/hvip-mcp/issues)，找 "Skill 需求" 标签
-- 原则：**每 5 条反馈就是下一个 Skill 的 input**
-
-### 2. 创建分支
+### 1. 创建分支
 
 ```bash
+# 任务池工单
+git checkout -b task/T-XXX
+
+# 自定义 Skill
 git checkout -b skill/<skill-name>
 ```
 
-命名示例：`skill/portfolio-overview`、`skill/batch-grid-create`
+### 2. 实现
 
-### 3. 实现 Skill
-
-在 `src/tools/agent-utils.ts` 中新增一个 `server.tool()` 注册。
-
-**必须遵循的项目规范**（详见 `CLAUDE.md`）：
+按任务文件（`tasks/T-XXX.md`）的规格写代码。必须遵循：
 
 | 规范 | 说明 |
 |------|------|
 | 描述格式 | 8 字段模板：功能/场景/关键词/参数/鉴权/风险/返回量/关联 |
-| 错误格式 | 统一 `toResult()` / `toError()`，含 `errorCategory` |
-| 枚举 | 使用 `src/tools/shared.ts` 中的 `INST_TYPE_*` 常量 |
+| 错误格式 | 统一 `toResult()` / `toError()` |
+| 枚举 | 使用 `INST_TYPE_*` 常量 |
 | 时间戳 | 必须加 `tsIso` 字段 |
-| 参数校验 | 使用 Zod schema |
-| 并行调用 | 用 `Promise.allSettled` 并行化多个 API 调用 |
+| 参数校验 | Zod schema |
+| 并行调用 | `Promise.allSettled` |
 
-**Skill 模式参考**（复制并修改）：
+### 3. 自检
+
+```bash
+npm run build    # 必须通过
+```
+
+### 4. Push 分支 + 通知
+
+```bash
+git push origin task/T-XXX
+```
+
+然后通知审核员：
+- **WS Hub**: 连上 `ws://localhost:9321`，发 `task:done` 消息
+- **或者**在对应 Issue 下评论分支名
+
+### 5. 审核 & 合并
+
+审核员（Claude）会：
+1. `git fetch origin` 拉分支
+2. `git diff origin/master...origin/task/T-XXX` 审查
+3. 通过 → `git merge --squash` → `git push origin master`
+4. 不通过 → 在分支下留 comment 或通过 WS Hub 返回修改意见
+
+---
+
+## Skill 模式参考
 
 ```typescript
 server.tool(
@@ -62,86 +82,44 @@ server.tool(
   async ({ param1, param2 }) => {
     if (!auth) return toError(AUTH_REQUIRED)
     try {
-      // 并行调用多个 API
       const results = await Promise.allSettled([
         privateApi.getXxx(auth, param1),
         publicApi.getYyy(param2),
       ])
-      // 汇总并结构化返回
       return toResult({ summary: "...", errors: [...] })
     } catch (e) { return toError(e) }
   }
 )
 ```
 
-### 4. 自检
+---
 
-```bash
-npm run build    # 必须通过，不能有编译错误
-```
+## 审核标准
 
-### 5. 提交 PR
-
-```bash
-git add src/tools/agent-utils.ts
-git commit -m "Skill: <功能描述>"
-git push origin skill/<skill-name>
-```
-
-然后在 GitHub 上提 PR，标题格式：`Skill: <功能描述>`
-
-**PR 描述按模板填写**（会自动加载 `.github/PULL_REQUEST_TEMPLATE.md`）。
-
-### 6. Review & 合并
-
-PR 提交后，CI 自动跑 `Build & Check`。Reviewer（Claude / okx-wallet-H）会检查：
-
-- [ ] CI 是否通过
-- [ ] 8 字段描述是否完整
-- [ ] 是否复用已有 API 调用（不重复发明轮子）
+- [ ] `npm run build` 通过
+- [ ] 8 字段描述完整
+- [ ] 是否复用已有 API 调用
 - [ ] 是否有 `tsIso` 时间戳
 - [ ] 是否使用 `toResult` / `toError`
-- [ ] Skill 是否解决了真实的反馈痛点
-
-通过后 **Squash Merge** 到 `master`。
+- [ ] Skill 是否解决了真实痛点
 
 ---
 
-## 工具修复流程
-
-对于已有工具的 Bug 修复或参数补充：
-
-1. 直接修改对应 `src/tools/<module>.ts` 文件
-2. PR 标题：`Fix: <描述>`
-3. 自检通过即可，Review 标准同 Skill
-
----
-
-## 规范改进流程
-
-对于 `CLAUDE.md`、`CONTRIBUTING.md`、CI 等非代码改进：
-
-1. PR 标题：`Meta: <描述>`
-2. 描述清楚改进了什么、为什么
-
----
-
-## Review 标准（给 Reviewer）
+## 审核员操作（内部）
 
 ```bash
-# 列出待审 PR
-gh pr list --repo okx-wallet-H/hvip-mcp
+# 列出所有远程 task 分支
+git fetch origin
+git branch -r | grep 'origin/task/'
 
-# 查看 PR
-gh pr view <number> --repo okx-wallet-H/hvip-mcp
+# 审查
+git diff origin/master...origin/task/T-XXX
 
-# 查看 diff
-gh pr diff <number> --repo okx-wallet-H/hvip-mcp
+# 合并
+git merge --squash origin/task/T-XXX
+git commit -m "Skill: <描述>"
+git push origin master
 
-# 通过
-gh pr review <number> --approve --repo okx-wallet-H/hvip-mcp
-gh pr merge <number> --squash --repo okx-wallet-H/hvip-mcp
-
-# 请求修改
-gh pr review <number> --request-changes -b "修改意见..." --repo okx-wallet-H/hvip-mcp
+# 清理
+git push origin --delete task/T-XXX
 ```
