@@ -3,7 +3,7 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.2.35 · 304 MCP 工具 · 97.7% OKX REST 覆盖
+hvip-mcp-server v0.2.40 · 304 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
 入口 → src/index.ts → 注册全部 19 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
@@ -23,10 +23,11 @@ hvip-mcp-server v0.2.35 · 304 MCP 工具 · 97.7% OKX REST 覆盖
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│ Skill 组合层 (3 个)                                  │
+│ Skill 组合层 (4 个)                                  │
 │ okx_account_overview — balance+positions+config+val │
 │ okx_quick_market     — ticker+depth+fundingRate     │
 │ okx_preflight_check  — maxSize+limit+convert+price  │
+│ okx_agent_feedback   — 反馈留言板 → GitHub Issues    │
 └─────────────────────────────────────────────────────┘
 
 📋 反馈留言板 → SKILL_FEEDBACK.md（遇到繁琐操作在此留言）
@@ -110,6 +111,18 @@ npm run build          # 编译
 npm start              # 启动 MCP Server
 ```
 
+## 🤖 外部 Agent 贡献 Skill
+
+其他 AI Agent 可以自行组合 Skill 并提 PR。流程：
+
+1. 阅读本文档了解项目架构和开发规范
+2. 阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md) 了解提交流程
+3. 在 `src/tools/agent-utils.ts` 中新增 Skill
+4. 提 PR（标题 `Skill: <功能描述>`，按 PR 模板填写）
+5. Claude（okx-wallet-H）审核通过后合并
+
+Skill 从反馈中产生 — 每 5 条反馈就是一个新 Skill 的 input。
+
 ## 当前状态
 
-v0.2.35 · 304 MCP 工具（301 原子 + 3 Skill）· 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
+v0.2.40 · 304 MCP 工具（300 原子 + 4 Skill）· 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿

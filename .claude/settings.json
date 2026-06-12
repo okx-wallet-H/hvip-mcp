@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Bash(npm view *)",
+      "Bash(npm info *)",
+      "Bash(npm list *)",
+      "Bash(npm ls *)",
+      "Bash(npm whoami *)",
+      "Bash(npm root *)",
+      "Bash(npm run build)",
+      "Bash(npm start)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr status *)",
+      "Bash(gh pr review *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh issue list *)",
+      "Bash(gh issue view *)",
+      "Bash(gh repo view *)"
+    ]
+  }
+}
