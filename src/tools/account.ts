@@ -19,13 +19,29 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_positions",
-    "CAT:[账户] | ## 功能：查询当前所有持仓信息，含持仓方向、数量、均价、未实现盈亏和杠杆倍数\n## 场景：用于查看当前仓位、监控浮动盈亏、判断风险敞口、决定是否平仓\n## 关键词：持仓, positions, 仓位, 未实现盈亏, 持仓均价, 杠杆, 头寸\n## 参数：\n##   - instType: 产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：okx_get_balance 看余额 → 本工具看持仓 → okx_get_mark_price 看标记价 → okx_close_position 平仓",
+    "CAT:[账户] | ## 功能：查询当前所有持仓信息，含持仓方向、数量、均价、未实现盈亏、杠杆倍数，并附带操作上下文（mgnMode/instFamily/lever/liqPx）方便平仓\n## 场景：用于查看当前仓位、监控浮动盈亏、判断风险敞口、决定是否平仓\n## 关键词：持仓, positions, 仓位, 未实现盈亏, 持仓均价, 杠杆, 头寸, 操作上下文\n## 参数：\n##   - instType: 产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB — 含 _actionContext 字段，可直接用于平仓/改仓\n## 关联：okx_get_balance 看余额 → 本工具看持仓+操作上下文 → okx_close_position 直接平仓无需再查 mgnMode",
     { instType: z.enum(INST_TYPE_PUBLIC).optional().describe("产品类型，不填则返回全部") },
     async ({ instType }) => {
       if (!auth) return toError(AUTH_REQUIRED)
       try {
         const data = await privateApi.getPositions(auth, instType)
-        return toResult(data)
+        const arr = Array.isArray(data) ? data : []
+        // 附操作上下文，让 Agent 无需再查 config 就能平仓
+        const enriched = arr.map((p: any) => ({
+          ...p,
+          tsIso: p.uTime ? new Date(parseInt(p.uTime)).toISOString() : undefined,
+          _actionContext: {
+            closePosition: "okx_close_position",
+            requiredParams: {
+              instId: p.instId,
+              posSide: p.posSide,
+              mgnMode: p.mgnMode || "cross",
+              ccy: p.ccy,
+            },
+            hint: "平仓时直接使用 _actionContext.requiredParams 中的值",
+          },
+        }))
+        return toResult(enriched)
       } catch (e) { return toError(e) }
     }
   )
