@@ -405,4 +405,168 @@ export function registerOutcomesTools(server: McpServer): void {
         return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
       } catch (e) { return toError(e) }
     })
+
+  // ══ T-003: Outcomes 订单管理（EIP-712）════════════════════════════════
+
+  server.tool("okx_predictions_place_order",
+    "## 功能：下 Outcomes 预测市场订单\n## 场景：用于对预测市场（YES/NO）下买单或卖单\n## 关键词：预测订单, place order, outcomes, 下单\n## 参数：\n##   - marketId: 市场ID（必填）\n##   - side: buy=买入, sell=卖出（必填）\n##   - outcome: yes=看涨, no=看跌（必填）\n##   - size: 合约张数（必填）\n##   - price: 限价，不填则市价\n## 鉴权：需要 API Key（交易权限+EIP-712）\n## 风险：WRITE — 下单操作，需用户确认\n## 返回量：微小 ~500B\n## 关联：本工具 → okx_predictions_cancel_order 撤单",
+    { marketId: z.string().describe("市场ID（必填）"),
+      side: z.enum(["buy","sell"]).describe("买卖方向"),
+      outcome: z.enum(["yes","no"]).describe("结果方向"),
+      size: z.string().describe("合约张数"),
+      price: z.string().optional().describe("限价，不填则市价") },
+    async ({ marketId, side, outcome, size, price }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = { marketId, side, outcome, size }
+        if (price) body.price = price
+        const d = await privateApi.predictionsPlaceOrder(auth, body)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_cancel_order",
+    "## 功能：撤销 Outcomes 预测市场订单\n## 场景：用于取消已下但未成交的预测市场订单\n## 关键词：预测订单, cancel order, 撤单\n## 参数：\n##   - orderId: 订单ID（可选）\n## 鉴权：需要 API Key（交易权限+EIP-712）\n## 风险：WRITE — 撤单操作，需用户确认\n## 返回量：微小 ~300B\n## 关联：okx_predictions_place_order 下单 → 本工具",
+    { orderId: z.string().optional().describe("订单ID") },
+    async ({ orderId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = {}
+        if (orderId) body.orderId = orderId
+        const d = await privateApi.predictionsCancelOrder(auth, body)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_cancel_all",
+    "## 功能：撤销所有 Outcomes 订单\n## 场景：用于清空当前市场所有挂单\n## 关键词：预测订单, cancel all, 全部撤单\n## 参数：\n##   - assetIds: 资产ID列表，逗号分隔（可选）\n## 鉴权：需要 API Key（交易权限+EIP-712）\n## 风险：WRITE — 批量撤单，需用户确认\n## 返回量：微小 ~300B\n## 关联：本工具 → okx_predictions_order_list 查订单",
+    { assetIds: z.string().optional().describe("资产ID列表，逗号分隔") },
+    async ({ assetIds }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = {}
+        if (assetIds) body.assetIds = assetIds
+        const d = await privateApi.predictionsCancelAll(auth, body)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_heartbeat",
+    "## 功能：Outcomes 心跳保活\n## 场景：定时发送心跳防止系统因超时自动撤单\n## 关键词：心跳, heartbeat, keep-alive\n## 参数：无\n## 鉴权：需要 API Key（EIP-712）\n## 风险：WRITE — 发送心跳，Agent 可自动调用\n## 返回量：微小 ~200B\n## 关联：下单前/后 → 本工具保持连接",
+    {},
+    async () => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsHeartbeat(auth)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_get_order",
+    "## 功能：查询单个 Outcomes 订单详情\n## 场景：用于查看订单状态、成交数量、价格\n## 关键词：订单详情, order detail, 查询\n## 参数：\n##   - orderId: 订单ID（必填）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~1KB\n## 关联：okx_predictions_order_list → 本工具",
+    { orderId: z.string().describe("订单ID（必填）") },
+    async ({ orderId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsGetOrder(auth, orderId)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_order_list",
+    "## 功能：查询 Outcomes 订单列表\n## 场景：用于查看历史订单、按市场或状态筛选\n## 关键词：订单列表, order list, 历史订单\n## 参数：\n##   - marketId: 市场ID（可选）\n##   - status: 订单状态（可选）\n##   - limit: 返回条数（可选）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：本工具 → okx_predictions_get_order 看详情",
+    { marketId: z.string().optional().describe("市场ID"),
+      status: z.string().optional().describe("订单状态"),
+      limit: z.number().int().min(1).max(100).optional().describe("返回条数") },
+    async ({ marketId, status, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsOrderList(auth, marketId, status, limit)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  // ══ T-004: Outcomes 持仓 & 账户 ═════════════════════════════════════
+
+  server.tool("okx_predictions_positions",
+    "## 功能：查询 Outcomes 持仓\n## 场景：用于查看当前持有的 YES/NO 仓位\n## 关键词：持仓, positions, 仓位\n## 参数：\n##   - marketId: 市场ID（可选）\n##   - status: 持仓状态（可选）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：本工具 → okx_predictions_split 拆分仓位",
+    { marketId: z.string().optional().describe("市场ID"),
+      status: z.string().optional().describe("持仓状态") },
+    async ({ marketId, status }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsPositions(auth, marketId, status)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_split",
+    "## 功能：将 xp 拆分为 YES 和 NO 代币\n## 场景：拆分资金到 YES/NO 双方向，参与预测市场\n## 关键词：拆分, split, xp, YES, NO\n## 参数：\n##   - amount: 拆分数量（必填）\n## 鉴权：需要 API Key（EIP-712）\n## 风险：WRITE — 资金操作，需用户确认\n## 返回量：微小 ~500B\n## 关联：okx_predictions_balance 查余额 → 本工具拆分",
+    { amount: z.string().describe("拆分数量（必填）") },
+    async ({ amount }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsSplit(auth, { amount })
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_merge",
+    "## 功能：将 YES+NO 合并为 xp\n## 场景：退出预测市场仓位，回收资金\n## 关键词：合并, merge, YES, NO, xp\n## 参数：\n##   - amount: 合并数量（必填）\n## 鉴权：需要 API Key（EIP-712）\n## 风险：WRITE — 资金操作，需用户确认\n## 返回量：微小 ~500B\n## 关联：okx_predictions_split 拆分 → 本工具合并",
+    { amount: z.string().describe("合并数量（必填）") },
+    async ({ amount }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsMerge(auth, { amount })
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_redeem",
+    "## 功能：结算后赎回获胜代币为 xp\n## 场景：事件结算后，将获胜的 YES/NO 代币按 1:1 兑回 xp\n## 关键词：赎回, redeem, 结算, 兑回\n## 参数：\n##   - assetId: 资产ID（可选）\n## 鉴权：需要 API Key（EIP-712）\n## 风险：WRITE — 赎回操作，需用户确认\n## 返回量：微小 ~500B\n## 关联：事件结算 → 本工具赎回 → okx_predictions_balance 查余额",
+    { assetId: z.string().optional().describe("资产ID") },
+    async ({ assetId }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const body: Record<string, unknown> = {}
+        if (assetId) body.assetId = assetId
+        const d = await privateApi.predictionsRedeem(auth, body)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_balance",
+    "## 功能：查询 Outcomes 账户 xp 余额\n## 场景：查看预测市场可用资金\n## 关键词：余额, balance, xp\n## 参数：无\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~500B\n## 关联：本工具查余额 → okx_predictions_positions 看持仓",
+    {},
+    async () => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsBalance(auth)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
+
+  server.tool("okx_predictions_trades",
+    "## 功能：查询 Outcomes 成交记录\n## 场景：查看历史成交明细\n## 关键词：成交记录, trades, 历史成交\n## 参数：\n##   - marketId: 市场ID（可选）\n##   - limit: 返回条数（可选）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_predictions_positions 持仓 → 本工具查看成交",
+    { marketId: z.string().optional().describe("市场ID"),
+      limit: z.number().int().min(1).max(100).optional().describe("返回条数") },
+    async ({ marketId, limit }) => {
+      const auth = getAuth()
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = await privateApi.predictionsTrades(auth, marketId, limit)
+        return toResult({ ...(Array.isArray(d) ? { data: d } : d), tsIso: new Date().toISOString() })
+      } catch (e) { return toError(e) }
+    })
 }

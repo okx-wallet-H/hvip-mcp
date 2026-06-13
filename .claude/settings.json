@@ -23,7 +23,23 @@
       "Bash(gh issue list *)",
       "Bash(gh issue view *)",
       "Bash(gh issue comment *)",
-      "Bash(gh repo view *)"
+      "Bash(gh repo view *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr close *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr diff *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git rebase *)",
+      "Bash(git stash *)",
+      "Bash(git reset *)",
+      "Bash(git clean *)",
+      "Bash(git remote *)",
+      "Bash(node -e *)",
+      "Bash(node dashboard*)",
+      "Bash(rm *)"
     ]
   }
 }
