@@ -676,4 +676,38 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
       } catch (e) { return toError(e) }
     }
   )
+
+  // ── 技巧页新增 ──────────────────────────────────────────────────────────
+
+  server.tool(
+    "okx_set_greeks",
+    "## 功能：设置希腊值展示方式\n## 场景：用于切换希腊值 PA/BS 展示模式\n## 参数：\n##   - greeksType: 希腊值类型。PA=基于标的, BS=基于增量\n## 鉴权：需要 API Key（交易）\n## 风险：WRITE — 修改账户配置\n## 返回量：微小 ~500B\n## 关联：本工具 → okx_get_account_greeks 查看希腊值",
+    {
+      greeksType: z.enum(["PA","BS"]).describe("希腊值类型。PA=基于标的, BS=基于增量"),
+    },
+    async ({ greeksType }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const data = await privateApi.setGreeks(auth, { greeksType })
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_get_max_avail_size",
+    "## 功能：查询最大可用可开数量\n## 场景：用于下单前检查最多能开多少张\n## 参数：\n##   - instId: 产品ID\n##   - tdMode: 交易模式。cash=现货, cross=全仓, isolated=逐仓\n##   - ccy: 保证金币种（可选，仅 cross 需要）\n## 鉴权：需要 API Key（只读）\n## 风险：READ — 只读查询\n## 返回量：微小 ~1KB\n## 关联：本工具查最大可开 → okx_place_order 下单",
+    {
+      instId: z.string().describe("产品ID"),
+      tdMode: z.enum(["cash","cross","isolated"]).describe("交易模式"),
+      ccy:    z.string().optional().describe("保证金币种（可选，仅cross需要）"),
+    },
+    async ({ instId, tdMode, ccy }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const data = await privateApi.getMaxAvailSize(auth, instId, tdMode, ccy)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
 }

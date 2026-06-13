@@ -539,6 +539,12 @@ export const privateApi = {
   getAccountGreeks: (auth: Auth, instType?: string, instFamily?: string, uly?: string, instId?: string) =>
     request<unknown[]>("GET", "/api/v5/account/greeks", { params: { instType, instFamily, uly, instId }, auth }),
 
+  setGreeks: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown[]>("POST", "/api/v5/account/set-greeks", { body, auth }),
+
+  getMaxAvailSize: (auth: Auth, instId: string, tdMode: string, ccy?: string) =>
+    request<unknown[]>("GET", "/api/v5/account/max-avail-size", { params: { instId, tdMode, ccy }, auth }),
+
   setAccountLevel: (auth: Auth, body: Record<string, unknown>) =>
     request<unknown[]>("POST", "/api/v5/account/set-account-level", { body, auth }),
 

@@ -3,32 +3,38 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.2.40 · 323 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
+hvip-mcp-server v0.2.42 · 354 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
 入口 → src/index.ts → 注册全部 19 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
 适配 → src/adapters/okx.ts    （OKX REST 签名 + 请求）
 
-┌─────────────────────────────────────────────────────┐
-│ 原子层 (301 工具)                                    │
-├────────────┬────────────┬────────────┬──────────────┤
-│ 交易类     │ 行情类     │ 数据类     │ 资金类       │
-│ trading   │ market     │ public     │ funding      │
-│ algo      │            │ stats      │ account      │
-│ sprd      │            │ rubik      │ subaccount   │
-│ rfq       │            │ outcomes   │ fiat         │
-├────────────┴────────────┴────────────┴──────────────┤
-│ 策略类     │ bot(grid) │ signal │ copy │ finance   │
-│            │ affiliate │        │      │            │
-└─────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│ 原子层 (354 工具)                                         │
+├────────────┬────────────┬────────────┬────────────────────┤
+│ 交易类     │ 行情类     │ 数据类     │ 资金类             │
+│ trading   │ market     │ public     │ funding            │
+│ algo      │            │ stats      │ account            │
+│ sprd      │            │ rubik      │ subaccount         │
+│ rfq       │            │ outcomes   │ fiat               │
+├────────────┴────────────┴────────────┴────────────────────┤
+│ 策略类     │ bot(grid) │ signal │ copy │ finance         │
+│            │ affiliate │        │      │                 │
+├──────────────────────────────────────────────────────────┤
+│ 🎯 技巧常用  │ set-greeks / max-avail-size / 杠杆/配置   │
+│  (trick)    │ 下单/撤单/改单/查单/账单/持仓/余额 共25个  │
+├──────────────────────────────────────────────────────────┤
+│ WS 实时     │ ws.ts(行情) + ws-predictions.ts(预测)     │
+│  (Stream)   │ 20+ 频道 × 8 工具                          │
+└─────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────┐
-│ Skill 组合层 (4 个)                                  │
-│ okx_account_overview — balance+positions+config+val │
-│ okx_quick_market     — ticker+depth+fundingRate     │
-│ okx_preflight_check  — maxSize+limit+convert+price  │
-│ okx_agent_feedback   — 反馈留言板 → GitHub Issues    │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ Skill 组合层 (4 个)                                      │
+│ okx_account_overview — balance+positions+config+val     │
+│ okx_quick_market     — ticker+depth+fundingRate         │
+│ okx_preflight_check  — maxSize+limit+convert+price      │
+│ okx_agent_feedback   — 反馈留言板 → GitHub Issues       │
+└─────────────────────────────────────────────────────────┘
 
 📋 反馈留言板 → SKILL_FEEDBACK.md（遇到繁琐操作在此留言）
 📖 对接标准 → docs/OKX-MCP-API对接标准-v0.1.8.md
