@@ -341,4 +341,386 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
       } catch (e) { return toError(e) }
     }
   )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // agent_risk_overview — 风险仪表盘 (P0)
+  // 替代: getBalance → getPositions → getAccountConfig → getMarkPrice → getFundingRate 串行5步
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "agent_risk_overview",
+    "CAT:[系统] | ## 功能：一键获取全仓风险仪表盘：持仓风险排序、总保证金率、强平预警、资金费率到期提醒\n## 场景：Agent 回答\"我现在风险多大\"、巡检所有持仓健康度、强平前预警通知\n## 关键词：风险, 强平, 保证金率, 风险排序, 健康度, risk, 风控\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询\n## 返回量：微小 ~2KB — 结构化风险摘要\n## 关联：本工具风险巡检 → 高风险仓位 agent_quick_trade 平仓 → agent_pnl_report 盈亏复盘",
+    {},
+    async () => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const [balance, positions, config] = await Promise.allSettled([
+          privateApi.getBalance(auth),
+          privateApi.getPositions(auth),
+          privateApi.getAccountConfig(auth),
+        ])
+
+        const balOk = balance.status === "fulfilled" ? (balance.value as any[]) : []
+        const posOk = positions.status === "fulfilled" ? (positions.value as any[]) : []
+        const cfgOk = config.status === "fulfilled" ? (config.value as any[])?.[0] ?? {} : {}
+
+        const totalEq = balOk.length > 0 ? parseFloat((balOk[0] as any)?.totalEq ?? "0") : 0
+        const details = (balOk.length > 0 ? (balOk[0] as any)?.details ?? [] : []) as any[]
+
+        // 持仓风险分析
+        const activePos = posOk.filter((p: any) => parseFloat(p.pos || "0") !== 0)
+        const posRisks = activePos.map((p: any) => {
+          const margin = parseFloat(p.margin ?? p.imr ?? "0")
+          const upl = parseFloat(p.upl ?? "0")
+          const liqPx = parseFloat(p.liqPx ?? "0")
+          const markPx = parseFloat(p.markPx ?? "0")
+          const mgnRatio = parseFloat(p.mgnRatio ?? "0")
+          const lever = parseFloat(p.lever ?? "0")
+          // 距强平价的百分比距离
+          let liqDistance = 100
+          if (liqPx > 0 && markPx > 0) {
+            liqDistance = p.posSide === "long"
+              ? ((markPx - liqPx) / markPx) * 100
+              : ((liqPx - markPx) / markPx) * 100
+          }
+          return {
+            instId: p.instId,
+            posSide: p.posSide,
+            pos: p.pos,
+            lever,
+            margin: margin.toFixed(2),
+            upl: upl.toFixed(2),
+            uplRatio: p.uplRatio,
+            markPx: p.markPx,
+            liqPx: p.liqPx,
+            mgnRatio: p.mgnRatio,
+            liqDistance: liqDistance.toFixed(1) + "%",
+            riskLevel: mgnRatio < 0.15 ? "🔴 危险" : mgnRatio < 0.3 ? "🟡 警告" : "🟢 安全",
+            // 附操作上下文，让 Agent 不再二次查
+            instFamily: p.instFamily,
+            instType: p.instType,
+            mgnMode: p.mgnMode || (cfgOk.posMode === "long_short_mode" ? "cross" : "isolated"),
+          }
+        }).sort((a: any, b: any) => parseFloat(a.mgnRatio) - parseFloat(b.mgnRatio))
+
+        // 总风险汇总
+        const totalMargin = posRisks.reduce((s: number, p: any) => s + parseFloat(p.margin), 0)
+        const dangerCount = posRisks.filter((p: any) => p.riskLevel === "🔴 危险").length
+        const warnCount = posRisks.filter((p: any) => p.riskLevel === "🟡 警告").length
+
+        // 保证金使用率
+        const totalMgnRatio = totalEq > 0 ? (totalMargin / totalEq * 100).toFixed(1) : "N/A"
+
+        // 资产币种简报
+        const usdtDetail = details.find((d: any) => d.ccy === "USDT")
+        const availBalance = usdtDetail ? parseFloat(usdtDetail.availBal ?? "0") : 0
+
+        const overview = {
+          tsIso: new Date().toISOString(),
+          totalEquity: totalEq.toFixed(2),
+          usedMargin: totalMargin.toFixed(2),
+          marginRatio: totalMgnRatio + "%",
+          availBalance: availBalance.toFixed(2),
+
+          summary: {
+            positionCount: posRisks.length,
+            dangerCount,
+            warnCount,
+            safeCount: posRisks.length - dangerCount - warnCount,
+            message: dangerCount > 0
+              ? `⚠️ ${dangerCount} 个仓位接近强平！`
+              : warnCount > 0
+                ? `⚡ ${warnCount} 个仓位需要关注`
+                : posRisks.length > 0
+                  ? "✅ 所有仓位安全"
+                  : "无持仓",
+          },
+
+          positions: posRisks,
+          config: {
+            posMode: (cfgOk as any).posMode,
+            acctLv: (cfgOk as any).acctLv,
+            autoLoan: (cfgOk as any).autoLoan,
+          },
+
+          errors: [
+            balance.status === "rejected" ? `余额: ${(balance.reason as any)?.message}` : null,
+            positions.status === "rejected" ? `持仓: ${(positions.reason as any)?.message}` : null,
+            config.status === "rejected" ? `配置: ${(config.reason as any)?.message}` : null,
+          ].filter(Boolean),
+        }
+
+        return toResult(overview)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // agent_quick_trade — 一步下单 (P0)
+  // 替代: getBalance → getMaxSize → getFeeRates → convertContractCoin → placeOrder 串行5步
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "agent_quick_trade",
+    "CAT:[系统] | ## 功能：一步完成交易全流程——自动查余额、算最大可开、检查限价、下单，返回结构化交易确认\n## 场景：Agent 收到用户\"买入0.1 BTC\"时直接调用，无需分别调余额/可开/限价/下单\n## 关键词：一键交易, quick trade, 下单全流程, 自动检查, 一步到位\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT-SWAP\n##   - side: buy=买入, sell=卖出\n##   - sz: 下单数量（币数或张数）\n##   - tdMode: cash=现货, cross=全仓, isolated=逐仓\n##   - px: 限价（选填，不填市价单）\n##   - ordType: 订单类型，默认limit\n## 鉴权：⚠️ 需要 API Key（交易权限）\n## 风险：WRITE — 真实下单，Agent 需用户确认后调用\n## 返回量：微小 ~1KB — 含预检结果+订单确认+风控提醒\n## 关联：agent_risk_overview 看风险 → 本工具下单 → okx_get_order 确认 → agent_pnl_report 复盘",
+    {
+      instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP"),
+      side:    z.enum(["buy","sell"]).describe("买卖方向"),
+      sz:      z.string().describe("下单数量（币数或张数）"),
+      tdMode:  z.enum(["cash","cross","isolated"]).describe("交易模式"),
+      px:      z.string().optional().describe("限价（选填，不填则市价）"),
+      ordType: z.enum(["market","limit","post_only","fok","ioc"]).optional().describe("订单类型，默认limit"),
+    },
+    async ({ instId, side, sz, tdMode, px, ordType }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        // 并行预检：余额 + 最大可开 + 手续费 + 合约换算 + 行情 + 限价
+        const feeCcy = tdMode === "cash" ? instId.split("-")[1] || "USDT" : "USDT"
+        const calls: [string, Promise<unknown>][] = [
+          ["balance", privateApi.getBalance(auth)],
+          ["maxSize", privateApi.getMaxSize(auth, instId, tdMode)],
+          ["feeRates", privateApi.getFeeRates(auth, instId.split("-")[1] === "USDT" ? "SPOT" : "SWAP", instId)],
+          ["ticker", publicApi.getTicker(instId)],
+          ["priceLimit", publicApi.getPriceLimitBatch("", undefined, instId)],
+        ]
+
+        const keys = calls.map(c => c[0])
+        const results = await Promise.allSettled(calls.map(c => c[1]))
+
+        const get = (name: string) => {
+          const idx = keys.indexOf(name)
+          if (idx < 0) return null
+          return results[idx].status === "fulfilled" ? (results[idx] as any).value : null
+        }
+
+        // 余额
+        const balData = get("balance") as any[]
+        const details = balData?.[0]?.details ?? []
+        const availBal = parseFloat((details.find((d: any) => d.ccy === feeCcy) as any)?.availBal ?? "0")
+
+        // 最大可开
+        const maxData = (get("maxSize") as any[])?.[0]
+        const maxBuy = parseFloat(maxData?.maxBuy ?? "0")
+        const maxSell = parseFloat(maxData?.maxSell ?? "0")
+        const maxSz = side === "buy" ? maxBuy : maxSell
+
+        // 手续费
+        const feeData = (get("feeRates") as any[])?.[0]
+        const makerFee = parseFloat(feeData?.maker ?? "0")
+        const takerFee = parseFloat(feeData?.taker ?? "0")
+        const feeRate = ordType === "market" ? takerFee : makerFee
+
+        // 行情
+        const tkData = (get("ticker") as any[])?.[0] ?? {}
+        const lastPx = parseFloat(tkData?.last ?? "0")
+        const orderPx = px ? parseFloat(px) : lastPx
+        const estCost = parseFloat(sz) * orderPx
+        const estFee = estCost * feeRate
+
+        // 限价检查
+        const limitData = (get("priceLimit") as any[])?.[0]
+        const lowest = parseFloat(limitData?.lowest ?? "0")
+        const highest = parseFloat(limitData?.highest ?? "999999")
+
+        const warnings: string[] = []
+        const qty = parseFloat(sz)
+        if (qty > maxSz) warnings.push(`数量 ${sz} 超过最大可${side === "buy" ? "买" : "卖"} ${maxSz}`)
+        if (availBal < estCost + estFee) warnings.push(`余额不足：需要 $${(estCost + estFee).toFixed(2)}，可用 $${availBal.toFixed(2)}`)
+        if (orderPx < lowest || orderPx > highest) warnings.push(`价格 ${orderPx} 超出限价范围 [${lowest}, ${highest}]`)
+
+        if (warnings.length > 0) {
+          return toResult({
+            executed: false,
+            precheck: {
+              balance: availBal.toFixed(2),
+              maxSize: { maxBuy, maxSell, maxForSide: maxSz },
+              feeRate: (feeRate * 100).toFixed(4) + "%",
+              estCost: estCost.toFixed(2),
+              estFee: estFee.toFixed(4),
+              priceCheck: { orderPx, lowest, highest, within: orderPx >= lowest && orderPx <= highest },
+            },
+            warnings,
+            tip: "预检未通过，请调整参数后重试",
+            tsIso: new Date().toISOString(),
+          })
+        }
+
+        // 下单
+        const body: Record<string, unknown> = { instId, side, sz, tdMode }
+        if (ordType) body.ordType = ordType
+        if (px) body.px = px
+        const orderResult = await privateApi.placeOrder(auth, body) as any[]
+
+        return toResult({
+          executed: true,
+          order: orderResult?.[0] ?? orderResult,
+          precheck: {
+            balance: availBal.toFixed(2),
+            maxSize: { maxBuy, maxSell, maxForSide: maxSz },
+            feeRate: (feeRate * 100).toFixed(4) + "%",
+            estCost: estCost.toFixed(2),
+            estFee: estFee.toFixed(4),
+          },
+          risk: {
+            marginUsed: ((estCost / availBal) * 100).toFixed(1) + "%",
+            warning: estCost / availBal > 0.3 ? "此单使用超过30%可用余额" : null,
+          },
+          tsIso: new Date().toISOString(),
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // agent_market_scan — 市场扫描 (P1)
+  // 替代: getTickers → 手动排序/过滤 → 逐个查费率/成交量 重复N次
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "agent_market_scan",
+    "CAT:[系统] | ## 功能：一键扫描市场异动——涨幅榜、跌幅榜、成交量异动、资金费率异常品种\n## 场景：Agent 回答\"今天有什么机会\"、发现暴涨暴跌、找费率套利目标\n## 关键词：市场扫描, 异动, 涨幅榜, 跌幅榜, 资金费率, 交易机会\n## 参数：\n##   - instType: 产品类型，默认SWAP\n##   - topN: 返回前N条，默认10\n##   - sortBy: 排序字段。change=涨跌幅, vol=成交量, fundingRate=资金费率\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：微小 ~3KB — 仅返回topN\n## 关联：本工具扫描 → okx_quick_market 深入分析 → agent_quick_trade 下单",
+    {
+      instType: z.enum(["SPOT","SWAP","FUTURES"]).optional().describe("产品类型，默认SWAP"),
+      topN:     z.number().int().min(3).max(50).optional().describe("返回条数，默认10"),
+      sortBy:   z.enum(["change","vol","fundingRate"]).optional().describe("排序字段。change=涨跌幅, vol=24h成交量, fundingRate=资金费率(仅SWAP)"),
+    },
+    async ({ instType, topN, sortBy }) => {
+      try {
+        const it = instType || "SWAP"
+        const n = topN || 10
+        const sb = sortBy || "change"
+
+        const data = await publicApi.getTickers(it) as any[]
+        const arr = data.map((t: any) => ({
+          instId: t.instId,
+          last: parseFloat(t.last ?? "0"),
+          change24h: parseFloat(t.sodUtc8 ?? t.sodUtc0 ?? t.change24h ?? "0"),
+          vol24h: parseFloat(t.vol24h ?? t.volCcy24h ?? "0"),
+          high24h: parseFloat(t.high24h ?? "0"),
+          low24h: parseFloat(t.low24h ?? "0"),
+          bid: parseFloat(t.bidPx ?? "0"),
+          ask: parseFloat(t.askPx ?? "0"),
+        })).filter((t: any) => t.last > 0 && t.vol24h > 0)
+
+        // 排序
+        if (sb === "vol") arr.sort((a: any, b: any) => b.vol24h - a.vol24h)
+        else if (sb === "change") arr.sort((a: any, b: any) => Math.abs(b.change24h) - Math.abs(a.change24h))
+        else arr.sort((a: any, b: any) => Math.abs(b.change24h) - Math.abs(a.change24h))
+
+        const top = arr.slice(0, n)
+
+        // 分类
+        const gainers = top.filter((t: any) => t.change24h > 0).sort((a: any, b: any) => b.change24h - a.change24h)
+        const losers = top.filter((t: any) => t.change24h < 0).sort((a: any, b: any) => a.change24h - b.change24h)
+        const volumeLeader = arr.slice(0, n).sort((a: any, b: any) => b.vol24h - a.vol24h).slice(0, 5)
+
+        // 资金费率异常（仅 SWAP）
+        let fundingAlerts: any[] = []
+        if (it === "SWAP") {
+          try {
+            const fr: Record<string, any> = {}
+            for (const t of top.slice(0, 10)) {
+              try {
+                const frData = await publicApi.getFundingRate(t.instId) as any[]
+                fr[t.instId] = parseFloat(frData?.[0]?.fundingRate ?? "0")
+              } catch { fr[t.instId] = 0 }
+            }
+            fundingAlerts = Object.entries(fr)
+              .filter(([, r]) => Math.abs(r as number) > 0.001)
+              .map(([instId, rate]) => ({ instId, fundingRate: ((rate as number) * 100).toFixed(4) + "%" }))
+          } catch {}
+        }
+
+        return toResult({
+          scanType: sb === "change" ? "涨跌幅异动" : sb === "vol" ? "成交量排行" : "综合扫描",
+          instType: it,
+          top: top.slice(0, n),
+          gainers: gainers.slice(0, 5),
+          losers: losers.slice(0, 5),
+          volumeLeader,
+          fundingAlerts,
+          updateTime: new Date().toISOString(),
+          tip: "扫描结果为快照。具体品种用 okx_quick_market 深入分析。",
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // agent_pnl_report — 盈亏报告 (P2)
+  // 替代: getFills → 手动汇总 → 按品种/日期分组计算 重复多次
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "agent_pnl_report",
+    "CAT:[系统] | ## 功能：一键生成盈亏报告——当前持仓浮动盈亏 + 近N日已实现盈亏汇总\n## 场景：Agent 回答\"今天我赚了多少\"、复盘交易绩效、生成每日盈亏报表\n## 关键词：盈亏, PnL, 盈亏报告, 浮动盈亏, 已实现盈亏, 交易复盘\n## 参数：\n##   - days: 统计天数，默认7（近7日已实现盈亏）\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询\n## 返回量：微小 ~2KB\n## 关联：agent_risk_overview 风险 → agent_quick_trade 交易 → 本工具复盘 → 调整策略",
+    {
+      days: z.number().int().min(1).max(90).optional().describe("统计天数，默认7"),
+    },
+    async ({ days }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const d = days || 7
+        const [balance, positions, fills] = await Promise.allSettled([
+          privateApi.getBalance(auth),
+          privateApi.getPositions(auth),
+          privateApi.getFillsHistory(auth, undefined, undefined, Math.min(d * 10, 100)),
+        ])
+
+        const balOk = balance.status === "fulfilled" ? (balance.value as any[])?.[0] ?? {} : {}
+        const posOk = positions.status === "fulfilled" ? (positions.value as any[]) : []
+        const fillsOk = fills.status === "fulfilled" ? (fills.value as any[]) : []
+
+        // 浮动盈亏
+        const totalUpl = posOk.reduce((s: number, p: any) => s + parseFloat(p.upl ?? "0"), 0).toFixed(2)
+        const activePos = posOk.filter((p: any) => parseFloat(p.pos || "0") !== 0)
+        const posPnL = activePos.map((p: any) => ({
+          instId: p.instId,
+          posSide: p.posSide,
+          pos: p.pos,
+          avgPx: p.avgPx,
+          markPx: p.markPx,
+          upl: parseFloat(p.upl || "0").toFixed(2),
+          uplRatio: p.uplRatio,
+        }))
+
+        // 已实现盈亏：按日汇总
+        const now = Date.now()
+        const cutoff = now - d * 86400000
+        const recentFills = fillsOk.filter((f: any) => {
+          const ft = parseInt(f.ts || f.uTime || "0")
+          return ft > cutoff
+        })
+
+        const dailyPnL: Record<string, number> = {}
+        let totalRealized = 0
+        for (const f of recentFills) {
+          const ft = parseInt(f.ts || f.uTime || "0")
+          const day = new Date(ft).toISOString().slice(0, 10)
+          const pnl = parseFloat(f.pnl ?? f.fillPnl ?? "0")
+          dailyPnL[day] = (dailyPnL[day] || 0) + pnl
+          totalRealized += pnl
+        }
+
+        const totalEq = parseFloat((balOk as any).totalEq ?? "0")
+
+        return toResult({
+          tsIso: new Date().toISOString(),
+          period: `近${d}日`,
+          totalEquity: totalEq.toFixed(2),
+          floatingPnL: totalUpl,
+          floatingPnLPercent: totalEq > 0 ? ((parseFloat(totalUpl) / totalEq) * 100).toFixed(2) + "%" : "N/A",
+          realizedPnL: totalRealized.toFixed(2),
+          realizedPnLPercent: totalEq > 0 ? ((totalRealized / totalEq) * 100).toFixed(2) + "%" : "N/A",
+          dailyBreakdown: Object.entries(dailyPnL).map(([date, pnl]) => ({
+            date, pnl: pnl.toFixed(2),
+          })).sort((a, b) => b.date.localeCompare(a.date)),
+          positions: posPnL,
+          positionCount: activePos.length,
+          tradesAnalyzed: recentFills.length,
+          errors: [
+            balance.status === "rejected" ? `余额: ${(balance.reason as any)?.message}` : null,
+            positions.status === "rejected" ? `持仓: ${(positions.reason as any)?.message}` : null,
+            fills.status === "rejected" ? `成交: ${(fills.reason as any)?.message}` : null,
+          ].filter(Boolean),
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
 }
