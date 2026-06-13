@@ -1,6 +1,6 @@
 {
   "name": "hvip-mcp-server",
-  "version": "0.2.42",
+  "version": "0.2.40",
   "description": "hvip MCP Server — 304 工具覆盖 97.7% OKX REST API，含交易/行情/资金/策略/预测市场（非 OKX 官方产品）",
   "homepage": "https://hvip.one",
   "repository": {

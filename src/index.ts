@@ -27,7 +27,7 @@ import { getAuth } from "./tools/shared.js"
 async function main() {
   const server = new McpServer({
     name: "hvip-mcp",
-    version: "0.2.42",
+    version: "0.2.40",
     description: "hvip MCP Server — 304 工具覆盖 97.7% OKX REST API，含交易/行情/资金/策略/预测市场（非 OKX 官方产品）。仓库: https://github.com/okx-wallet-H/hvip-mcp",
   })
   const auth   = getAuth()
