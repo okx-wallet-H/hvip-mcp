@@ -447,6 +447,8 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
             positions.status === "rejected" ? `持仓: ${(positions.reason as any)?.message}` : null,
             config.status === "rejected" ? `配置: ${(config.reason as any)?.message}` : null,
           ].filter(Boolean),
+
+          _summary: `当前${posRisks.length}个持仓，保证金${totalMargin.toFixed(2)} USD，总权益${totalEq.toFixed(2)} USD。${dangerCount > 0 ? `🔴 ${dangerCount}个仓位接近强平！` : warnCount > 0 ? `⚡ ${warnCount}个需关注` : posRisks.length > 0 ? `✅ 所有仓位安全` : `无持仓`}`,
         }
 
         return toResult(overview)
@@ -563,6 +565,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
             marginUsed: ((estCost / availBal) * 100).toFixed(1) + "%",
             warning: estCost / availBal > 0.3 ? "此单使用超过30%可用余额" : null,
           },
+          _summary: `${side === "buy" ? "买入" : "卖出"} ${sz} ${instId} 已成交，预估成本 $${(estCost + estFee).toFixed(2)}，手续费 $${estFee.toFixed(4)}。保证金占用 ${((estCost / availBal) * 100).toFixed(1)}%`,
           tsIso: new Date().toISOString(),
         })
       } catch (e) { return toError(e) }
@@ -637,6 +640,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
           volumeLeader,
           fundingAlerts,
           updateTime: new Date().toISOString(),
+          _summary: `共扫描${arr.length}个${it}品种。涨幅前5: ${gainers.slice(0, 3).map((g: any) => g.instId).join("、") || "无"}。跌幅前5: ${losers.slice(0, 3).map((l: any) => l.instId).join("、") || "无"}。${fundingAlerts.length > 0 ? `⚠️ ${fundingAlerts.length}个品种资金费率异常。` : ""}`,
           tip: "扫描结果为快照。具体品种用 okx_quick_market 深入分析。",
         })
       } catch (e) { return toError(e) }
@@ -719,6 +723,194 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
             positions.status === "rejected" ? `持仓: ${(positions.reason as any)?.message}` : null,
             fills.status === "rejected" ? `成交: ${(fills.reason as any)?.message}` : null,
           ].filter(Boolean),
+          _summary: `近${d}日浮动盈亏 $${totalUpl}（${totalEq > 0 ? ((parseFloat(totalUpl) / totalEq) * 100).toFixed(2) : "N/A"}%），已实现盈亏 $${totalRealized.toFixed(2)}。${activePos.length}个持仓，分析${recentFills.length}笔成交。`,
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // agent_simulate_order — 模拟下单沙盒
+  // 替代: getTicker → 手动估算滑点 → getFeeRates → 心算成本
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "agent_simulate_order",
+    "CAT:[系统] | ## 功能：模拟下单——不产生真实订单，返回预估成交价、滑点、手续费、资金占用\n## 场景：Agent 回答\"如果我现在买入0.1 BTC会怎样\"时使用，让用户在不冒风险的情况下了解交易成本\n## 关键词：模拟交易, 沙盒, simulate, 预估, 滑点, 手续费, 资金预估\n## 参数：\n##   - instId: 产品ID\n##   - side: buy=买入, sell=卖出\n##   - sz: 下单数量\n##   - tdMode: 交易模式\n##   - px: 限价（选填，用于计算限价单预估）\n## 鉴权：⚠️ 需要 API Key（只读，不产生订单）\n## 风险：READ — 只查询+计算，不产生真实订单\n## 返回量：微小 ~1KB\n## 关联：本工具模拟 → 用户确认 → agent_quick_trade 真实下单",
+    {
+      instId: z.string().describe("产品ID，如 BTC-USDT-SWAP"),
+      side:   z.enum(["buy","sell"]).describe("买卖方向"),
+      sz:     z.string().describe("下单数量"),
+      tdMode: z.enum(["cash","cross","isolated"]).describe("交易模式"),
+      px:     z.string().optional().describe("限价（选填，用于计算限价单预估）"),
+    },
+    async ({ instId, side, sz, tdMode, px }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const qty = parseFloat(sz)
+        // 并行查询：行情 + 深度 + 手续费 + 限价
+        const calls: [string, Promise<unknown>][] = [
+          ["ticker", publicApi.getTicker(instId)],
+          ["orderbook", publicApi.getOrderbook(instId, 10)],
+          ["feeRates", privateApi.getFeeRates(auth, instId.includes("-SWAP") ? "SWAP" : "SPOT", instId)],
+          ["priceLimit", publicApi.getPriceLimitBatch("", undefined, instId)],
+        ]
+
+        const keys = calls.map(c => c[0])
+        const results = await Promise.allSettled(calls.map(c => c[1]))
+        const getArr = (name: string) => {
+          const idx = keys.indexOf(name)
+          if (idx < 0) return []
+          return results[idx].status === "fulfilled" ? (results[idx] as any).value ?? [] : []
+        }
+
+        // 行情
+        const tkArr = getArr("ticker")
+        const tk = tkArr[0] ?? {}
+        const lastPx = parseFloat(tk?.last ?? "0")
+        const bidPx = parseFloat(tk?.bidPx ?? "0")
+        const askPx = parseFloat(tk?.askPx ?? "0")
+        const markPx = lastPx || bidPx || askPx
+
+        // 深度 — 计算滑点
+        const obArr = getArr("orderbook")
+        const obData = obArr?.data?.[0] ?? obArr
+        const asks = (obData?.asks ?? []) as any[]
+        const bids = (obData?.bids ?? []) as any[]
+        let slippage = 0
+        if (side === "buy" && asks.length > 0) {
+          let remaining = qty
+          let cost = 0
+          for (const a of asks) {
+            const px_a = parseFloat(a[0] || "0")
+            const sz_a = parseFloat(a[1] || "0")
+            const fill = Math.min(remaining, sz_a)
+            cost += fill * px_a
+            remaining -= fill
+            if (remaining <= 0) break
+          }
+          const avgPx = cost / qty
+          slippage = markPx > 0 ? ((avgPx - markPx) / markPx) * 100 : 0
+        } else if (side === "sell" && bids.length > 0) {
+          let remaining = qty
+          let revenue = 0
+          for (const b of bids) {
+            const px_b = parseFloat(b[0] || "0")
+            const sz_b = parseFloat(b[1] || "0")
+            const fill = Math.min(remaining, sz_b)
+            revenue += fill * px_b
+            remaining -= fill
+            if (remaining <= 0) break
+          }
+          const avgPx = revenue / qty
+          slippage = markPx > 0 ? ((markPx - avgPx) / markPx) * 100 : 0
+        }
+
+        // 手续费
+        const feeArr = getArr("feeRates")
+        const feeData = feeArr[0] ?? {}
+        const makerFee = parseFloat(feeData?.maker ?? "0")
+        const takerFee = parseFloat(feeData?.taker ?? "0")
+        const feeRate = takerFee  // simulation uses taker rate (worst case)
+
+        // 限价
+        const limitArr = getArr("priceLimit")
+        const limitData = limitArr[0]
+        const lowest = parseFloat(limitData?.lowest ?? "0")
+        const highest = parseFloat(limitData?.highest ?? "999999")
+
+        const orderPx = px ? parseFloat(px) : (side === "buy" ? askPx : bidPx)
+        const estCost = qty * orderPx
+        const estFee = estCost * feeRate
+        const pxWithinLimit = orderPx >= lowest && orderPx <= highest
+
+        return toResult({
+          simulated: true,
+          instId, side, sz, tdMode,
+          orderPx: orderPx.toFixed(4),
+          currentPrice: { last: lastPx, bid: bidPx, ask: askPx },
+          estimate: {
+            estCost: estCost.toFixed(2) + " USD",
+            estFee: estFee.toFixed(4) + " USD",
+            estTotal: (estCost + estFee).toFixed(2) + " USD",
+            feeRate: (feeRate * 100).toFixed(4) + "%",
+            slippage: slippage.toFixed(4) + "%",
+          },
+          priceCheck: {
+            withinLimit: pxWithinLimit,
+            range: `${lowest} ~ ${highest}`,
+          },
+          _summary: `模拟${side === "buy" ? "买入" : "卖出"} ${sz} ${instId}：预估成交价 $${orderPx.toFixed(2)}，手续费 $${estFee.toFixed(4)}，合计 $${(estCost + estFee).toFixed(2)}，滑点 ${slippage.toFixed(2)}%。${pxWithinLimit ? "价格在合理范围内。" : "⚠️ 价格超出限价范围。"}`,
+          tsIso: new Date().toISOString(),
+          tip: "以上为模拟结果，不产生真实订单。确认后可用 agent_quick_trade 真实下单。",
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // agent_get_preference — 获取 Agent 偏好
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "agent_get_preference",
+    "CAT:[系统] | ## 功能：读取 Agent 持久化偏好，跨会话保留\n## 场景：Agent 在新会话中恢复用户偏好（如\"只做现货\"\"默认交易对BTC-USDT\"\"风险偏好低\"）\n## 关键词：偏好, preference, 记忆, 持久化, 用户画像\n## 参数：\n##   - key: 偏好键名。不填返回全部偏好\n## 鉴权：PUBLIC — 本地读取\n## 风险：READ — 只读\n## 返回量：微小 ~300B\n## 关联：agent_set_preference 设置偏好 → 本工具 → Agent 根据偏好调整策略",
+    {
+      key: z.string().optional().describe("偏好键名，不填返回全部"),
+    },
+    async ({ key }) => {
+      try {
+        const prefPath = path.join(os.homedir(), ".hvip", "preferences.json")
+        let prefs: Record<string, string> = {}
+        try {
+          if (fs.existsSync(prefPath)) {
+            prefs = JSON.parse(fs.readFileSync(prefPath, "utf-8"))
+          }
+        } catch {}
+
+        const result = key
+          ? { key, value: prefs[key] ?? null, found: key in prefs }
+          : { all: prefs, count: Object.keys(prefs).length }
+
+        return toResult({
+          ...result,
+          _summary: key
+            ? `偏好 "${key}" = ${prefs[key] ? `"${prefs[key]}"` : "未设置"}`
+            : `已存储 ${Object.keys(prefs).length} 条偏好`,
+          tsIso: new Date().toISOString(),
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // agent_set_preference — 设置 Agent 偏好
+  // ══════════════════════════════════════════════════════════════════════
+  server.tool(
+    "agent_set_preference",
+    "CAT:[系统] | ## 功能：设置 Agent 持久化偏好，跨会话保留\n## 场景：用户说\"以后默认交易对用BTC-USDT\"时，Agent 保存偏好，下次会话自动恢复\n## 关键词：偏好, preference, 设置, 记忆, 持久化, 用户画像\n## 参数：\n##   - key: 偏好键名\n##   - value: 偏好值\n## 鉴权：PUBLIC — 本地写入\n## 风险：READ — 本地文件写入，无资金风险\n## 返回量：微小 ~200B\n## 关联：本工具设置偏好 → agent_get_preference 读取 → Agent 按偏好决策\n## 常用键名参考:\n##   - default_instId: 默认交易对，如 BTC-USDT-SWAP\n##   - default_tdMode: 默认交易模式 (cross/isolated/cash)\n##   - risk_level: 风险偏好 (low/medium/high)\n##   - trade_mode: 交易模式 (spot_only/swap_permitted/margin_permitted)\n##   - position_size_pct: 单笔仓位占比，如 0.1 (10%)",
+    {
+      key:   z.string().describe("偏好键名。常用: default_instId, default_tdMode, risk_level, trade_mode, position_size_pct"),
+      value: z.string().describe("偏好值"),
+    },
+    async ({ key, value }) => {
+      try {
+        const dir = path.join(os.homedir(), ".hvip")
+        const prefPath = path.join(dir, "preferences.json")
+        let prefs: Record<string, string> = {}
+        try {
+          fs.mkdirSync(dir, { recursive: true })
+          if (fs.existsSync(prefPath)) {
+            prefs = JSON.parse(fs.readFileSync(prefPath, "utf-8"))
+          }
+        } catch {}
+        prefs[key] = value
+        fs.writeFileSync(prefPath, JSON.stringify(prefs, null, 2), "utf-8")
+
+        return toResult({
+          ok: true,
+          key, value,
+          stored: Object.keys(prefs).length,
+          _summary: `已保存偏好: "${key}" = "${value}"（共 ${Object.keys(prefs).length} 条偏好）`,
+          tsIso: new Date().toISOString(),
         })
       } catch (e) { return toError(e) }
     }
