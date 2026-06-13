@@ -3,7 +3,7 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.2.40 · 304 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
+hvip-mcp-server v0.2.42 · 323 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
 入口 → src/index.ts → 注册全部 19 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
@@ -125,4 +125,4 @@ Skill 从反馈中产生 — 每 5 条反馈就是一个新 Skill 的 input。
 
 ## 当前状态
 
-v0.2.40 · 304 MCP 工具（300 原子 + 4 Skill）· 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
+v0.2.42 · 323 MCP 工具（314 原子 + 9 Skill）· 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
