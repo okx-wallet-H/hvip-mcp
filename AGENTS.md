@@ -3,7 +3,7 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.2.40 · 323 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
+hvip-mcp-server v0.2.43 · 323 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
 入口 → src/index.ts → 注册全部 19 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
@@ -96,13 +96,21 @@ SKILL_FEEDBACK.md      ← Agent 反馈留言板
 - 496 个节点，2,027 条边，覆盖全部 25 个源文件
 - 直接调用 **codegraph_explore** 理解代码结构，不要再手动 grep/glob
 
+## 🚫 代码纪律（铁律）
+
+1. **禁止直推 master**：所有改动走 `feat/` `fix/` `task/` 分支，push 后审核再合并
+2. **分支命名规范**：`feat/<slug>` `fix/<slug>` `docs/<slug>` `refactor/<slug>` `chore/<slug>` `task/<编号>`。禁止其他格式
+3. **每次提交前 build**：`npm run build` 不通过不上传
+4. **不删未合并分支**：审核不通过时保留远程分支并附修改意见
+5. **版本号由 Owner 定**：不可自行修改 `package.json` 中的 `version` 字段
+
 ## 开发规范
 
-1. **描述格式**：每个工具的 description 必须用 8 字段模板（功能/场景/关键词/参数/鉴权/风险/返回量/关联）。参考 `src/tools/market.ts` 的 `okx_get_ticker`
+1. **描述格式**：每个工具的 description 必须用 9 字段模板（功能/场景/关键词/参数/鉴权/风险/返回量/分类/关联）。参考 `src/tools/market.ts` 的 `okx_get_ticker`
 2. **枚举**：全部使用 `src/tools/shared.ts` 中的 `INST_TYPE_*` 常量，禁止硬编码
 3. **错误格式**：统一 `toError()` / `toResult()`，含 `errorCategory`（BUSINESS/AUTH/VALIDATION/NETWORK/RATE_LIMIT）
 4. **时间戳**：必须加 `tsIso` 字段
-5. **防幻觉**：接新端点前必须 curl 验证 OKX 真实 API，404 跳过。对接 SOP 见 `docs/OKX-MCP-防幻觉对接SOP-v1.0.md`
+5. **防幻觉**：接新端点前必须 curl 验证 OKX 真实 API，404 跳过。WS 频道必须确认在 OKX 官方文档有记载
 
 ## 常用命令
 
@@ -111,18 +119,24 @@ npm run build          # 编译
 npm start              # 启动 MCP Server
 ```
 
-## 🤖 外部 Agent 贡献 Skill
+## 🤖 外部 Agent 贡献
 
-其他 AI Agent 可以自行组合 Skill 并提 PR。流程：
+其他 AI Agent 参与开发：
 
-1. 阅读本文档了解项目架构和开发规范
-2. 阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md) 了解提交流程
-3. 在 `src/tools/agent-utils.ts` 中新增 Skill
-4. 提 PR（标题 `Skill: <功能描述>`，按 PR 模板填写）
-5. Claude（okx-wallet-H）审核通过后合并
+1. 阅读 `CLAUDE.md` + `CONTRIBUTING.md` 了解规范和流程
+2. 从 `tasks/` 或 GitHub Issues 找任务
+3. `git checkout -b task/T-XXX` → 开发 → `npm run build` → push
+4. Push 后通过 WS Hub (`ws://localhost:9321`) 发 `task:done` 通知审核员
+5. 审核通过后 squash-merge 到 master
 
-Skill 从反馈中产生 — 每 5 条反馈就是一个新 Skill 的 input。
+## 开发流程（内部）
+
+参照 OKX 官方 + GitHub Flow 标准：
+```
+Issue/任务 → 分支(feat/fix/task) → 开发 → build → push → CI → Review → Squash Merge → 删分支
+```
+详见 `CONTRIBUTING.md`
 
 ## 当前状态
 
-v0.2.40 · 323 MCP 工具（314 原子 + 9 Skill）· 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
+v0.2.43 · 352 MCP 工具 · 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
