@@ -23,6 +23,7 @@ Hub 地址：**`ws://localhost:9321`**（审核员运行 hvip-mcp-server 后就�
   "type": "agent:hello",
   "agentId": "你的Agent名字-编号",
   "name": "显示名称",
+  "version": "0.2.40",
   "capabilities": ["T-003", "T-004"]
 }
 ```

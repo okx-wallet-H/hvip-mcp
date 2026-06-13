@@ -49,11 +49,13 @@ class AgentHub {
   private tasks = new Map<string, TaskState>()
   private rooms = new Map<string, RoomState>()
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private version = "0.0.0"
 
   // ── 启动 ──
-  start(port: number, host = "0.0.0.0"): void {
+  start(port: number, host = "0.0.0.0", version = "0.0.0"): void {
+    this.version = version
     this.wss = new WebSocketServer({ port, host })
-    console.log(`[AgentHub] WS Server started on ws://${host}:${port}`)
+    console.log(`[AgentHub] WS Server v${version} started on ws://${host}:${port}`)
 
     // 预设房间
     this.ensureRoom("#lobby")
@@ -134,9 +136,22 @@ class AgentHub {
     this.send(ws, {
       type: "agent:registered",
       agentId,
+      currentVersion: this.version,
       message: `已注册。可用任务: ${this.getUnassignedTasks().join(", ") || "无"}`,
       pendingTasks: this.getUnassignedTasks(),
     })
+
+    // 版本检查：Agent 落后自动提醒升级
+    const agentVersion = String(msg.version || "")
+    if (agentVersion && agentVersion !== this.version) {
+      this.send(ws, {
+        type: "agent:upgrade",
+        current: this.version,
+        yourVersion: agentVersion,
+        message: `hvip MCP 已升级到 v${this.version}，你当前 v${agentVersion}。请 git pull && npm run build 后重连。`,
+      })
+      this.sendToRoom("#lobby", "system", `${agentId} 版本过旧 (v${agentVersion})，已提醒升级到 v${this.version}`)
+    }
 
     // 自动派发匹配的任务
     if (capabilities.length > 0) {
@@ -506,6 +521,6 @@ export const agentHub = new AgentHub()
 export type { HubStatus }
 
 // 便利函数
-export function startAgentHub(port: number, host = "0.0.0.0"): void {
-  agentHub.start(port, host)
+export function startAgentHub(port: number, host = "0.0.0.0", version = "0.0.0"): void {
+  agentHub.start(port, host, version)
 }
