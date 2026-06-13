@@ -17,7 +17,8 @@ import { registerCopyTools }       from "./tools/copy.js"
 import { registerSignalTools }      from "./tools/signal.js"
 import { registerRfqTools }        from "./tools/rfq.js"
 import { registerAffiliateTools }  from "./tools/affiliate.js"
-import { registerFiatTools }     from "./tools/fiat.js"
+import { registerFiatTools }           from "./tools/fiat.js"
+import { registerWsPredictionsTools }  from "./tools/ws-predictions.js"
 import { registerAgentUtils }    from "./tools/agent-utils.js"
 import { registerXLayerWSTools } from "./tools/xlayer-ws.js"
 import { registerWsTools } from "./tools/ws.js"
@@ -49,6 +50,7 @@ async function main() {
   registerFinanceTools(server, auth)
   registerAffiliateTools(server, auth)
   registerFiatTools(server, auth)
+  registerWsPredictionsTools(server)
   registerRfqTools(server, auth)
   registerAgentUtils(server, auth)
 
