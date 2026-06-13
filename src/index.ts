@@ -20,6 +20,7 @@ import { registerAffiliateTools }  from "./tools/affiliate.js"
 import { registerFiatTools }     from "./tools/fiat.js"
 import { registerAgentUtils }    from "./tools/agent-utils.js"
 import { registerXLayerWSTools } from "./tools/xlayer-ws.js"
+import { registerWsTools } from "./tools/ws.js"
 import { registerAgentHubTools } from "./tools/agent-hub.js"
 import { startAgentHub } from "./adapters/agent-hub.js"
 import { getAuth } from "./tools/shared.js"
@@ -52,6 +53,8 @@ async function main() {
   registerAgentUtils(server, auth)
 
   registerXLayerWSTools(server)
+
+  registerWsTools(server)
 
   registerAgentHubTools(server)
   startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"))
