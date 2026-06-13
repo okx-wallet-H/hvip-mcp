@@ -1007,4 +1007,23 @@ export const privateApi = {
 
   movePositions: (auth: Auth, body: Record<string, unknown>) =>
     request<unknown[]>("POST", "/api/v5/account/move-positions", { body, auth }),
+
+  // ── T-003: Outcomes 订单管理 ────────────────────────────────────
+  predictionsPlaceOrder: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown[]>("POST", "/api/v5/predictions/orders", { body, auth }),
+
+  predictionsCancelOrder: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown[]>("POST", "/api/v5/predictions/orders/cancel", { body, auth }),
+
+  predictionsCancelAll: (auth: Auth, body: Record<string, unknown>) =>
+    request<unknown[]>("POST", "/api/v5/predictions/orders/cancel-all", { body, auth }),
+
+  predictionsHeartbeat: (auth: Auth) =>
+    request<unknown[]>("POST", "/api/v5/predictions/heartbeat", { auth }),
+
+  predictionsGetOrder: (auth: Auth, orderId: string) =>
+    request<unknown[]>("GET", `/api/v5/predictions/orders/${orderId}`, { auth }),
+
+  predictionsOrderList: (auth: Auth, marketId?: string, status?: string, limit?: number) =>
+    request<unknown[]>("GET", "/api/v5/predictions/orders", { params: { marketId, status, limit }, auth }),
 }
