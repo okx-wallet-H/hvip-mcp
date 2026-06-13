@@ -25,18 +25,39 @@ interface HubMessage {
   [key: string]: unknown
 }
 
+// ── Room ──────────────────────────────────────────────────────────────────
+
+interface RoomMessage {
+  roomId: string
+  from:    string
+  text:    string
+  ts:      string
+}
+
+interface RoomState {
+  messages: RoomMessage[]
+  members:  Set<string>
+}
+
+const MAX_ROOM_MESSAGES = 200
+
 // ── Hub 核心 ──────────────────────────────────────────────────────────────
 
 class AgentHub {
   private wss: WSServer | null = null
   private agents = new Map<string, AgentConn>()
   private tasks = new Map<string, TaskState>()
+  private rooms = new Map<string, RoomState>()
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
 
   // ── 启动 ──
   start(port: number, host = "0.0.0.0"): void {
     this.wss = new WebSocketServer({ port, host })
     console.log(`[AgentHub] WS Server started on ws://${host}:${port}`)
+
+    // 预设房间
+    this.ensureRoom("#lobby")
+    this.ensureRoom("#review")
 
     this.wss.on("connection", (ws) => {
       let agentId: string | null = null
@@ -51,26 +72,12 @@ class AgentHub {
       })
 
       ws.on("close", () => {
-        if (agentId) {
-          const info = this.agents.get(agentId)
-          console.log(`[AgentHub] Agent 离线: ${agentId} (${info?.name || "?"})`)
-          this.agents.delete(agentId)
-          // 回收未完成的任务
-          for (const [tid, t] of this.tasks) {
-            if (t.assignedTo === agentId && t.status === "assigned") {
-              t.status = "unassigned"
-              t.assignedTo = undefined
-              t.claimedAt = undefined
-              this.broadcast({ type: "task:released", taskId: tid, reason: "Agent 离线" })
-            }
-          }
-        }
+        if (agentId) this.handleDisconnect(agentId)
       })
 
       ws.on("error", () => { /* close 事件会处理 */ })
     })
 
-    // 心跳检查：每 30s 踢掉超时 2 分钟的 Agent
     this.heartbeatTimer = setInterval(() => {
       const now = Date.now()
       for (const [id, a] of this.agents) {
@@ -86,18 +93,15 @@ class AgentHub {
   // ── 消息路由 ──
   private handleMessage(ws: WebSocket, authAgentId: string | null, msg: HubMessage): void {
     switch (msg.type) {
-      case "agent:hello":
-        this.handleHello(ws, msg)
-        break
-      case "agent:status":
-        if (authAgentId) this.handleAgentStatus(authAgentId)
-        break
-      case "task:claim":
-        this.handleClaim(msg)
-        break
-      case "task:done":
-        this.handleDone(msg)
-        break
+      case "agent:hello":   this.handleHello(ws, msg); break
+      case "agent:status":  if (authAgentId) this.handleAgentStatus(authAgentId); break
+      case "task:claim":    this.handleClaim(msg); break
+      case "task:done":     this.handleDone(msg); break
+      // ── Room ──
+      case "room:join":     this.handleRoomJoin(authAgentId, msg); break
+      case "room:leave":    this.handleRoomLeave(authAgentId, msg); break
+      case "room:message":  this.handleRoomMessage(authAgentId, msg); break
+      case "room:history":  this.handleRoomHistory(ws, msg); break
       default:
         this.send(ws, { type: "error", message: `未知消息类型: ${msg.type}` })
     }
@@ -114,7 +118,6 @@ class AgentHub {
       return
     }
 
-    // 踢掉旧连接
     const existing = this.agents.get(agentId)
     if (existing) existing.ws.close()
 
@@ -123,6 +126,9 @@ class AgentHub {
       status: "idle",
       lastSeen: Date.now(),
     })
+
+    // 自动推入 #lobby
+    this.joinRoom(agentId, "#lobby")
 
     console.log(`[AgentHub] Agent 注册: ${agentId} (${name}) skills: [${capabilities.join(", ")}]`)
     this.send(ws, {
@@ -138,6 +144,34 @@ class AgentHub {
         if (capabilities.includes(tid)) {
           this.dispatchTaskTo(tid, agentId)
         }
+      }
+    }
+  }
+
+  private handleDisconnect(agentId: string): void {
+    const info = this.agents.get(agentId)
+    console.log(`[AgentHub] Agent 离线: ${agentId} (${info?.name || "?"})`)
+
+    // 离开所有房间
+    for (const [, room] of this.rooms) {
+      if (room.members.has(agentId)) {
+        room.members.delete(agentId)
+        this.sendToRoomMembers(room, {
+          type: "room:member_left",
+          roomId: agentId,  // fixed below
+          agentId,
+        })
+      }
+    }
+    this.agents.delete(agentId)
+
+    // 回收任务
+    for (const [tid, t] of this.tasks) {
+      if (t.assignedTo === agentId && t.status === "assigned") {
+        t.status = "unassigned"
+        t.assignedTo = undefined
+        t.claimedAt = undefined
+        this.broadcast({ type: "task:released", taskId: tid, reason: "Agent 离线" })
       }
     }
   }
@@ -173,6 +207,9 @@ class AgentHub {
     const a = this.agents.get(agentId)
     if (a) a.status = "working"
 
+    // 自动推入任务房间
+    this.joinRoom(agentId, `#task-${taskId}`)
+
     console.log(`[AgentHub] ${agentId} 认领 ${taskId}`)
     this.sendTo(agentId, {
       type: "task:assigned",
@@ -204,6 +241,12 @@ class AgentHub {
     if (a) a.status = "idle"
 
     console.log(`[AgentHub] ${agentId} 完成 ${taskId}: ${result}`)
+
+    // 发到任务房间
+    this.sendToRoom(`#task-${taskId}`, agentId, `已完成 ${taskId}: ${result} (branch: ${branch})，等待审核。`)
+    // 发到审核房间
+    this.sendToRoom("#review", agentId, `${taskId} 提交完成，branch: ${branch}`)
+
     this.broadcast({
       type: "task:completed",
       taskId, agentId, result, branch,
@@ -211,7 +254,7 @@ class AgentHub {
     })
   }
 
-  // ── 派发任务到指定 Agent ──
+  // ── 派发任务 ──
   dispatchTaskTo(taskId: string, agentId: string): void {
     if (!this.tasks.has(taskId)) {
       this.tasks.set(taskId, { status: "unassigned" })
@@ -227,7 +270,7 @@ class AgentHub {
     })
   }
 
-  // ── 审核 ──
+  // ── 审核 + 自动通知房间 ──
   reviewTask(taskId: string, verdict: "approved" | "rejected", feedback?: string): void {
     const task = this.tasks.get(taskId)
     if (!task) return
@@ -240,8 +283,120 @@ class AgentHub {
       task.claimedAt = undefined
     }
 
+    const roomId = `#task-${taskId}`
+    const msg = verdict === "approved"
+      ? `✅ ${taskId} 审核通过。已合并到 master 并删除远程分支。`
+      : `❌ ${taskId} 审核不通过。${feedback || "请修改后重新 push。"}`
+
+    this.sendToRoom(roomId, "reviewer", msg)
+    this.sendToRoom("#review", "reviewer", `${taskId}: ${verdict}`)
+
     if (task.assignedTo) {
       this.sendTo(task.assignedTo, { type: "task:review", taskId, verdict, feedback })
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Room 操作
+  // ══════════════════════════════════════════════════════════════════════
+
+  private ensureRoom(roomId: string): RoomState {
+    let room = this.rooms.get(roomId)
+    if (!room) {
+      room = { messages: [], members: new Set() }
+      this.rooms.set(roomId, room)
+    }
+    return room
+  }
+
+  joinRoom(agentId: string, roomId: string): void {
+    const room = this.ensureRoom(roomId)
+    if (room.members.has(agentId)) return
+
+    room.members.add(agentId)
+    const a = this.agents.get(agentId)
+    if (a) {
+      this.send(a.ws, {
+        type: "room:joined",
+        roomId,
+        members: [...room.members],
+        recentMessages: room.messages.slice(-5),
+      })
+    }
+    this.sendToRoomMembers(room, { type: "room:member_joined", roomId, agentId })
+    console.log(`[AgentHub] ${agentId} → ${roomId}`)
+  }
+
+  leaveRoom(agentId: string, roomId: string): void {
+    const room = this.rooms.get(roomId)
+    if (!room) return
+    room.members.delete(agentId)
+    this.sendToRoomMembers(room, { type: "room:member_left", roomId, agentId })
+    // 清理空房间（保留预设）
+    if (roomId !== "#lobby" && roomId !== "#review" && room.members.size === 0) {
+      this.rooms.delete(roomId)
+    }
+  }
+
+  sendToRoom(roomId: string, from: string, text: string): void {
+    const room = this.ensureRoom(roomId)
+    const msg: RoomMessage = { roomId, from, text, ts: new Date().toISOString() }
+    room.messages.push(msg)
+    if (room.messages.length > MAX_ROOM_MESSAGES) room.messages.shift()
+
+    // 广播给房间成员
+    const raw = JSON.stringify({ type: "room:message", ...msg })
+    for (const agentId of room.members) {
+      const a = this.agents.get(agentId)
+      if (a && a.ws.readyState === WebSocket.OPEN) a.ws.send(raw)
+    }
+  }
+
+  getRoomHistory(roomId: string, limit = 50): RoomMessage[] {
+    const room = this.rooms.get(roomId)
+    if (!room) return []
+    return room.messages.slice(-limit)
+  }
+
+  getRooms(): Array<{ roomId: string; members: string[]; messageCount: number }> {
+    return [...this.rooms.entries()].map(([id, r]) => ({
+      roomId: id,
+      members: [...r.members],
+      messageCount: r.messages.length,
+    }))
+  }
+
+  // ── Room message handlers ────────────────────────────────────────────
+
+  private handleRoomJoin(agentId: string | null, msg: HubMessage): void {
+    if (!agentId) return
+    this.joinRoom(agentId, String(msg.roomId || ""))
+  }
+
+  private handleRoomLeave(agentId: string | null, msg: HubMessage): void {
+    if (!agentId) return
+    this.leaveRoom(agentId, String(msg.roomId || ""))
+  }
+
+  private handleRoomMessage(agentId: string | null, msg: HubMessage): void {
+    if (!agentId) return
+    const roomId = String(msg.roomId || "")
+    const text   = String(msg.text || "")
+    if (!roomId || !text) return
+    this.sendToRoom(roomId, agentId, text)
+  }
+
+  private handleRoomHistory(ws: WebSocket, msg: HubMessage): void {
+    const roomId = String(msg.roomId || "")
+    const limit  = Number(msg.limit) || 50
+    this.send(ws, { type: "room:history", roomId, messages: this.getRoomHistory(roomId, limit) })
+  }
+
+  private sendToRoomMembers(room: RoomState, msg: object): void {
+    const raw = JSON.stringify(msg)
+    for (const agentId of room.members) {
+      const a = this.agents.get(agentId)
+      if (a && a.ws.readyState === WebSocket.OPEN) a.ws.send(raw)
     }
   }
 
@@ -305,7 +460,9 @@ class AgentHub {
       branch: t.branch,
     }))
 
-    return { agents, tasks, agentCount: agents.length, taskCount: tasks.length }
+    const rooms = this.getRooms()
+
+    return { agents, tasks, rooms, agentCount: agents.length, taskCount: tasks.length }
   }
 
   // ── 关闭 ──
@@ -314,6 +471,7 @@ class AgentHub {
     this.wss?.close()
     this.agents.clear()
     this.tasks.clear()
+    this.rooms.clear()
   }
 }
 
@@ -333,6 +491,11 @@ interface HubStatus {
     claimedAt?: string
     result?: string
     branch?: string
+  }>
+  rooms: Array<{
+    roomId: string
+    members: string[]
+    messageCount: number
   }>
   agentCount: number
   taskCount: number
