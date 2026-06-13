@@ -114,7 +114,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_get_rfq_counterparties",
-    "## 功能：获取RFQ对手方列表\n## 场景：用于查看可询价的做市商和对手方\n## 关键词：RFQ对手方, counterparties, 报价对手, 询价对手\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：本工具查看对手方 → okx_create_rfq 发起询价",
+    "CAT:[策略-RFQ] | ## 功能：获取RFQ对手方列表\n## 场景：用于查看可询价的做市商和对手方\n## 关键词：RFQ对手方, counterparties, 报价对手, 询价对手\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：本工具查看对手方 → okx_create_rfq 发起询价",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -127,7 +127,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_cancel_rfq",
-    "## 功能：取消RFQ报价请求\n## 场景：用于取消已发送但未收到报价的询价\n## 关键词：取消询价, cancel rfq, 撤销询价\n## 参数：\n##   - rfqId: RFQ ID。必填\n## 鉴权：🔴 需要 API Key（交易）- 将取消询价，调用前必须确认\n## 风险：WRITE — 取消询价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：okx_get_rfqs 查看询价 → 本工具取消 → 重新询价",
+    "CAT:[策略-RFQ] | ## 功能：取消RFQ报价请求\n## 场景：用于取消已发送但未收到报价的询价\n## 关键词：取消询价, cancel rfq, 撤销询价\n## 参数：\n##   - rfqId: RFQ ID。必填\n## 鉴权：🔴 需要 API Key（交易）- 将取消询价，调用前必须确认\n## 风险：WRITE — 取消询价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：okx_get_rfqs 查看询价 → 本工具取消 → 重新询价",
     {
       rfqId: z.string().describe("RFQ ID。必填"),
     },
@@ -142,7 +142,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_cancel_batch_rfqs",
-    "## 功能：批量取消RFQ报价请求\n## 场景：用于同时取消多个询价\n## 关键词：批量取消, cancel batch rfqs, 批量撤销询价\n## 参数：\n##   - rfqIds: RFQ ID数组（JSON数组字符串）。必填\n## 鉴权：🔴 需要 API Key（交易）- 将批量取消询价，调用前必须确认\n## 风险：WRITE — 批量取消，调用前必须确认\n## 返回量：中等 ~2KB\n## 关联：okx_get_rfqs 查看询价 → 本工具批量取消",
+    "CAT:[策略-RFQ] | ## 功能：批量取消RFQ报价请求\n## 场景：用于同时取消多个询价\n## 关键词：批量取消, cancel batch rfqs, 批量撤销询价\n## 参数：\n##   - rfqIds: RFQ ID数组（JSON数组字符串）。必填\n## 鉴权：🔴 需要 API Key（交易）- 将批量取消询价，调用前必须确认\n## 风险：WRITE — 批量取消，调用前必须确认\n## 返回量：中等 ~2KB\n## 关联：okx_get_rfqs 查看询价 → 本工具批量取消",
     {
       rfqIds: z.string().describe("RFQ ID数组JSON字符串，如 '[\"123\",\"456\"]'"),
     },
@@ -158,7 +158,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_cancel_all_rfqs",
-    "## 功能：取消所有RFQ报价请求\n## 场景：用于一键清空所有未完成的询价\n## 关键词：全部取消, cancel all rfqs, 清空询价\n## 参数：无\n## 鉴权：🔴 需要 API Key（交易）- 将取消所有询价，调用前必须确认\n## 风险：WRITE — 取消全部询价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：本工具一键取消所有 → okx_create_rfq 重新询价",
+    "CAT:[策略-RFQ] | ## 功能：取消所有RFQ报价请求\n## 场景：用于一键清空所有未完成的询价\n## 关键词：全部取消, cancel all rfqs, 清空询价\n## 参数：无\n## 鉴权：🔴 需要 API Key（交易）- 将取消所有询价，调用前必须确认\n## 风险：WRITE — 取消全部询价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：本工具一键取消所有 → okx_create_rfq 重新询价",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -171,7 +171,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_create_quote",
-    "## 功能：创建报价（回复RFQ询价）\n## 场景：用于做市商回复询价、提供报价\n## 参数：\n##   - rfqId: RFQ ID。必填\n##   - quotePx: 报价价格。必填\n##   - sz: 报价数量。必填\n## 鉴权：🔴 需要 API Key（交易）- 将发送报价，调用前必须确认\n## 风险：WRITE — 发送报价，调用前必须确认\n## 返回量：微小 ~500B\n## 关联：okx_get_rfqs 查看询价 → 本工具报价 → okx_get_quotes 查看报价",
+    "CAT:[策略-RFQ] | ## 功能：创建报价（回复RFQ询价）\n## 场景：用于做市商回复询价、提供报价\n## 参数：\n##   - rfqId: RFQ ID。必填\n##   - quotePx: 报价价格。必填\n##   - sz: 报价数量。必填\n## 鉴权：🔴 需要 API Key（交易）- 将发送报价，调用前必须确认\n## 风险：WRITE — 发送报价，调用前必须确认\n## 返回量：微小 ~500B\n## 关联：okx_get_rfqs 查看询价 → 本工具报价 → okx_get_quotes 查看报价",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
       quotePx: z.string().describe("报价价格。必填"),
@@ -188,7 +188,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_cancel_quote",
-    "## 功能：取消已发送的报价\n## 场景：用于取消尚未被接受的报价\n## 参数：\n##   - rfqId: RFQ ID。必填\n##   - quoteId: 报价ID。必填\n## 鉴权：🔴 需要 API Key（交易）- 将取消报价，调用前必须确认\n## 风险：WRITE — 取消报价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：okx_get_quotes 查看报价 → 本工具取消 → 重新报价",
+    "CAT:[策略-RFQ] | ## 功能：取消已发送的报价\n## 场景：用于取消尚未被接受的报价\n## 参数：\n##   - rfqId: RFQ ID。必填\n##   - quoteId: 报价ID。必填\n## 鉴权：🔴 需要 API Key（交易）- 将取消报价，调用前必须确认\n## 风险：WRITE — 取消报价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：okx_get_quotes 查看报价 → 本工具取消 → 重新报价",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
       quoteId: z.string().describe("报价ID。必填"),
@@ -204,7 +204,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_get_rfq_trades",
-    "## 功能：查询RFQ成交记录\n## 场景：用于查看大宗交易的成交历史\n## 关键词：RFQ成交, rfq trades, 大宗成交, 询价成交\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_get_rfqs 查询价 → 本工具查成交 → 核对大宗交易",
+    "CAT:[策略-RFQ] | ## 功能：查询RFQ成交记录\n## 场景：用于查看大宗交易的成交历史\n## 关键词：RFQ成交, rfq trades, 大宗成交, 询价成交\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_get_rfqs 查询价 → 本工具查成交 → 核对大宗交易",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -216,7 +216,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
   )
   server.tool(
     "okx_reset_rfq_mmp",
-    "## 功能：重置RFQ的做市商保护（MMP）状态\n## 场景：用于触发MMP保护后手动恢复做市报价\n## 关键词：RFQ-MMP, reset mmp, 做市保护重置\n## 参数：无\n## 鉴权：🔴 需要 API Key（交易）- 重置做市保护，调用前必须确认\n## 风险：WRITE — 重置MMP后做市商可恢复报价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：本工具重置 → 恢复正常RFQ报价",
+    "CAT:[策略-RFQ] | ## 功能：重置RFQ的做市商保护（MMP）状态\n## 场景：用于触发MMP保护后手动恢复做市报价\n## 关键词：RFQ-MMP, reset mmp, 做市保护重置\n## 参数：无\n## 鉴权：🔴 需要 API Key（交易）- 重置做市保护，调用前必须确认\n## 风险：WRITE — 重置MMP后做市商可恢复报价，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：本工具重置 → 恢复正常RFQ报价",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

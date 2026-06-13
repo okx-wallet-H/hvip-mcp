@@ -13,7 +13,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   server.tool(
     "okx_account_overview",
-    "## 功能：一键获取账户全景：余额、持仓、配置、总估值，替代串行调用 4 个工具\n## 场景：用于Agent首次了解用户账户全貌、回答\"我账户现在什么情况\"、每日资产概览\n## 关键词：账户全景, 账户概览, account overview, 资产快照, 持仓汇总, 一键查账\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~3KB — 结构化摘要，非原始JSON堆砌\n## 关联：本工具全景 → okx_get_positions 深入单仓位 → okx_get_balance 看各币种 → okx_place_order 交易",
+    "CAT:[系统] | ## 功能：一键获取账户全景：余额、持仓、配置、总估值，替代串行调用 4 个工具\n## 场景：用于Agent首次了解用户账户全貌、回答\"我账户现在什么情况\"、每日资产概览\n## 关键词：账户全景, 账户概览, account overview, 资产快照, 持仓汇总, 一键查账\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~3KB — 结构化摘要，非原始JSON堆砌\n## 关联：本工具全景 → okx_get_positions 深入单仓位 → okx_get_balance 看各币种 → okx_place_order 交易",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -101,7 +101,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   server.tool(
     "okx_quick_market",
-    "## 功能：单次调用返回指定产品的行情+5档深度+资金费率+产品规格的结构化摘要\n## 场景：用于Agent回答\"现在BTC什么情况\"时一次拿到全部信息、快速判断交易时机\n## 关键词：市场速览, quick market, 行情+深度, 一键看盘, 综合行情, 市场概况\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT、ETH-USDT-SWAP\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~2KB — 精简5档深度，非全量订单簿\n## 关联：本工具速览 → okx_get_candles 深入K线分析 → okx_get_orderbook 看全深度 → okx_place_order 下单",
+    "CAT:[系统] | ## 功能：单次调用返回指定产品的行情+5档深度+资金费率+产品规格的结构化摘要\n## 场景：用于Agent回答\"现在BTC什么情况\"时一次拿到全部信息、快速判断交易时机\n## 关键词：市场速览, quick market, 行情+深度, 一键看盘, 综合行情, 市场概况\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT、ETH-USDT-SWAP\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~2KB — 精简5档深度，非全量订单簿\n## 关联：本工具速览 → okx_get_candles 深入K线分析 → okx_get_orderbook 看全深度 → okx_place_order 下单",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP"),
     },
@@ -197,7 +197,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   server.tool(
     "okx_preflight_check",
-    "## 功能：下单前一次性检查：最大可开数量、限价范围、合约张数换算、当前价格，避免下单后报错\n## 场景：用于Agent下单前必调、验证用户输入的数量和价格是否合法、避免因参数错误被拒\n## 关键词：下单预检, preflight, 下单前检查, 数量换算, 限价检查, 可开检查\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT-SWAP。必填\n##   - tdMode: 交易模式。cash=现货, cross=全仓, isolated=逐仓。必填\n##   - sz: 用户想下单的数量。必填（币数，会自动换算为张数）\n##   - px: 用户想下单的价格（选填，填了会检查是否在限价范围内）\n##   - side: 买卖方向。buy=买入, sell=卖出。填了会查对应方向的最大可开\n##   - ordType: 订单类型。填了会检查是否在限价范围内（限价单才需要）\n## 鉴权：⚠️ 需要 API Key（只读）- 只查询不产生订单\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~1KB\n## 关联：本工具预检通过 → okx_place_order 下单 → okx_get_order 确认成交",
+    "CAT:[系统] | ## 功能：下单前一次性检查：最大可开数量、限价范围、合约张数换算、当前价格，避免下单后报错\n## 场景：用于Agent下单前必调、验证用户输入的数量和价格是否合法、避免因参数错误被拒\n## 关键词：下单预检, preflight, 下单前检查, 数量换算, 限价检查, 可开检查\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT-SWAP。必填\n##   - tdMode: 交易模式。cash=现货, cross=全仓, isolated=逐仓。必填\n##   - sz: 用户想下单的数量。必填（币数，会自动换算为张数）\n##   - px: 用户想下单的价格（选填，填了会检查是否在限价范围内）\n##   - side: 买卖方向。buy=买入, sell=卖出。填了会查对应方向的最大可开\n##   - ordType: 订单类型。填了会检查是否在限价范围内（限价单才需要）\n## 鉴权：⚠️ 需要 API Key（只读）- 只查询不产生订单\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~1KB\n## 关联：本工具预检通过 → okx_place_order 下单 → okx_get_order 确认成交",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       tdMode:  z.enum(["cash","cross","isolated"]).describe("交易模式。cash=现货, cross=全仓, isolated=逐仓"),
@@ -319,7 +319,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   server.tool(
     "okx_agent_feedback",
-    "## 功能：提交使用反馈——当你遇到多步操作烦琐、参数试错、不知道调用顺序、搜索不到工具、或需要使用手工计算弥补不足时，调用此工具记录下来\n## 场景：用于Agent汇报MCP工具的使用痛点，反馈将直接进入开发团队的待办列表，推动Skill组合和工具优化\n## 关键词：反馈, feedback, 留言, 建议, 痛点, 改善建议\n## 参数：\n##   - title: 一句话标题\n##   - what: 你做了什么操作\n##   - tools: 调用了哪些工具（用逗号分隔）\n##   - pain: 痛点是什么\n##   - suggestion: 你建议怎么改善（想要什么Skill）\n## 鉴权：PUBLIC — 无需 API Key，谁都可以反馈\n## 风险：READ — 只写日志，Agent 可随时调用\n## 返回量：微小 ~200B\n## 关联：任何工具组合遇到阻碍时调用 → 开发者审查反馈 → 创建 Skill 或优化工具",
+    "CAT:[系统] | ## 功能：提交使用反馈——当你遇到多步操作烦琐、参数试错、不知道调用顺序、搜索不到工具、或需要使用手工计算弥补不足时，调用此工具记录下来\n## 场景：用于Agent汇报MCP工具的使用痛点，反馈将直接进入开发团队的待办列表，推动Skill组合和工具优化\n## 关键词：反馈, feedback, 留言, 建议, 痛点, 改善建议\n## 参数：\n##   - title: 一句话标题\n##   - what: 你做了什么操作\n##   - tools: 调用了哪些工具（用逗号分隔）\n##   - pain: 痛点是什么\n##   - suggestion: 你建议怎么改善（想要什么Skill）\n## 鉴权：PUBLIC — 无需 API Key，谁都可以反馈\n## 风险：READ — 只写日志，Agent 可随时调用\n## 返回量：微小 ~200B\n## 关联：任何工具组合遇到阻碍时调用 → 开发者审查反馈 → 创建 Skill 或优化工具",
     {
       title:      z.string().describe("一句话标题"),
       what:       z.string().describe("你做了什么操作"),
