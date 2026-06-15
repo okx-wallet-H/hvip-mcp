@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: TypeScript 类型检查
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: 自检 — 工具数 / tsIso / CAT 标签
+        run: |
+          node -e "
+          const s = require('fs').readFileSync('./dist/index.js','utf8');
+
+          // 工具注册计数（esbuild 编译后格式为 server.tool(\n  \"name\"）
+          const toolCount = (s.match(/server\.tool\(/g) || []).length;
+          console.log('工具注册:', toolCount);
+
+          // tsIso 覆盖
+          const tsIso = (s.match(/tsIso/g) || []).length;
+          console.log('tsIso 引用:', tsIso);
+
+          // CAT 标签
+          const cats = (s.match(/CAT:\[/g) || []).length;
+          console.log('CAT 标签:', cats);
+
+          // 检查安全基础设施
+          const hasReadOnly = s.includes('OKX_READ_ONLY');
+          const hasClassifyRisk = s.includes('classifyRisk');
+          const hasShebang = s.startsWith('#!/usr/bin/env node');
+          console.log('只读模式:', hasReadOnly ? '✅' : '❌');
+          console.log('风险分级:', hasClassifyRisk ? '✅' : '❌');
+          console.log('shebang:', hasShebang ? '✅' : '❌');
+
+          // 新增模块
+          console.log('指标模块:', s.includes('okx_indicator') ? '✅' : '❌');
+          console.log('SmartMoney:', s.includes('okx_smart_leaderboard') ? '✅' : '❌');
+
+          // 门禁
+          if (toolCount < 200) { console.log('FAIL: 工具注册不足 ' + toolCount); process.exit(1); }
+          if (cats < 20) { console.log('FAIL: CAT 标签不足 ' + cats); process.exit(1); }
+          if (!hasReadOnly) { console.log('FAIL: 缺少只读模式'); process.exit(1); }
+          console.log('✅ 自检全绿');
+          "
+
+      - name: 模块清单
+        run: |
+          echo '### 模块工具分布' >> $GITHUB_STEP_SUMMARY
+          for f in src/tools/*.ts; do
+            count=$(grep -c 'server\.tool(' "$f" 2>/dev/null || echo 0)
+            name=$(basename "$f" .ts)
+            if [ "$count" -gt 0 ]; then
+              echo "- ${name}: ${count} 工具" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
