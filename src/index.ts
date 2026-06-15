@@ -26,6 +26,7 @@ import { registerSmartMoneyTools } from "./tools/smartmoney.js"
 import { registerXLayerWSTools } from "./tools/xlayer-ws.js"
 import { registerWsTools } from "./tools/ws.js"
 import { registerAgentHubTools } from "./tools/agent-hub.js"
+import { registerCodeGraphTools } from "./tools/codegraph.js"
 import { startAgentHub } from "./adapters/agent-hub.js"
 import { getAuth, classifyRisk, type RiskLevel } from "./tools/shared.js"
 import { privateApi } from "./adapters/okx.js"
@@ -109,6 +110,7 @@ function registerAllTools(
   registerXLayerWSTools(server)
   registerWsTools(server)
   registerAgentHubTools(server)
+  registerCodeGraphTools(server)
 
   return { skipped, skipLog }
 }
@@ -248,7 +250,7 @@ async function main() {
   const server = new McpServer({
     name: "hvip-mcp",
     version: VERSION,
-    description: "hvip MCP Server — 362 工具覆盖 97.7% OKX REST API，含交易/行情/资金/策略/预测市场/技术指标/Smart Money（非 OKX 官方产品）。仓库: https://github.com/okx-wallet-H/hvip-mcp",
+    description: "hvip MCP Server — 364 工具覆盖 97.7% OKX REST API，含交易/行情/资金/策略/预测市场/技术指标/Smart Money（非 OKX 官方产品）。仓库: https://github.com/okx-wallet-H/hvip-mcp",
   })
 
   const { skipped, skipLog } = registerAllTools(server, auth, readOnly)
