@@ -251,7 +251,7 @@ async function main() {
   const server = new McpServer({
     name: "hvip-mcp",
     version: VERSION,
-    description: "hvip MCP Server — 364 工具覆盖 97.7% OKX REST API，含交易/行情/资金/策略/预测市场/技术指标/Smart Money（非 OKX 官方产品）。仓库: https://github.com/okx-wallet-H/hvip-mcp",
+    description: "hvip MCP Server — 365 工具覆盖 97.7% OKX REST API，含交易/行情/资金/策略/预测市场/技术指标/Smart Money/WebSocket/代码图谱（非 OKX 官方产品）。仓库: https://github.com/okx-wallet-H/hvip-mcp",
   })
 
   const { skipped, skipLog } = registerAllTools(server, auth, readOnly)
