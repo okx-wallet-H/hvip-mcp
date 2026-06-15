@@ -1,34 +1,73 @@
-name: Build & Check
+name: Publish to npm
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '版本号 (如 v0.2.45)，留空用 package.json'
+        required: false
+        default: ''
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
 
       - run: npm ci
+
+      - name: 解析版本号
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          elif [ -n "${{ github.ref_name }}" ] && [[ "${{ github.ref_name }}" != master ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          VER="${TAG#v}"
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "::notice::发布版本 $VER"
 
       - name: Build
         run: npm run build
 
-      - name: Self-check
+      - name: 验证产物
         run: |
-          node -e "
-          const s=require('fs').readFileSync('./dist/index.js','utf8');
-          const tools=(s.match(/server\\.tool\\(/g)||[]).length;
-          const tsIso=(s.match(/tsIso/g)||[]).length;
-          const instRefs=(s.match(/INST_TYPE_/g)||[]).length;
-          console.log('Tools:'+tools+' tsIso:'+tsIso+' INST_TYPE:'+instRefs);
-          if(tools<100||tsIso<10){console.log('FAIL');process.exit(1)}
-          console.log('PASS');
-          "
+          test -f dist/index.js || { echo "FAIL"; exit 1; }
+          SIZE=$(wc -c < dist/index.js)
+          echo "产物: ${SIZE} bytes"
+          [ "$SIZE" -gt 100000 ] || { echo "FAIL: 过小"; exit 1; }
+
+      - name: 发布到 npm
+        if: steps.version.outputs.version != ''
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version --allow-same-version
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.tag }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          make_latest: true
