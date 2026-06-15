@@ -28,6 +28,9 @@ GitHub Actions → Bump & Publish → 选叠加级别 → 自动：
 
 ## 历史版本
 
+### v0.2.48 (2026-06-15)
+即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.48)。
+
 ### v0.2.47 (2026-06-15)
 即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.47)。
 

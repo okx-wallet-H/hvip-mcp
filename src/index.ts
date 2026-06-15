@@ -237,7 +237,7 @@ async function startStdio(
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function main() {
-  const VERSION = "0.2.47"
+  const VERSION = "0.2.48"
   const auth = getAuth()
   const mode = resolveTransportMode()
 
