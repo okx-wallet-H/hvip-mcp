@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { createServer } from "node:http"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
@@ -108,7 +109,7 @@ function registerAllTools(
   registerIndicatorTools(server)
   registerSmartMoneyTools(server, auth)
   registerXLayerWSTools(server)
-  registerWsTools(server)
+  registerWsTools(server, auth)
   registerAgentHubTools(server)
   registerCodeGraphTools(server)
 
