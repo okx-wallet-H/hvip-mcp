@@ -1,238 +1,418 @@
+/**
+ * 代码知识图谱 — node:sqlite 零依赖引擎
+ *
+ * 读取 .codegraph/codegraph.db（CodeGraph 标准格式），
+ * 用 Node 内置 node:sqlite (22.5+) 直接查询。
+ * 代码图谱由 Claude Code 自动维护，hvip 只读取。
+ *
+ * Schema:
+ *   nodes(id, kind, name, file_path, start_line, signature, is_exported, ...)
+ *   edges(source, target, kind, line, ...)  — kind: calls/contains/references/imports
+ *   files(path, language, node_count, indexed_at, ...)
+ *   nodes_fts — FTS5 全文索引 (name, qualified_name, docstring, signature)
+ */
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { toResult, toError } from "./shared.js"
+import * as path from "node:path"
+import * as fs from "node:fs"
 
-// ════════════════════════════════════════════════════════════════════════════
-// 代码知识图谱 — CodeGraph 引擎内核集成
-//
-// 通过 CodeGraph.open()（读模式）打开 .codegraph DB，
-// 复用 CodeGraph 官方的遍历器、搜索器、上下文构建器。
-// 代码图谱本身由 Claude Code 自动维护，hvip 只消费不写入。
-// ════════════════════════════════════════════════════════════════════════════
+// ── SQLite 绑定 ──────────────────────────────────────────────────────────────
 
-let _cg: any = null
-let _cgInitError: string | null = null
-let _cgInitDone = false
+let DatabaseSync: any = null
+let _sqliteAvailable: boolean | null = null
 
-async function getCodeGraph(): Promise<any | null> {
-  if (_cgInitDone) return _cg
-
+function isSqliteAvailable(): boolean {
+  if (_sqliteAvailable !== null) return _sqliteAvailable
   try {
-    const mod = await import("@colbymchenry/codegraph")
-    const CodeGraph = mod.CodeGraph || mod.default?.CodeGraph
+    const sqlite = require("node:sqlite") as { DatabaseSync: new (p: string, o?: any) => any }
+    DatabaseSync = sqlite.DatabaseSync
+    _sqliteAvailable = true
+    return true
+  } catch {
+    _sqliteAvailable = false
+    return false
+  }
+}
 
-    // open() 只读模式，不冲突 Claude Code 的 daemon
-    _cg = await CodeGraph.open(".")
-    _cgInitDone = true
-    return _cg
-  } catch (e: any) {
-    _cgInitError = e.message || String(e)
-    _cgInitDone = true
+function getDBPath(): string {
+  return path.resolve(".codegraph", "codegraph.db")
+}
+
+function openDB(): any | null {
+  if (!isSqliteAvailable()) return null
+  const dbPath = getDBPath()
+  if (!fs.existsSync(dbPath)) return null
+  try {
+    return new DatabaseSync(dbPath, { readonly: true })
+  } catch {
     return null
   }
 }
 
+// ── 查询辅助 ─────────────────────────────────────────────────────────────────
+
+function safeGet<T>(db: any, sql: string, ...params: any[]): T | null {
+  try {
+    const stmt = db.prepare(sql)
+    return stmt.get(...(params.length ? params : [])) as T
+  } catch { return null }
+}
+
+function safeAll<T>(db: any, sql: string, limit: number, ...params: any[]): T[] {
+  try {
+    const stmt = db.prepare(sql)
+    const all = stmt.all(...(params.length ? params : [])) as T[]
+    return (Array.isArray(all) ? all : []).slice(0, limit)
+  } catch { return [] }
+}
+
+/** 通过名称查找节点（精确 + LIKE 回退） */
+function findNodes(db: any, name: string, limit = 5): any[] {
+  // 先精确匹配
+  const exact = safeAll<any>(db,
+    "SELECT * FROM nodes WHERE name = ? LIMIT ?", limit, name, limit
+  )
+  if (exact.length > 0) return exact
+  // LIKE 回退
+  return safeAll<any>(db,
+    "SELECT * FROM nodes WHERE name LIKE ? LIMIT ?", limit, `%${name}%`, limit
+  )
+}
+
+/** 获取调用者列表 */
+function getCallers(db: any, nodeId: string, limit = 50): any[] {
+  return safeAll<any>(db, `
+    SELECT n.name, n.kind, n.file_path, n.start_line, e.line, e.kind as edge_kind
+    FROM edges e
+    JOIN nodes n ON e.source = n.id
+    WHERE e.target = ? AND e.kind = 'calls'
+    ORDER BY n.file_path, n.start_line
+    LIMIT ?
+  `, limit, nodeId, limit)
+}
+
+/** 获取被调用者列表 */
+function getCallees(db: any, nodeId: string, limit = 50): any[] {
+  return safeAll<any>(db, `
+    SELECT n.name, n.kind, n.file_path, n.start_line, e.line, e.kind as edge_kind
+    FROM edges e
+    JOIN nodes n ON e.target = n.id
+    WHERE e.source = ? AND e.kind = 'calls'
+    ORDER BY n.file_path, n.start_line
+    LIMIT ?
+  `, limit, nodeId, limit)
+}
+
+/** 2-hop 影响分析：修改此节点会影响谁？ */
+function getImpact(db: any, nodeId: string, maxDepth = 2, limit = 50): { direct: any[]; indirect: any[] } {
+  const direct = getCallers(db, nodeId, limit)
+  // 对前 10 个直接调用者，查它们的调用者
+  const indirectMap = new Map<string, any>()
+  for (const d of direct.slice(0, 10)) {
+    const node = safeGet<any>(db,
+      "SELECT id, name, kind, file_path FROM nodes WHERE name = ? AND file_path = ? LIMIT 1",
+      d.name, d.file_path
+    )
+    if (node) {
+      const indirect = safeAll<any>(db, `
+        SELECT n.name, n.kind, n.file_path, n.start_line
+        FROM edges e JOIN nodes n ON e.source = n.id
+        WHERE e.target = ? AND e.kind = 'calls'
+        LIMIT 5
+      `, 5, node.id)
+      for (const idr of indirect) {
+        const key = `${idr.name}@${idr.file_path}`
+        if (!indirectMap.has(key)) indirectMap.set(key, idr)
+      }
+    }
+  }
+  return { direct, indirect: [...indirectMap.values()].slice(0, limit) }
+}
+
+// ── 工具注册 ─────────────────────────────────────────────────────────────────
+
 export function registerCodeGraphTools(server: McpServer): void {
 
-  // ══════════════════════════════════════════════════════════════════════
-  // codegraph_status — 图谱状态
-  // ══════════════════════════════════════════════════════════════════════
   server.tool(
     "codegraph_status",
-    "CAT:[代码智能] | ## 功能：检查代码知识图谱状态——节点数、边数、覆盖文件、被调用最多的函数\n## 场景：Agent 首次连接时确认图谱是否就绪，或用户问「hvip 代码结构能查吗」时确认\n## 关键词：代码图谱, codegraph, 知识图谱, 索引状态, 调用排行\n## 参数：无\n## 鉴权：PUBLIC — 本地读数据库\n## 风险：READ — 只读\n## 返回量：微小 ~800B\n## 关联：本工具确认状态 → codegraph_query 追踪调用链/搜索符号",
+    "CAT:[代码智能] | ## 功能：检查代码知识图谱状态——节点数、边数、覆盖文件、被调最多的函数\n## 场景：Agent 首次连接时确认图谱就绪\n## 关键词：代码图谱, codegraph, 知识图谱, 索引状态, 调用排行\n## 参数：无\n## 鉴权：PUBLIC — 本地读 DB\n## 风险：READ — 只读\n## 返回量：微小 ~1KB\n## 关联：确认状态 → codegraph_query 追踪调用链",
     {},
     async () => {
       try {
-        const cg = await getCodeGraph()
-
-        if (!cg) {
+        if (!isSqliteAvailable()) {
+          const nodeVersion = process.versions.node
           return toResult({
             status: "unavailable",
-            reason: _cgInitError || "CodeGraph 引擎加载失败",
-            how_to_setup: "npm i @colbymchenry/codegraph && codegraph index",
-            alternatives: "图谱不可用时，仍可用本工具返回的节点数和边数了解代码规模",
+            reason: `Node.js ${nodeVersion} 不支持内置 sqlite，需要 Node >= 22.5.0`,
+            nodeVersion,
             tsIso: new Date().toISOString(),
-            _summary: "代码图谱未就绪。请运行 codegraph index 生成数据库。",
+            _summary: `代码图谱不可用：需 Node >= 22.5.0，当前 ${nodeVersion}`,
           })
         }
 
-        const stats = await cg.getStats()
-
-        // Top 5 被调用函数（通过 graph 遍历）
-        let topCalled: any[] = []
-        try {
-          const allExported = await cg.getNodesByKind("function")
-            .then((nodes: any[]) => nodes.filter((n: any) => n.isExported))
-            .catch(() => [])
-          // 采样前 50 个函数查调用数
-          const sample = allExported.slice(0, 50)
-          const withCounts = await Promise.all(
-            sample.map(async (n: any) => {
-              try {
-                const callers = await cg.getCallers(n.id, 1)
-                return { name: n.name, file: n.filePath, callers: callers?.length || 0 }
-              } catch { return { name: n.name, file: n.filePath, callers: 0 } }
-            })
-          )
-          topCalled = withCounts.sort((a, b) => b.callers - a.callers).slice(0, 5)
-        } catch { /* non-critical */ }
-
-        const status = {
-          status: "ready",
-          stats: {
-            nodes: stats.nodeCount,
-            edges: stats.edgeCount,
-            files: stats.fileCount,
-            byKind: stats.nodesByKind,
-            byLanguage: stats.filesByLanguage,
-            dbSize: stats.dbSizeBytes ? `${(stats.dbSizeBytes / 1024 / 1024).toFixed(1)} MB` : "unknown",
-          },
-          topCalled,
-          queryHint: "用 codegraph_query 查调用链。例: codegraph_query({ mode: 'callers', symbol: 'toResult' })",
-          tsIso: new Date().toISOString(),
-          _summary: `代码知识图谱就绪。${stats.nodeCount} 个节点，${stats.edgeCount} 条关系，覆盖 ${stats.fileCount} 个文件。${topCalled.length ? `被调最多: ${topCalled.slice(0, 3).map((f: any) => f.name).join("、")}` : ""}`,
+        const dbPath = getDBPath()
+        if (!fs.existsSync(dbPath)) {
+          return toResult({
+            status: "no_db",
+            reason: `.codegraph/codegraph.db 不存在`,
+            how_to_setup: [
+              "1. npm i -g @colbymchenry/codegraph",
+              "2. cd 到项目根目录运行 codegraph index",
+              "3. 重启 MCP Server",
+              "（Claude Code 用户：图谱由 CodeGraph 功能自动生成）",
+            ].join("\n"),
+            tsIso: new Date().toISOString(),
+            _summary: "代码图谱未生成。运行 codegraph index 后可用。",
+          })
         }
 
-        return toResult(status)
+        const db = openDB()
+        if (!db) {
+          return toResult({
+            status: "error",
+            reason: "无法打开代码图谱数据库（可能被锁定）",
+            dbPath,
+            tsIso: new Date().toISOString(),
+            _summary: "代码图谱数据库打开失败，请重试。",
+          })
+        }
+
+        try {
+          // 基本统计
+          const nodeCount = safeGet<any>(db, "SELECT count(*) as n FROM nodes")?.n || 0
+          const edgeCount = safeGet<any>(db, "SELECT count(*) as n FROM edges")?.n || 0
+          const fileCount = safeGet<any>(db, "SELECT count(*) as n FROM files")?.n || 0
+
+          // 按语言
+          const byLang = safeAll<any>(db,
+            "SELECT language, count(*) as n FROM files GROUP BY language ORDER BY n DESC", 20
+          )
+
+          // 按节点类型
+          const byKind = safeAll<any>(db,
+            "SELECT kind, count(*) as n FROM nodes GROUP BY kind ORDER BY n DESC", 20
+          )
+
+          // Top 5 被调用函数
+          let topCalled: any[] = []
+          try {
+            topCalled = safeAll<any>(db, `
+              SELECT n.name, n.kind, n.file_path, count(e.id) as caller_count
+              FROM edges e
+              JOIN nodes n ON e.target = n.id
+              WHERE e.kind = 'calls'
+              GROUP BY e.target
+              ORDER BY caller_count DESC
+              LIMIT 5
+            `, 5) || []
+          } catch { /* FTS5 may fail on old DBs */ }
+
+          // 最后索引时间
+          const lastIndexed = safeGet<any>(db,
+            "SELECT max(indexed_at) as ts FROM files"
+          )?.ts
+
+          db.close()
+
+          const status = {
+            status: "ready",
+            dbPath,
+            database: { nodeCount, edgeCount, fileCount },
+            languages: byLang.reduce((acc: any, r: any) => ({ ...acc, [r.language]: r.n }), {}),
+            nodesByKind: byKind.reduce((acc: any, r: any) => ({ ...acc, [r.kind]: r.n }), {}),
+            lastIndexed: lastIndexed ? new Date(lastIndexed).toISOString() : "unknown",
+            topCalledFunctions: topCalled.map((r: any) => ({
+              name: r.name, kind: r.kind, file: r.file_path, callers: r.caller_count,
+            })),
+            queryHint: "codegraph_query { mode: 'callers', symbol: 'toResult' }",
+            tsIso: new Date().toISOString(),
+            _summary: `代码图谱就绪。${nodeCount} 个节点，${edgeCount} 条关系，${fileCount} 个文件。${topCalled.length ? `被调最多: ${topCalled.slice(0, 3).map((f: any) => f.name).join("、")}` : ""}`,
+          }
+
+          return toResult(status)
+        } catch (e) {
+          try { db.close() } catch {}
+          throw e
+        }
       } catch (e) { return toError(e) }
     }
   )
 
-  // ══════════════════════════════════════════════════════════════════════
-  // codegraph_query — 图谱查询
-  // ══════════════════════════════════════════════════════════════════════
   server.tool(
     "codegraph_query",
-    "CAT:[代码智能] | ## 功能：查询代码知识图谱——追踪调用链、搜索符号、探索模块依赖、按文件列出符号\n## 场景：Agent 回答「toResult 被哪些工具调用」「registerMarketTools 的上下游」「代码里哪里处理了 WebSocket」时调用\n## 关键词：codegraph, 调用链, callers, callees, 依赖, 代码搜索, 符号查询, 上下游, 影响分析\n## 参数：\n##   - mode: 查询模式。callers=谁调用它, callees=它调用谁, search=全文搜索, file=按文件列出\n##   - symbol: 符号名/节点ID (callers/callees/file 模式)\n##   - query: 搜索词 (search 模式)\n##   - limit: 返回数，默认 15\n## 鉴权：PUBLIC — 本地读数据库\n## 风险：READ — 只读\n## 返回量：微小 ~2KB\n## 关联：codegraph_status 看状态 → 本工具查询 → Agent 定位源码",
+    "CAT:[代码智能] | ## 功能：查询代码知识图谱——追踪调用链（callers/callees）、搜索符号、按文件列符号、影响分析\n## 场景：Agent 回答「toResult 被哪些工具调用」「改 shared.ts 影响哪些模块」「WebSocket 在哪些文件里」时调用\n## 关键词：codegraph, 调用链, callers, callees, 搜索, 影响分析, 依赖\n## 参数：\n##   - mode: 查询模式。callers / callees / search / file / impact\n##   - symbol: 符号名或文件名\n##   - limit: 返回数，默认 15\n## 鉴权：PUBLIC — 本地读 DB\n## 风险：READ — 只读\n## 返回量：微小 ~2KB\n## 关联：codegraph_status → codegraph_query",
     {
-      mode:   z.enum(["callers","callees","search","file"]).describe("callers=谁调用它, callees=它调用谁, search=全文搜索, file=按文件列出符号"),
-      symbol: z.string().optional().describe("符号名（如 toResult）或文件名（如 agent-utils.ts）"),
-      query:  z.string().optional().describe("搜索词（search 模式），如 'websocket 连接'"),
+      mode:   z.enum(["callers","callees","search","file","impact"]).describe("callers=谁调用它, callees=它调用谁, search=搜符号, file=按文件, impact=2跳影响分析"),
+      symbol: z.string().optional().describe("符号名（如 toResult）或文件名（如 agent-utils.ts）或搜索词"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回数，默认 15"),
     },
-    async ({ mode, symbol, query, limit }) => {
+    async ({ mode, symbol, limit }) => {
       try {
-        const cg = await getCodeGraph()
-        if (!cg) return toError("代码图谱不可用。请先调 codegraph_status 检查状态。")
+        const db = openDB()
+        if (!db) return toError("代码图谱不可用。请调 codegraph_status 检查状态。")
 
         const n = limit || 15
 
-        // ── search — 全文搜索符号 ──
-        if (mode === "search") {
-          const q = query || symbol || ""
-          if (!q) return toError("search 模式需要 query 或 symbol 参数")
+        try {
+          // ── search ──────────────────────────────────────────────────────
+          if (mode === "search") {
+            if (!symbol) return toError("search 模式需要 symbol 参数")
+            const q = symbol
 
-          const results = await cg.searchNodes(q, { limit: n })
+            // FTS5 全文搜索
+            let rows = safeAll<any>(db, `
+              SELECT n.id, n.name, n.kind, n.file_path, n.start_line, n.signature,
+                     n.docstring, n.qualified_name
+              FROM nodes_fts f
+              JOIN nodes n ON f.id = n.id
+              WHERE nodes_fts MATCH ?
+              ORDER BY rank
+              LIMIT ?
+            `, n, q, n)
 
-          if (!results?.length) {
+            // LIKE 回退
+            if (!rows || rows.length === 0) {
+              rows = safeAll<any>(db, `
+                SELECT id, name, kind, file_path, start_line, signature, docstring, qualified_name
+                FROM nodes
+                WHERE name LIKE ? OR qualified_name LIKE ?
+                ORDER BY name
+                LIMIT ?
+              `, n, `%${q}%`, `%${q}%`, n)
+            }
+
+            if (!rows || rows.length === 0) {
+              return toResult({
+                mode: "search", query: q, found: false,
+                hint: `未找到 "${q}"。试试函数名（如 registerTools）或文件名片段。`,
+                tsIso: new Date().toISOString(),
+              })
+            }
+
+            const items = rows.slice(0, n).map((r: any) => ({
+              name: r.name, kind: r.kind, file: r.file_path, line: r.start_line,
+              signature: r.signature?.slice(0, 120),
+              docstring: r.docstring?.slice(0, 100),
+            }))
+
             return toResult({
-              mode: "search", query: q, found: false,
-              hint: `未找到与 "${q}" 相关的符号。试试函数名（如 registerTools）或文件名。`,
+              mode: "search", query: q, total: rows.length, results: items,
+              _summary: `搜索 "${q}" 找到 ${rows.length} 个符号。${items.slice(0, 3).map(i => `${i.name}(${i.kind})`).join(" | ")}`,
+              hint: `找到后: codegraph_query({ mode: 'callers', symbol: '<name>' })`,
               tsIso: new Date().toISOString(),
             })
           }
 
-          const items = await Promise.all(results.slice(0, n).map(async (r: any) => {
-            const node = r.node || r
-            let callerCount = 0, calleeCount = 0
-            try { callerCount = (await cg.getCallers(node.id, 1))?.length || 0 } catch {}
-            try { calleeCount = (await cg.getCallees(node.id, 1))?.length || 0 } catch {}
-            return {
-              id: node.id, name: node.name, kind: node.kind,
-              file: node.filePath, line: node.startLine,
-              signature: node.signature?.slice(0, 120),
-              stats: { callers: callerCount, callees: calleeCount },
+          // ── callers ─────────────────────────────────────────────────────
+          if (mode === "callers") {
+            if (!symbol) return toError("callers 模式需要 symbol")
+            const nodes = findNodes(db, symbol, 3)
+            if (!nodes.length) {
+              return toResult({ mode: "callers", symbol, found: false, tsIso: new Date().toISOString() })
             }
-          }))
 
-          return toResult({
-            mode: "search", query: q, total: results.length, results: items,
-            _summary: `搜索 "${q}" 找到 ${results.length} 个符号。${items.slice(0, 3).map(i => `${i.name}(${i.kind})`).join(" | ")}`,
-            hint: `找到具体符号后，用 codegraph_query({ mode: 'callers', symbol: '<id>' }) 追踪调用链。`,
-            tsIso: new Date().toISOString(),
-          })
-        }
+            const results = nodes.map((node: any) => {
+              const callers = getCallers(db, node.id, n)
+              return {
+                target: { id: node.id, name: node.name, kind: node.kind, file: node.file_path, line: node.start_line },
+                callers: callers.map((c: any) => ({
+                  name: c.name, kind: c.kind, file: c.file_path, line: c.start_line,
+                })),
+                total: callers.length,
+              }
+            })
 
-        // ── callers — 谁调用它 ──
-        if (mode === "callers") {
-          if (!symbol) return toError("callers 模式需要 symbol 参数")
-
-          const nodes = await cg.getNodesByName(symbol)
-          if (!nodes?.length) {
-            return toResult({ mode: "callers", symbol, found: false, tsIso: new Date().toISOString() })
+            const total = results.reduce((s, r) => s + r.total, 0)
+            return toResult({
+              mode: "callers", symbol, matched: nodes.length, results,
+              _summary: `"${symbol}" 匹配 ${nodes.length} 个符号，共 ${total} 个调用者。`,
+              tsIso: new Date().toISOString(),
+            })
           }
 
-          const results = await Promise.all(nodes.slice(0, 5).map(async (node: any) => {
-            const callers = await cg.getCallers(node.id, 1)
-            return {
-              target: { id: node.id, name: node.name, kind: node.kind, file: node.filePath, line: node.startLine },
-              callers: (callers || []).slice(0, n).map((c: any) => ({
-                name: c.name, kind: c.kind, file: c.filePath, line: c.line, relation: c.edgeKind,
-              })),
-              total: callers?.length || 0,
+          // ── callees ─────────────────────────────────────────────────────
+          if (mode === "callees") {
+            if (!symbol) return toError("callees 模式需要 symbol")
+            const nodes = findNodes(db, symbol, 3)
+            if (!nodes.length) {
+              return toResult({ mode: "callees", symbol, found: false, tsIso: new Date().toISOString() })
             }
-          }))
 
-          const total = results.reduce((s, r) => s + r.total, 0)
-          return toResult({
-            mode: "callers", symbol, matched: nodes.length, results,
-            _summary: `"${symbol}" 匹配 ${nodes.length} 个符号，共 ${total} 个调用者。`,
-            tsIso: new Date().toISOString(),
-          })
-        }
+            const results = nodes.map((node: any) => {
+              const callees = getCallees(db, node.id, n)
+              return {
+                source: { id: node.id, name: node.name, kind: node.kind, file: node.file_path, line: node.start_line },
+                callees: callees.map((c: any) => ({
+                  name: c.name, kind: c.kind, file: c.file_path, line: c.start_line,
+                })),
+                total: callees.length,
+              }
+            })
 
-        // ── callees — 它调用谁 ──
-        if (mode === "callees") {
-          if (!symbol) return toError("callees 模式需要 symbol 参数")
-
-          const nodes = await cg.getNodesByName(symbol)
-          if (!nodes?.length) {
-            return toResult({ mode: "callees", symbol, found: false, tsIso: new Date().toISOString() })
+            const total = results.reduce((s, r) => s + r.total, 0)
+            return toResult({
+              mode: "callees", symbol, matched: nodes.length, results,
+              _summary: `"${symbol}" 匹配 ${nodes.length} 个符号，共调用 ${total} 个下游。`,
+              tsIso: new Date().toISOString(),
+            })
           }
 
-          const results = await Promise.all(nodes.slice(0, 5).map(async (node: any) => {
-            const callees = await cg.getCallees(node.id, 1)
-            return {
-              source: { id: node.id, name: node.name, kind: node.kind, file: node.filePath, line: node.startLine },
-              callees: (callees || []).slice(0, n).map((c: any) => ({
-                name: c.name, kind: c.kind, file: c.filePath, line: c.line, relation: c.edgeKind,
+          // ── file ─────────────────────────────────────────────────────────
+          if (mode === "file") {
+            if (!symbol) return toError("file 模式需要 symbol（文件名）")
+            const file = safeGet<any>(db,
+              "SELECT * FROM files WHERE path LIKE ? LIMIT 1",
+              `%${symbol}%`
+            )
+
+            const nodes = safeAll<any>(db, `
+              SELECT name, kind, start_line, signature, is_exported
+              FROM nodes WHERE file_path LIKE ?
+              ORDER BY start_line LIMIT ?
+            `, n, `%${symbol}%`, n)
+
+            return toResult({
+              mode: "file", file: symbol,
+              fileInfo: file ? { path: file.path, language: file.language, size: file.size, nodeCount: file.node_count } : null,
+              symbols: nodes.map((r: any) => ({
+                name: r.name, kind: r.kind, line: r.start_line,
+                signature: r.signature?.slice(0, 120), exported: r.is_exported === 1,
               })),
-              total: callees?.length || 0,
+              _summary: `文件 "${symbol}" 包含 ${nodes.length} 个符号。`,
+              tsIso: new Date().toISOString(),
+            })
+          }
+
+          // ── impact ──────────────────────────────────────────────────────
+          if (mode === "impact") {
+            if (!symbol) return toError("impact 模式需要 symbol")
+            const nodes = findNodes(db, symbol, 1)
+            if (!nodes.length) {
+              return toResult({ mode: "impact", symbol, found: false, tsIso: new Date().toISOString() })
             }
-          }))
+            const node = nodes[0]
+            const { direct, indirect } = getImpact(db, node.id, 2, n)
 
-          const total = results.reduce((s, r) => s + r.total, 0)
-          return toResult({
-            mode: "callees", symbol, matched: nodes.length, results,
-            _summary: `"${symbol}" 匹配 ${nodes.length} 个符号，共调用 ${total} 个下游。`,
-            tsIso: new Date().toISOString(),
-          })
+            return toResult({
+              mode: "impact",
+              symbol,
+              node: { id: node.id, name: node.name, kind: node.kind, file: node.file_path, line: node.start_line },
+              directlyAffected: direct.map((c: any) => ({
+                name: c.name, kind: c.kind, file: c.file_path, line: c.start_line,
+              })),
+              indirectlyAffected: indirect.map((c: any) => ({
+                name: c.name, kind: c.kind, file: c.file_path, line: c.start_line,
+              })),
+              _summary: `修改 "${symbol}" 直接影响 ${direct.length} 个调用者，间接影响 ${indirect.length} 个下游。`,
+              tsIso: new Date().toISOString(),
+            })
+          }
+
+          return toError(`未知模式: ${mode}`)
+        } finally {
+          try { db.close() } catch {}
         }
-
-        // ── file — 按文件列出符号 ──
-        if (mode === "file") {
-          if (!symbol) return toError("file 模式需要 symbol 参数（文件名）")
-
-          const files = await cg.getFiles({ pattern: symbol })
-          const fileInfo = files?.[0]
-          const symbols = fileInfo
-            ? await cg.getNodesInFile(fileInfo.path)
-            : []
-
-          return toResult({
-            mode: "file", file: symbol,
-            fileInfo: fileInfo ? { path: fileInfo.path, language: fileInfo.language, size: fileInfo.size } : null,
-            symbols: (symbols || []).slice(0, n).map((s: any) => ({
-              name: s.name, kind: s.kind, line: s.startLine,
-              signature: s.signature?.slice(0, 120),
-              exported: s.isExported,
-            })),
-            _summary: `文件 "${symbol}" 包含 ${symbols?.length || 0} 个符号。`,
-            tsIso: new Date().toISOString(),
-          })
-        }
-
-        return toError(`未知模式: ${mode}`)
       } catch (e) { return toError(e) }
     }
   )
