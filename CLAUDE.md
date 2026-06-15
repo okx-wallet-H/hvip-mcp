@@ -3,7 +3,7 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.2.45 · 362 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
+hvip-mcp-server v0.2.46 · 362 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
 入口 → src/index.ts → 注册全部 19 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
@@ -31,7 +31,7 @@ hvip-mcp-server v0.2.45 · 362 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: ht
 └─────────────────────────────────────────────────────┘
 
 📋 反馈留言板 → SKILL_FEEDBACK.md（遇到繁琐操作在此留言）
-📖 对接标准 → docs/OKX-MCP-API对接标准-v0.2.45.md
+📖 对接标准 → docs/OKX-MCP-API对接标准-v0.2.46.md
 🔧 防幻觉 SOP → docs/OKX-MCP-防幻觉对接SOP-v1.0.md
 🧠 代码知识图谱 → .codegraph/（496 节点 / 2,027 边）
 ```
@@ -139,4 +139,4 @@ Issue/任务 → 分支(feat/fix/task) → 开发 → build → push → CI → 
 
 ## 当前状态
 
-v0.2.45 · 362 MCP 工具 · 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
+v0.2.46 · 362 MCP 工具 · 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
