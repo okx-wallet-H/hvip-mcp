@@ -1035,10 +1035,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // 目录数据：按「用户想做什么」分组，不按 API 模块分组
   const CATALOG = {
     _instruction: [
-      "你是 hvip MCP Server 的 Agent。本目录帮你按用户意图快速定位工具，无需扫描全部 350+ 个工具描述。",
-      "用法: 1) 根据用户说的话匹配下方某个域的 when 触发词 → 2) 调用该域的 go_to 工具 → 3) 如需深入再调用 also 列表中的工具。",
+      "你是 hvip MCP Server 的 AI Agent。收到本目录后，你已经掌握全部必要信息，无需再扫描 tools/list。",
+      "工作流: 1) 看 _setup 了解连接状态 -> 2) _onboarding 决定第一步 -> 3) 匹配用户意图到域 -> 4) 用 go_to_params 直接调目标工具。",
       "不确定域时调用 agent_catalog_detail { domain } 查看该域的详细工具清单。",
-      "注意: 所有 WRITE/ADMIN 级别的工具需用户确认后才能调用。",
+      "所有 WRITE/FUND_TRANSFER/ADMIN 工具需用户确认后调用，不可自动发起。",
     ].join(" "),
 
     domains: [
@@ -1256,10 +1256,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     ],
 
     _tips: [
-      "Agent 最佳实践：每个新会话先调 agent_get_preference 恢复用户偏好",
-      "需要 API Key 的工具（账户/交易类）需用户先配置 OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE 环境变量",
-      "WRITE 级别工具会修改用户账户，调用前 Agent 必须向用户确认",
-      "深度调研某个域时调 agent_catalog_detail { domain } 获取该域全部工具详情",
+      "每个新会话先调 agent_get_preference 恢复用户偏好(默认交易对/风险偏好/仓位占比)",
+      "需要 API Key 时告诉用户去 OKX 官网创建，开通读取+交易权限",
+      "先模拟后交易: agent_simulate_order 预估 -> 确认 -> agent_quick_trade 下单",
+      "WRITE 工具会修改账户，调用前必须向用户确认，不可自动发起",
       "技术指标用 okx_indicator 单个计算或 okx_indicator_batch 批量，支持 RSI/MACD/布林带等 17 种",
       "聪明钱分析用 okx_smart_leaderboard 找顶尖交易员 → okx_smart_sentiment 看市场情绪",
     ],
@@ -1271,9 +1271,64 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     {},
     async () => {
       try {
+        // ── 动态状态感知 ──
+        const hasAuth = auth !== null
+        const setup: any = {
+          hasApiKey: hasAuth,
+          readOnly: process.env.OKX_READ_ONLY === "true",
+          mode: hasAuth
+            ? (process.env.OKX_READ_ONLY === "true" ? "只读（WRITE 工具已隐藏）" : "完整交易（所有工具可用）")
+            : "未配置 API Key（仅公开工具可用）",
+        }
+
+        if (!hasAuth) {
+          setup.howToConfigure = {
+            required: ["OKX_API_KEY", "OKX_SECRET_KEY", "OKX_PASSPHRASE"],
+            where: "OKX 官网 -> 个人中心 -> API -> 创建 API Key（开通 读取+交易 权限）",
+            quickStart: "npx hvip-mcp setup --client claude-code",
+          }
+          setup.whatYouCanDoNow = "当前无 API Key，但以下域的工具可立即使用: 行情看盘 / 技术指标 / 市场扫描 / 聪明钱 / 预测市场（公开查询）/ WebSocket 实时 / 系统工具"
+        }
+
+        const onboarding = hasAuth
+          ? "API Key 已配置。建议第一步: agent_get_preference 恢复偏好 -> okx_account_overview 了解账户全景 -> 根据用户意图匹配域 go_to 工具"
+          : "欢迎！hvip MCP 已连接但尚未配置 API Key。告诉用户：想看行情和指标现在就能看，想看账户和交易请先配 Key。配好后重连 MCP 即可。"
+
+        // ── go_to 工具参数提示，Agent 无需再查 tools/list ──
+        const paramsHints: Record<string, string> = {
+          "okx_account_overview": "无需参数",
+          "okx_quick_market": "instId (如 BTC-USDT、ETH-USDT-SWAP)",
+          "okx_preflight_check": "instId, tdMode (cash|cross|isolated), sz, px?, side?, ordType?",
+          "agent_quick_trade": "instId, side (buy|sell), sz, tdMode (cash|cross|isolated), px?, ordType?",
+          "agent_risk_overview": "无需参数",
+          "agent_market_scan": "instType? (默认SWAP), topN?, sortBy? (change|vol|fundingRate)",
+          "agent_pnl_report": "days? (默认7)",
+          "okx_get_balance": "ccy? (如 BTC，不填全部)",
+          "agent_simulate_order": "instId, side, sz, tdMode, px?",
+          "okx_indicator": "instId, indicator (rsi|macd|bb|atr|stoch 等17种), period?, bar? (默认1H)",
+          "okx_indicator_batch": "instId, indicators (逗号分隔如 rsi,macd,bb), bar?",
+          "okx_smart_leaderboard": "instType?, sortBy?, topN?",
+          "okx_smart_trader_detail": "uniqueCode (交易员码), instType?",
+          "okx_smart_sentiment": "instFamily? (默认BTC-USD)",
+          "agent_get_preference": "key? (不填返回全部)",
+          "agent_set_preference": "key, value",
+          "okx_event_instruments": "eventType? (不填返回全部)",
+          "okx_ws_subscribe": "channels (JSON数组)",
+          "okx_get_grid_ai_param": "instType, algoOrdType",
+        }
+
+        const enrichedDomains = CATALOG.domains.map((d: any) => ({
+          ...d,
+          go_to_params: paramsHints[d.go_to] || "见 agent_catalog_detail",
+        }))
+
         return toResult({
           tsIso: new Date().toISOString(),
-          ...CATALOG,
+          _setup: setup,
+          _onboarding: onboarding,
+          _instruction: CATALOG._instruction,
+          domains: enrichedDomains,
+          _tips: CATALOG._tips,
         })
       } catch (e) { return toError(e) }
     }
