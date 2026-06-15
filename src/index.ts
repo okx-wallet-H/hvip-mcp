@@ -125,6 +125,7 @@ async function startHttp(
   skipped: number,
 ) {
   const port = parseInt(process.env.PORT || "3000", 10)
+  const host = process.env.HOST || "127.0.0.1"
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless
   })
@@ -181,12 +182,12 @@ async function startHttp(
     res.end(JSON.stringify({ error: "Not Found" }))
   })
 
-  httpServer.listen(port, "0.2.47.0", () => {
+  httpServer.listen(port, host, () => {
     process.stderr.write([
       `╔══════════════════════════════════════════════╗`,
       `║  hvip-mcp v${version}  HTTP 模式             ║`,
-      `║  POST http://0.2.47.0:${port}/mcp              ║`,
-      `║  GET  http://0.2.47.0:${port}/health            ║`,
+      `║  POST http://${host}:${port}/mcp              ║`,
+      `║  GET  http://${host}:${port}/health            ║`,
       `║  模式: ${readOnly ? "只读" : "完整"}  | 工具: ${readOnly ? "READ only" : "全部"}  ║`,
       `╚══════════════════════════════════════════════╝`,
     ].join("\n") + "\n")
@@ -224,7 +225,8 @@ async function startStdio(
     process.stderr.write(`[hvip] 未配置 API Key | 仅公开工具可用 (v${version})\n`)
   }
 
-  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"), "0.2.47.0", version)
+  const wsHost = process.env.WS_BIND_HOST || "127.0.0.1"
+  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"), wsHost, version)
 
   const transport = new StdioServerTransport()
   await server.connect(transport)
