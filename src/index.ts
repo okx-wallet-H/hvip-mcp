@@ -28,7 +28,7 @@ import { getAuth, classifyRisk, type RiskLevel } from "./tools/shared.js"
 import { privateApi } from "./adapters/okx.js"
 
 async function main() {
-  const VERSION = "0.2.44"
+  const VERSION = "0.2.45"
   const server = new McpServer({
     name: "hvip-mcp",
     version: VERSION,
@@ -114,7 +114,7 @@ async function main() {
     process.stderr.write(`[hvip] 未配置 API Key | 仅公开工具可用\n`)
   }
 
-  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"), "0.0.0.0", VERSION)
+  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"), "0.2.45.0", VERSION)
 
   const transport = new StdioServerTransport()
   await effectiveServer.connect(transport)

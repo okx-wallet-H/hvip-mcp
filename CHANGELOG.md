@@ -28,5 +28,8 @@ GitHub Actions → Bump & Publish → 选叠加级别 → 自动：
 
 ## 历史版本
 
+### v0.2.45 (2026-06-15)
+即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.45)。
+
 ### v0.2.44 (2026-06-13)
 首次结构化发布。362 工具，14 域导航，技术指标 + Smart Money 模块，只读模式 + 权限感知安全模型。
