@@ -4,6 +4,9 @@
  * OKX WS docs: https://www.okx.com/docs-v5/en/#websocket-api
  * Public:  wss://ws.okx.com:8443/ws/v5/public
  * Private: wss://ws.okx.com:8443/ws/v5/private
+ *
+ * Note: WsManager 单例，共享 event buffer。单 MCP 会话安全；
+ * 多会话 HTTP 模式下 drain() 按 subId 过滤，不会串事件。
  */
 import crypto from "node:crypto"
 import type WebSocket from "ws"
@@ -17,6 +20,7 @@ export interface WsSubscription {
   id: string
   channel: string
   instId: string
+  type: "public" | "private"
 }
 
 interface BufferedEvent {
@@ -44,7 +48,9 @@ export class WsManager {
   private wsPriv: InstanceType<typeof WebSocket> | null = null
   private pingPub: ReturnType<typeof setInterval> | null = null
   private pingPriv: ReturnType<typeof setInterval> | null = null
-  private channelArgs = new Map<string, Set<string>>() // channel -> instIds
+  // Fix #1: 按 type 拆分 channelArgs，重连时只遍历同类型
+  private channelArgsPub = new Map<string, Set<string>>()
+  private channelArgsPriv = new Map<string, Set<string>>()
 
   private getWs(type: "public" | "private"): InstanceType<typeof WebSocket> | null {
     return type === "public" ? this.wsPub : this.wsPriv
@@ -60,6 +66,9 @@ export class WsManager {
     if (type === "public") this.pingPub = timer
     else this.pingPriv = timer
   }
+  private getChannelArgs(type: "public" | "private"): Map<string, Set<string>> {
+    return type === "public" ? this.channelArgsPub : this.channelArgsPriv
+  }
 
   async subscribe(opts: {
     channel: string
@@ -69,7 +78,7 @@ export class WsManager {
   }): Promise<string> {
     const id = `sub_${++subCounter}`
     const type = opts.type || "public"
-    this.subscriptions.set(id, { id, channel: opts.channel, instId: opts.instId })
+    this.subscriptions.set(id, { id, channel: opts.channel, instId: opts.instId, type })
 
     const arg: Record<string, unknown> = { channel: opts.channel, instId: opts.instId }
 
@@ -84,9 +93,9 @@ export class WsManager {
       targetWs.send(JSON.stringify({ op: "subscribe", args: [arg] }))
     }
 
-    const ck = opts.channel
-    if (!this.channelArgs.has(ck)) this.channelArgs.set(ck, new Set())
-    this.channelArgs.get(ck)!.add(opts.instId)
+    const chanArgs = this.getChannelArgs(type)
+    if (!chanArgs.has(opts.channel)) chanArgs.set(opts.channel, new Set())
+    chanArgs.get(opts.channel)!.add(opts.instId)
 
     return id
   }
@@ -118,12 +127,29 @@ export class WsManager {
 
   close(subId?: string): number {
     if (subId) {
+      const sub = this.subscriptions.get(subId)
+      if (sub) {
+        // Fix #2: 清理 channelArgs
+        const chanArgs = this.getChannelArgs(sub.type)
+        const instIds = chanArgs.get(sub.channel)
+        if (instIds) {
+          instIds.delete(sub.instId)
+          if (instIds.size === 0) chanArgs.delete(sub.channel)
+        }
+        // 向服务端发送 unsubscribe（好习惯）
+        const ws = this.getWs(sub.type)
+        if (ws?.readyState === WebSocketImpl.OPEN) {
+          try { ws.send(JSON.stringify({ op: "unsubscribe", args: [{ channel: sub.channel, instId: sub.instId }] })) } catch {}
+        }
+      }
       this.subscriptions.delete(subId)
       this.events = this.events.filter(e => e.subId !== subId)
       return 1
     }
     const count = this.subscriptions.size
     this.subscriptions.clear()
+    this.channelArgsPub.clear()
+    this.channelArgsPriv.clear()
     this.events = []
     for (const ws of [this.wsPub, this.wsPriv]) {
       if (ws) { try { ws.close() } catch {} }
@@ -160,8 +186,9 @@ export class WsManager {
           }))
         }
 
-        // Resubscribe previously tracked channels for this type
-        for (const [channel, instIds] of this.channelArgs) {
+        // Fix #1: 只重连同类型的频道
+        const chanArgs = this.getChannelArgs(type)
+        for (const [channel, instIds] of chanArgs) {
           for (const instId of instIds) {
             ws.send(JSON.stringify({ op: "subscribe", args: [{ channel, instId }] }))
           }
