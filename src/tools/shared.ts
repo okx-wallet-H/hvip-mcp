@@ -51,7 +51,45 @@ export const INST_TYPE_SWAP_FUT   = ["SWAP","FUTURES"] as const                 
 export const INST_TYPE_MARGIN_PUB = ["MARGIN","SWAP","FUTURES","OPTION"] as const          // 含杠杆的公开数据
 export const INST_TYPE_RUBIK      = ["SPOT","CONTRACTS"] as const                          // 交易大数据专用（OKX 原生 CONTRACTS）
 
+// ── Agent 可读性增强：toResult 自动注入 _summary ────────────────────────────
+
+function autoSummary(data: unknown): string | undefined {
+  if (Array.isArray(data)) {
+    const n = data.length
+    if (n === 0) return "返回空列表"
+    const first = data[0] as any
+    if (first?.instId && first?.last) return `返回 ${n} 个产品行情`
+    if (first?.instId && first?.pos) return `返回 ${n} 个持仓`
+    if (first?.ccy) return `返回 ${n} 个币种信息`
+    if (first?.ordId) return `返回 ${n} 笔订单`
+    if (first?.ts) return `返回 ${n} 条时间序列数据`
+    if (first?.name) return `返回 ${n} 条记录`
+    return `返回 ${n} 条记录`
+  }
+  if (typeof data === "object" && data !== null) {
+    const d = data as any
+    if (d.ok === true && d.message) return d.message as string
+    if (d._summary) return undefined // 已有，不覆盖
+    if (d.data && Array.isArray(d.data)) return `返回 ${d.data.length} 条记录`
+  }
+  return undefined
+}
+
 export function toResult(data: unknown): { content: [{ type: "text"; text: string }] } {
+  // 自动注入 _summary
+  if (Array.isArray(data)) {
+    const summary = autoSummary(data)
+    const wrapper: any = { list: data }
+    if (summary) wrapper._summary = summary
+    return { content: [{ type: "text", text: JSON.stringify(wrapper, null, 2) }] }
+  }
+  if (typeof data === "object" && data !== null && !(data as any)._summary) {
+    const summary = autoSummary(data)
+    if (summary) {
+      const enriched = { _summary: summary, ...(data as any) }
+      return { content: [{ type: "text", text: JSON.stringify(enriched, null, 2) }] }
+    }
+  }
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] }
 }
 
