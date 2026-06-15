@@ -1,0 +1,93 @@
+name: Bump & Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: '版本号叠加级别'
+        required: true
+        type: choice
+        default: 'patch'
+        options:
+          - patch   # 0.2.44 → 0.2.45
+          - minor   # 0.2.44 → 0.3.0
+          - major   # 0.2.44 → 1.0.0
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - run: npm ci
+
+      - name: 叠加版本号
+        id: version
+        run: |
+          OLD=$(node -p "require('./package.json').version")
+          NEW=$(npm version ${{ github.event.inputs.bump }} --no-git-tag-version)
+          echo "old=$OLD" >> $GITHUB_OUTPUT
+          echo "new=${NEW#v}" >> $GITHUB_OUTPUT
+          echo "::notice::版本 $OLD → $NEW"
+
+      - name: 同步版本号到源码
+        run: |
+          VER="${{ steps.version.outputs.new }}"
+          # CLAUDE.md
+          sed -i "s/v[0-9]\+\.[0-9]\+\.[0-9]\+/v${VER}/g" CLAUDE.md
+          # index.ts description
+          sed -i "s/[0-9]\+\.[0-9]\+\.[0-9]\+/${VER}/g" src/index.ts
+          echo "已同步版本号到 CLAUDE.md + src/index.ts"
+
+      - name: Build
+        run: npm run build
+
+      - name: 验证
+        run: |
+          test -f dist/index.js || { echo "FAIL"; exit 1; }
+          SIZE=$(wc -c < dist/index.js)
+          TOOLS=$(grep -c 'server\.tool(' dist/index.js)
+          echo "产物: ${SIZE} bytes | 工具: ${TOOLS}"
+          [ "$SIZE" -gt 100000 ] || exit 1
+          [ "$TOOLS" -ge 200 ] || exit 1
+
+      - name: 提交 + Tag
+        run: |
+          VER="${{ steps.version.outputs.new }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add package.json package-lock.json CLAUDE.md src/index.ts dist/index.js
+          git diff --staged --stat
+          git commit -m "release: v${VER}"
+
+          git tag -a "v${VER}" -m "v${VER}"
+          git push origin master --follow-tags
+          echo "::notice::已推送 v${VER} tag"
+
+      - name: 发布到 npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: GitHub Release
+        run: |
+          VER="${{ steps.version.outputs.new }}"
+          gh release create "v${VER}" \
+            --title "v${VER}" \
+            --generate-notes \
+            --latest
+        env:
+          GH_TOKEN: ${{ github.token }}
