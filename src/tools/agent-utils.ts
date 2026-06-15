@@ -1238,6 +1238,16 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         risk: "READ",
       },
       {
+        domain: "代码智能",
+        what: "查询 hvip-mcp 自身代码结构：函数调用链、模块依赖、符号搜索",
+        when: ["代码结构", "调用链", "谁调用了", "谁被调用", "依赖关系", "上下游", "代码搜索"],
+        go_to: "codegraph_status",
+        also: [
+          "codegraph_query — 调用链追踪 (callers/callees/explore/files)",
+        ],
+        risk: "READ",
+      },
+      {
         domain: "系统工具",
         what: "偏好设置、反馈留言、Agent集群管理",
         when: ["偏好", "设置默认", "记住", "反馈", "建议", "Agent Hub", "集群"],
@@ -1536,6 +1546,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         { name: "okx_position_builder", auth: "API Key (交易)", params: "body(JSON)", what: "组合保证金试算 — WRITE" },
       ],
     },
+    "代码智能": {
+      workflow: "codegraph_status 看状态 → codegraph_query 追踪调用链/搜索符号 → 用 Read 看源码细节",
+      tools: [
+        { name: "codegraph_status", auth: "公开", params: "无", what: "知识图谱状态：节点数/边数/覆盖文件/最后索引" },
+        { name: "codegraph_query", auth: "公开", params: "mode (callers|callees|explore|files), symbol?, question?, limit?", what: "查询调用链 / 符号搜索 / 模块依赖 / 按文件查" },
+      ],
+    },
     "系统工具": {
       workflow: "按需调用，各工具独立",
       tools: [
@@ -1562,7 +1579,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     "agent_catalog_detail",
     "CAT:[系统] | ## 功能：查看某个业务域的详细工具清单——含每个工具的参数提示、鉴权要求、推荐调用顺序\n## 场景：Agent 在 agent_catalog 确定域后，调用此工具获取该域所有工具的精准信息、参数提示和典型 workflow\n## 关键词：目录详情, catalog detail, 工具清单, 域详情, workflow\n## 参数：\n##   - domain: 域名称。可取值: 账户资产 | 行情看盘 | 下单交易 | 风险风控 | 市场扫描 | 盈亏复盘 | 资金管理 | 策略交易 | 预测市场 | WebSocket 实时 | 模拟估算 | 系统工具\n## 鉴权：PUBLIC — 纯索引\n## 风险：READ — 只读\n## 返回量：微小 ~2KB — 单域详情\n## 关联：agent_catalog 选域 → 本工具获取详情 → 直接调用目标工具",
     {
-      domain: z.string().describe("域名称。可选: 账户资产, 行情看盘, 技术指标, 下单交易, 风险风控, 市场扫描, 聪明钱, 盈亏复盘, 资金管理, 策略交易, 预测市场, WebSocket 实时, 模拟估算, 系统工具"),
+      domain: z.string().describe("域名称。可选: 账户资产, 行情看盘, 技术指标, 下单交易, 风险风控, 市场扫描, 聪明钱, 盈亏复盘, 资金管理, 策略交易, 预测市场, 代码智能, WebSocket 实时, 模拟估算, 系统工具"),
     },
     async ({ domain }) => {
       try {
