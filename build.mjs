@@ -1,4 +1,5 @@
 import { build } from "esbuild"
+import { readFileSync, writeFileSync } from "fs"
 
 await build({
   entryPoints: ["src/index.ts"],
@@ -8,6 +9,7 @@ await build({
   format: "cjs",
   outfile: "dist/index.js",
   external: [],
+  banner: { js: "#!/usr/bin/env node" },
 })
 
 console.log("✅ dist/index.js built")
