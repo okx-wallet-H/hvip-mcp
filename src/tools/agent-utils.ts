@@ -26,14 +26,18 @@ async function fetchAllSettled(fetchers: Record<string, Promise<unknown>>): Prom
   const errors: string[] = []
   for (let i = 0; i < results.length; i++) {
     if (results[i].status === "rejected") {
-      errors.push(`${keys[i]}: ${(results[i].reason as any)?.message ?? String(results[i].reason)}`)
+      const r = results[i]
+      if (r.status === "rejected") {
+        errors.push(`${keys[i]}: ${(r.reason as any)?.message ?? String(r.reason)}`)
+      }
     }
   }
   const get = (name: string) => {
     const idx = keys.indexOf(name)
     if (idx < 0) return null
-    if (results[idx].status === "rejected") return null
-    return (results[idx] as PromiseFulfilledResult<any>).value
+    const r = results[idx]
+    if (r.status === "rejected") return null
+    return (r as PromiseFulfilledResult<any>).value
   }
   return { get, errors }
 }
