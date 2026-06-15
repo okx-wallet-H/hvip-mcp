@@ -3,11 +3,13 @@
  *
  * In-memory event buffer shared across tool calls.
  * Agent calls okx_ws_subscribe once → events flow → okx_ws_events drains.
+ * Private channels require API Key — uses same HMAC-SHA256 as REST.
  */
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import { toResult, toError } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
 import { WsManager } from "../adapters/ws.js"
+import type { Auth } from "../adapters/okx.js"
 
 let wsManager: WsManager | null = null
 function getOrCreateWs(): WsManager {
@@ -15,27 +17,67 @@ function getOrCreateWs(): WsManager {
   return wsManager
 }
 
-const PUBLIC_CHANNELS = [
-  "tickers", "trades",
-  "candle1m", "candle5m", "candle15m", "candle1H", "candle4H", "candle1D",
-  "books5", "books",
-  "mark-price", "funding-rate", "open-interest", "price-limit", "index-tickers",
-] as const
+const ALL_CHANNELS = {
+  public: [
+    // 行情类（10）
+    "tickers", "trades", "all-trades", "option-trades",
+    "candle1m", "candle5m", "candle15m", "candle1H", "candle4H", "candle1D",
+    // 深度类（2）
+    "books5", "books",
+    // 市场细节（1）
+    "call-auction-details",
+    // 公共数据（10）
+    "mark-price", "mark-price-candles",
+    "index-tickers", "index-candles",
+    "funding-rate", "open-interest", "price-limit",
+    "instruments", "option-summary", "estimated-price",
+    // 风险预警（3）
+    "liquidation-orders", "adl-warning", "status",
+    // 事件合约（1）
+    "event-contract-markets",
+    // 经济日历（1）
+    "economic-calendar",
+    // 价差公开（4）
+    "sprd/tickers", "sprd/candles", "sprd/order-book", "sprd/public-trades",
+    // 大宗公开（3）
+    "public-structure-block-trades", "public-block-trades", "block-tickers",
+  ],
+  private: [
+    // 账户（5）
+    "account", "positions", "balance_and_position", "position-risk-warning", "account-greeks",
+    // 交易（4）
+    "orders", "fills", "algo-orders", "advance-algo-orders",
+    // 网格（4）
+    "spot-grid-algo-orders", "contract-grid-algo-orders", "grid-positions", "grid-sub-orders",
+    // 定投（1）
+    "recurring-buy-orders",
+    // 跟单（1）
+    "lead-trading-notification",
+    // 资金（2）
+    "deposit-info", "withdrawal-info",
+    // 大宗私有（3）
+    "rfqs", "quotes", "structure-block-trades",
+    // 价差私有（2）
+    "sprd/orders", "sprd/trades",
+  ],
+} as const
 
-export function registerWsTools(server: McpServer): void {
+export function registerWsTools(server: McpServer, auth: Auth | null): void {
 
   server.tool(
     "okx_ws_subscribe",
-    "CAT:[行情-WS] | ## 功能：订阅OKX WebSocket实时数据，事件自动缓冲在内存中\n## 场景：Agent 需要实时监控行情变化而非轮询时调用\n## 关键词：WebSocket, ws, 实时推送, 实时行情, 订阅, subscribe, 流式\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT、ETH-USDT-SWAP\n##   - channel: 频道名。(tickers/trades/candle1m~1D/books5/books等)\n##   - instType: SPOT/SWAP/FUTURES/OPTION（tickers/trades 频道需要）\n## 鉴权：PUBLIC — 公开频道\n## 风险：READ — 只读订阅\n## 返回量：微小 ~500B\n## 关联：本工具订阅 → okx_ws_events 拉取 → 决策 → okx_ws_close 关闭",
+    "CAT:[行情-WS] | ## 功能：订阅 OKX WebSocket 实时公开频道，事件自动缓冲在内存中\n## 场景：Agent 需要实时监控行情、爆仓单、资金费率、价差/大宗市场时调用，替代 REST 轮询\n## 关键词：WebSocket, ws, 实时推送, 实时行情, 订阅, subscribe, 爆仓, 资金费率, 价差, 大宗\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT、ETH-USDT-SWAP。status/instruments/economic-calendar 等全局频道不需要 instId\n##   - channel: 频道名。可选: tickers / trades / all-trades / candle1m~1D / books5 / books / funding-rate / open-interest / price-limit / instruments / mark-price / mark-price-candles / index-tickers / index-candles / option-summary / estimated-price / liquidation-orders / adl-warning / event-contract-markets / economic-calendar / status / sprd/* / public-*-block-trades / block-tickers\n## 鉴权：PUBLIC — 公开频道，无需 API Key\n## 风险：READ — 只读\n## 返回量：微小 ~500B\n## 关联：本工具订阅 → okx_ws_events 拉取 → okx_ws_close 关闭",
     {
-      instId:  z.string().describe("产品ID，如 BTC-USDT"),
-      channel: z.string().describe("频道名"),
-      instType: z.enum(["SPOT","SWAP","FUTURES","OPTION"]).optional().describe("tickers/trades 需要"),
+      instId:  z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。纯全局频道（status/instruments/economic-calendar）可传空字符串"),
+      channel: z.string().describe("频道名。公开频道共 33 个，支持 tickers/trades/candle1m~1D/books5/books/funding-rate/open-interest/price-limit/instruments/mark-price/mark-price-candles/index-tickers/index-candles/option-summary/estimated-price/liquidation-orders/adl-warning/event-contract-markets/economic-calendar/status/sprd系列/public-block-trades系列/block-tickers"),
+      instType: z.enum(["SPOT","SWAP","FUTURES","OPTION"]).optional().describe("部分频道需要产品类型"),
     },
     async ({ instId, channel }) => {
       try {
-        if (!PUBLIC_CHANNELS.includes(channel as any)) {
-          return toError(new Error(`频道 "${channel}" 不支持。支持: ${PUBLIC_CHANNELS.join(" ")}`))
+        if (!(ALL_CHANNELS.public as readonly string[]).includes(channel)) {
+          return toError(new Error(
+            `频道 "${channel}" 非公开频道。\n公开频道(${ALL_CHANNELS.public.length}个): ${ALL_CHANNELS.public.join(" ")}\n私有频道请用 okx_ws_subscribe_private。`
+          ))
         }
         const ws = getOrCreateWs()
         const subId = await ws.subscribe({ channel, instId: instId.toUpperCase(), type: "public" })
@@ -44,8 +86,45 @@ export function registerWsTools(server: McpServer): void {
           subscriptionId: subId,
           channel,
           instId: instId.toUpperCase(),
+          type: "public",
           buffered: ws.countBuffered(subId),
-          hint: `已订阅 ${instId.toUpperCase()} ${channel}。调用 okx_ws_events 拉取事件。`,
+          hint: `已订阅 ${instId || "全局"} ${channel}。调用 okx_ws_events 拉取事件。`,
+          tsIso: new Date().toISOString(),
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  server.tool(
+    "okx_ws_subscribe_private",
+    "CAT:[行情-WS] | ## 功能：订阅 OKX WebSocket 私有频道——实时推送账户余额、持仓变动、订单成交、网格/策略/跟单状态\n## 场景：Agent 需要实时跟踪账户变化（非轮询 REST）时调用\n## 关键词：WebSocket, ws, 私有频道, 实时账户, 订单推送, positions, orders, 网格, 跟单\n## 参数：\n##   - instId: 产品ID。account/positions/balance_and_position 等账户级频道可不传\n##   - channel: 私有频道名。可选: account / positions / balance_and_position / position-risk-warning / account-greeks / orders / fills / algo-orders / advance-algo-orders / spot-grid-algo-orders / contract-grid-algo-orders / grid-positions / grid-sub-orders / recurring-buy-orders / lead-trading-notification / deposit-info / withdrawal-info / rfqs / quotes / structure-block-trades / sprd/orders / sprd/trades\n## 鉴权：⚠️ 需要 API Key（必须开通读取权限）\n## 风险：READ — 只读订阅，但需 API Key\n## 返回量：微小 ~500B\n## 关联：本工具订阅 → okx_ws_events 拉取 → okx_ws_close 关闭",
+    {
+      instId:  z.string().optional().describe("产品ID。账户级频道可不传（如 account/positions/balances）"),
+      channel: z.string().describe("私有频道名。共 22 个: account / positions / balance_and_position / position-risk-warning / account-greeks / orders / fills / algo-orders / advance-algo-orders / spot-grid-algo-orders / contract-grid-algo-orders / grid-positions / grid-sub-orders / recurring-buy-orders / lead-trading-notification / deposit-info / withdrawal-info / rfqs / quotes / structure-block-trades / sprd/orders / sprd/trades"),
+    },
+    async ({ instId, channel }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        if (!(ALL_CHANNELS.private as readonly string[]).includes(channel)) {
+          return toError(new Error(
+            `频道 "${channel}" 非私有频道。\n私有频道(${ALL_CHANNELS.private.length}个): ${ALL_CHANNELS.private.join(" ")}\n公开频道请用 okx_ws_subscribe。`
+          ))
+        }
+        const ws = getOrCreateWs()
+        const subId = await ws.subscribe({
+          channel,
+          instId: (instId || "").toUpperCase(),
+          type: "private",
+          auth,
+        })
+        return toResult({
+          subscribed: true,
+          subscriptionId: subId,
+          channel,
+          instId: (instId || "全局").toUpperCase(),
+          type: "private",
+          buffered: ws.countBuffered(subId),
+          hint: `已订阅私有频道 ${channel}。调用 okx_ws_events 拉取实时事件。`,
           tsIso: new Date().toISOString(),
         })
       } catch (e) { return toError(e) }

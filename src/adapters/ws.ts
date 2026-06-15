@@ -155,6 +155,27 @@ export class WsManager {
           if (msg === "pong") return
           const parsed = JSON.parse(msg)
 
+          // OKX WS 错误事件 — 包装为可读消息
+          if (parsed.event === "error" && parsed.code) {
+            this.events.push({
+              subId: "__error__",
+              channel: parsed.arg?.channel || "unknown",
+              instId: parsed.arg?.instId || "",
+              ts: Date.now(),
+              data: {
+                error: true,
+                code: parsed.code,
+                message: parsed.msg || "WebSocket 错误",
+                hint: parsed.code === "60001" ? "频道名不支持或参数错误，请检查 channel 值" :
+                       parsed.code === "60003" ? "登录已过期，请重连" :
+                       parsed.code === "60009" ? "私有频道需要先 login（API Key 签名）" :
+                       `OKX WS 错误 ${parsed.code}`,
+              },
+            })
+            if (this.events.length > 10000) this.events = this.events.slice(-5000)
+            return
+          }
+
           if (parsed.arg && parsed.data) {
             for (const [id, sub] of this.subscriptions) {
               if (sub.channel === parsed.arg.channel && sub.instId === parsed.arg.instId) {

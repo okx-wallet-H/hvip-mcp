@@ -93,32 +93,194 @@ export function toResult(data: unknown): { content: [{ type: "text"; text: strin
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] }
 }
 
-// ── 错误分类（修复3：统一错误格式） ──────────────────────────────────────────
+// ── 错误分类 + 中文消息映射 ────────────────────────────────────────────────
 
 type ErrorCategory = "BUSINESS" | "AUTH" | "VALIDATION" | "NETWORK" | "RATE_LIMIT"
 
-function classifyError(msg: string): { errorCode: string; errorCategory: ErrorCategory } {
-  // OKX API 错误码映射
+/** OKX REST + WS 错误码 → 中文消息。Agent 可直接转述给用户 */
+const OKX_ERROR_MESSAGES: Record<number, string> = {
+  // 公共 / 系统
+  50000: "系统内部错误",
+  50001: "系统繁忙，请稍后重试",
+  50002: "系统升级维护中",
+  50004: "请求超时",
+  50005: "接口已被冻结，请联系客服",
+  50006: "OK-ACCESS-KEY 无效",
+  50007: "OK-ACCESS-SIGN 签名错误",
+  50008: "OK-ACCESS-TIMESTAMP 时间戳无效",
+  50009: "OK-ACCESS-PASSPHRASE 密码短语错误",
+  50010: "当前 IP 不在 API Key 白名单中",
+  50011: "请求频率过快，已触发限流。请降低请求速率",
+  50012: "系统繁忙，请稍后重试",
+  50013: "系统错误",
+  50014: "参数校验失败，请检查必填字段和格式",
+  50015: "仓位已被冻结",
+  50016: "账户已被冻结",
+  50017: "账户已被暂停",
+  50018: "账户等级不足",
+  50019: "合约已到期",
+  50020: "余额不足",
+  50021: "保证金不足",
+  50022: "下单数量小于最小限制",
+  50023: "下单数量超过最大限制",
+  50024: "持仓数量已达上限",
+  50025: "挂单数量已达上限",
+  50026: "下单价格超出限价范围",
+  50027: "价格精度不符合要求",
+  50028: "数量精度不符合要求",
+  50029: "该合约暂不可用",
+  50030: "API Key 无此操作权限",
+  50031: "API Key 已过期",
+  50032: "API Key 未找到",
+  50033: "API Key 未激活",
+  50035: "触发风控规则，交易被拒绝",
+  50036: "无交易权限",
+  50044: "订单不存在",
+  50045: "该订单不可撤销",
+  50046: "订单已全部成交",
+  50047: "订单已被撤销",
+  50050: "持仓不存在",
+  50051: "仓位已平仓",
+  50053: "仓位保证金不足",
+  50056: "下单过于频繁",
+  50058: "该币种暂不支持",
+  50059: "参数解析失败",
+  50060: "账户模式不支持此操作",
+  50061: "子账户请求频率超限",
+  50064: "该合约不支持此操作",
+  50068: "系统升级中，暂不可用",
+  50070: "持仓模式不匹配",
+  50071: "保证金模式不匹配",
+  50072: "杠杆倍数超出允许范围",
+  50074: "触发价格无效",
+  50080: "下单价格偏离市场价过大",
+  50082: "账户权益不足",
+  // API Key 相关
+  50100: "API Key 已被冻结",
+  50101: "API Key 已过期",
+  50102: "请求时间戳与服务器时间偏差超过 30 秒",
+  50103: "请求头 OK-ACCESS-KEY 不能为空",
+  50104: "请求头 OK-ACCESS-SIGN 签名不能为空",
+  50105: "请求头 OK-ACCESS-TIMESTAMP 不能为空",
+  50106: "请求头 OK-ACCESS-PASSPHRASE 不能为空",
+  50107: "API Key 对应的账户不存在",
+  50108: "账户余额不足",
+  50109: "划转金额超过限额",
+  50110: "划转币种不支持",
+  50111: "划转失败",
+  50120: "API Key 权限不足，请检查是否开通了所需权限（读取/交易/提现）",
+  50121: "API Key 已过期",
+  50122: "API Key 未找到",
+  50123: "API Key 未激活",
+  50124: "API Key 已被删除",
+  50125: "API Key 已被冻结",
+  50126: "API Key 已被禁用",
+  // 交易
+  51000: "参数错误，请检查必填参数",
+  51001: "订单类型不支持",
+  51002: "订单方向不支持",
+  51003: "订单数量不能为 0 或负数",
+  51004: "订单价格不能为 0 或负数",
+  51005: "保证金模式不支持",
+  51006: "订单价格超出限价范围",
+  51007: "订单数量精度不符合要求",
+  51008: "订单价格精度不符合要求",
+  51009: "订单数量超出最大限制",
+  51010: "订单数量低于最小限制",
+  51011: "该产品不支持此订单类型",
+  51012: "该产品不支持此保证金模式",
+  51013: "该产品不支持此持仓模式",
+  51014: "当前持仓模式不允许此操作",
+  51015: "当前账户模式不允许此操作",
+  51020: "批量下单数量超过上限",
+  51021: "批量操作中包含重复订单",
+  51026: "订单价格超出滑点保护范围",
+  51027: "订单已过期",
+  51100: "该产品不在可交易列表",
+  51102: "持仓模式不匹配，无法平仓",
+  51103: "保证金模式不匹配，无法平仓",
+  51104: "杠杆倍数不匹配",
+  51107: "市价单当前不可用",
+  51108: "止损单当前不可用",
+  // 资金
+  52000: "划转失败",
+  52001: "提现金额超过限额",
+  52002: "提现地址无效",
+  52003: "提现链不支持",
+  52004: "提现网络费不足",
+  52005: "提现已冻结",
+  52006: "充值地址生成失败",
+  52007: "该币种不支持充值",
+  52008: "该币种不支持提现",
+  // 跟单交易
+  52100: "交易员不存在",
+  52101: "交易员不对外公开",
+  52102: "跟单金额超出限制",
+  52103: "跟单人数已达上限",
+  52104: "当前不支持跟单该交易员",
+  52105: "该交易员已停止带单",
+  // 策略 / 网格
+  53000: "策略委托创建失败",
+  53001: "策略委托修改失败",
+  53002: "策略委托撤销失败",
+  53003: "策略委托不存在",
+  53004: "策略委托已触发",
+  53005: "网格策略创建失败",
+  53006: "网格策略不存在",
+  53007: "网格策略已停止",
+  53008: "网格参数无效",
+  // WebSocket
+  60001: "订阅频道不存在或参数错误",
+  60002: "WebSocket 登录失败，请检查 API Key",
+  60003: "WebSocket 订阅参数无效",
+  60004: "WebSocket 请求频率过高",
+  60005: "WebSocket 连接数已达上限",
+  60006: "WebSocket 连接被服务端关闭",
+  60007: "WebSocket 该频道需要登录",
+  60008: "WebSocket 该频道不需要登录",
+  60009: "WebSocket 登录已过期，请重新登录",
+  64008: "服务升级中，连接即将关闭，请重连",
+}
+
+function translateError(code: number, rawMsg: string): string {
+  const translated = OKX_ERROR_MESSAGES[code]
+  if (translated) return translated
+  // 通用分类回退
+  if (code >= 50000 && code < 50100) return `系统/认证错误 (${code}): ${rawMsg}`
+  if (code >= 50100 && code < 50200) return `API Key 错误 (${code}): ${rawMsg}`
+  if (code >= 51000 && code < 51200) return `交易参数错误 (${code}): ${rawMsg}`
+  if (code >= 52000 && code < 52200) return `资金/跟单错误 (${code}): ${rawMsg}`
+  if (code >= 53000 && code < 54000) return `策略委托错误 (${code}): ${rawMsg}`
+  if (code >= 60000 && code < 65000) return `WebSocket 错误 (${code}): ${rawMsg}`
+  return rawMsg
+}
+
+function classifyError(msg: string): { errorCode: string; errorCategory: ErrorCategory; errorMessage: string } {
+  // OKX API 错误码匹配: "OKX 50011: 请求频率过快..."
   const okxMatch = msg.match(/OKX (\d+):/)
   if (okxMatch && okxMatch[1]) {
     const code = parseInt(okxMatch[1])
-    if (code >= 50000 && code < 50100) return { errorCode: `OKX_${code}`, errorCategory: "AUTH" }
-    if (code >= 51000) return { errorCode: `OKX_${code}`, errorCategory: "BUSINESS" }
-    if (code >= 50004 && code <= 50014) return { errorCode: `OKX_${code}`, errorCategory: "VALIDATION" }
-    return { errorCode: `OKX_${code}`, errorCategory: "BUSINESS" }
+    const rawMsg = msg.replace(/^OKX \d+: /, "")
+    const translated = translateError(code, rawMsg)
+
+    if (code >= 50000 && code < 50100) return { errorCode: `OKX_${code}`, errorCategory: "AUTH", errorMessage: translated }
+    if (code === 50100 || code === 50101 || code === 50120) return { errorCode: `OKX_${code}`, errorCategory: "AUTH", errorMessage: translated }
+    if (code >= 50004 && code <= 50014) return { errorCode: `OKX_${code}`, errorCategory: "VALIDATION", errorMessage: translated }
+    if (code >= 51000 && code < 51200) return { errorCode: `OKX_${code}`, errorCategory: "VALIDATION", errorMessage: translated }
+    return { errorCode: `OKX_${code}`, errorCategory: "BUSINESS", errorMessage: translated }
   }
   // HTTP 错误
   if (msg.startsWith("HTTP ")) {
     const httpMatch = msg.match(/HTTP (\d+)/)
     const status = httpMatch && httpMatch[1] ? parseInt(httpMatch[1]) : 0
-    if (status === 401 || status === 403) return { errorCode: "HTTP_401", errorCategory: "AUTH" }
-    if (status === 429) return { errorCode: "HTTP_429", errorCategory: "RATE_LIMIT" }
-    return { errorCode: "NETWORK_ERROR", errorCategory: "NETWORK" }
+    if (status === 401 || status === 403) return { errorCode: "HTTP_401", errorCategory: "AUTH", errorMessage: "API Key 认证失败，请检查密钥是否正确配置" }
+    if (status === 429) return { errorCode: "HTTP_429", errorCategory: "RATE_LIMIT", errorMessage: "请求过于频繁，已触发限流。请稍等后重试" }
+    return { errorCode: "NETWORK_ERROR", errorCategory: "NETWORK", errorMessage: `网络错误 HTTP ${status}` }
   }
   // AUTH_REQUIRED 消息
-  if (msg.includes("API Key")) return { errorCode: "AUTH_REQUIRED", errorCategory: "AUTH" }
+  if (msg.includes("API Key")) return { errorCode: "AUTH_REQUIRED", errorCategory: "AUTH", errorMessage: msg }
   // 默认
-  return { errorCode: "UNKNOWN_ERROR", errorCategory: "BUSINESS" }
+  return { errorCode: "UNKNOWN_ERROR", errorCategory: "BUSINESS", errorMessage: msg }
 }
 
 // ── 工具风险分级（只读模式 + 权限感知注册用） ────────────────────────────
@@ -168,13 +330,15 @@ export function toError(e: unknown): {
   isError: true
   errorCode: string
   errorCategory: ErrorCategory
+  errorMessage: string
 } {
   const msg = e instanceof Error ? e.message : String(e)
-  const { errorCode, errorCategory } = classifyError(msg)
+  const { errorCode, errorCategory, errorMessage } = classifyError(msg)
   return {
-    content: [{ type: "text", text: msg }],
+    content: [{ type: "text", text: errorMessage }],
     isError: true,
     errorCode,
     errorCategory,
+    errorMessage,
   }
 }

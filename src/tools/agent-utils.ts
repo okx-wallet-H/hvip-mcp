@@ -1215,12 +1215,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
       },
       {
         domain: "WebSocket 实时",
-        what: "实时行情推送、成交推送",
-        when: ["实时", "订阅", "推送", "websocket", "ws", "监听"],
+        what: "实时行情、账户、订单、爆仓、价差、大宗推送（55 频道）",
+        when: ["实时", "订阅", "推送", "websocket", "ws", "监听", "爆仓", "实时订单"],
         go_to: "okx_ws_subscribe",
         also: [
-          "okx_ws_events — 获取推送事件",
-          "okx_ws_status — 订阅状态",
+          "okx_ws_subscribe_private — 私有频道（账户/持仓/订单，需Key）",
+          "okx_ws_events — 拉取缓冲事件",
+          "okx_ws_status — 查看订阅状态",
           "okx_ws_close — 关闭订阅",
         ],
         risk: "READ",
@@ -1323,7 +1324,8 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
           "agent_get_preference": "key? (不填返回全部)",
           "agent_set_preference": "key, value",
           "okx_event_instruments": "eventType? (不填返回全部)",
-          "okx_ws_subscribe": "channels (JSON数组)",
+          "okx_ws_subscribe": "instId (产品ID), channel (33个公开频道)",
+          "okx_ws_subscribe_private": "instId? (产品ID), channel (22个私有频道，需Key)",
           "okx_get_grid_ai_param": "instType, algoOrdType",
         }
 
@@ -1530,12 +1532,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
       ],
     },
     "WebSocket 实时": {
-      workflow: "okx_ws_subscribe 订阅频道 → okx_ws_events 拉取事件",
+      workflow: "okx_ws_subscribe 公开频道 → okx_ws_subscribe_private 私有频道（需Key）→ okx_ws_events 拉取 → okx_ws_status 管理",
       tools: [
-        { name: "okx_ws_subscribe", auth: "公开", params: "channels[]", what: "订阅实时频道（tickers/trades/books/candles/fundingRate 等）" },
-        { name: "okx_ws_events", auth: "公开", params: "channel?", what: "收取订阅的实时推送事件" },
-        { name: "okx_ws_status", auth: "公开", params: "无", what: "当前订阅状态" },
-        { name: "okx_ws_close", auth: "公开", params: "channel?", what: "取消订阅" },
+        { name: "okx_ws_subscribe", auth: "公开", params: "instId, channel (33公开频道)", what: "订阅公开频道：行情/深度/爆仓/价差/大宗/资金费率等" },
+        { name: "okx_ws_subscribe_private", auth: "API Key", params: "instId?, channel (22私有频道)", what: "订阅私有频道：账户/持仓/订单/网格/跟单等实时推送" },
+        { name: "okx_ws_events", auth: "公开", params: "subscriptionId?, limit?, filter?", what: "拉取缓冲的实时事件" },
+        { name: "okx_ws_status", auth: "公开", params: "无", what: "当前所有订阅+缓冲积压" },
+        { name: "okx_ws_close", auth: "公开", params: "subscriptionId?", what: "关闭订阅" },
       ],
     },
     "模拟估算": {

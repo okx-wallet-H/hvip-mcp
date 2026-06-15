@@ -108,7 +108,7 @@ function registerAllTools(
   registerIndicatorTools(server)
   registerSmartMoneyTools(server, auth)
   registerXLayerWSTools(server)
-  registerWsTools(server)
+  registerWsTools(server, auth)
   registerAgentHubTools(server)
   registerCodeGraphTools(server)
 
