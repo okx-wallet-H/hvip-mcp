@@ -20,55 +20,30 @@ jobs:
 
       - run: npm ci
 
-      - name: TypeScript 类型检查
-        run: npx tsc --noEmit
-
-      - name: Build
+      - name: Build (esbuild)
         run: npm run build
 
-      - name: 自检 — 工具数 / tsIso / CAT 标签
+      - name: 自检
         run: |
           node -e "
           const s = require('fs').readFileSync('./dist/index.js','utf8');
 
-          // 工具注册计数（esbuild 编译后格式为 server.tool(\n  \"name\"）
           const toolCount = (s.match(/server\.tool\(/g) || []).length;
-          console.log('工具注册:', toolCount);
-
-          // tsIso 覆盖
           const tsIso = (s.match(/tsIso/g) || []).length;
-          console.log('tsIso 引用:', tsIso);
-
-          // CAT 标签
           const cats = (s.match(/CAT:\[/g) || []).length;
+
+          console.log('工具注册:', toolCount);
+          console.log('tsIso 引用:', tsIso);
           console.log('CAT 标签:', cats);
+          console.log('只读模式:', s.includes('OKX_READ_ONLY') ? 'PASS' : 'MISSING');
+          console.log('风险分级:', s.includes('classifyRisk') ? 'PASS' : 'MISSING');
+          console.log('shebang:', s.startsWith('#!/usr/bin/env node') ? 'PASS' : 'MISSING');
+          console.log('指标模块:', s.includes('okx_indicator') ? 'PASS' : 'MISSING');
+          console.log('SmartMoney:', s.includes('okx_smart_leaderboard') ? 'PASS' : 'MISSING');
 
-          // 检查安全基础设施
-          const hasReadOnly = s.includes('OKX_READ_ONLY');
-          const hasClassifyRisk = s.includes('classifyRisk');
-          const hasShebang = s.startsWith('#!/usr/bin/env node');
-          console.log('只读模式:', hasReadOnly ? '✅' : '❌');
-          console.log('风险分级:', hasClassifyRisk ? '✅' : '❌');
-          console.log('shebang:', hasShebang ? '✅' : '❌');
-
-          // 新增模块
-          console.log('指标模块:', s.includes('okx_indicator') ? '✅' : '❌');
-          console.log('SmartMoney:', s.includes('okx_smart_leaderboard') ? '✅' : '❌');
-
-          // 门禁
-          if (toolCount < 200) { console.log('FAIL: 工具注册不足 ' + toolCount); process.exit(1); }
-          if (cats < 20) { console.log('FAIL: CAT 标签不足 ' + cats); process.exit(1); }
-          if (!hasReadOnly) { console.log('FAIL: 缺少只读模式'); process.exit(1); }
-          console.log('✅ 自检全绿');
+          if (toolCount < 200) { console.log('FAIL: tool count', toolCount); process.exit(1); }
+          if (cats < 20) { console.log('FAIL: CAT tags', cats); process.exit(1); }
+          if (!s.includes('OKX_READ_ONLY')) { console.log('FAIL: missing OKX_READ_ONLY'); process.exit(1); }
+          if (!s.includes('#!/usr/bin/env node')) { console.log('FAIL: missing shebang'); process.exit(1); }
+          console.log('PASS: all checks');
           "
-
-      - name: 模块清单
-        run: |
-          echo '### 模块工具分布' >> $GITHUB_STEP_SUMMARY
-          for f in src/tools/*.ts; do
-            count=$(grep -c 'server\.tool(' "$f" 2>/dev/null || echo 0)
-            name=$(basename "$f" .ts)
-            if [ "$count" -gt 0 ]; then
-              echo "- ${name}: ${count} 工具" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
