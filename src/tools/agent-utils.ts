@@ -1184,6 +1184,32 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         risk: "READ",
       },
       {
+        domain: "技术指标",
+        what: "技术分析指标计算：RSI、MACD、布林带、ADX、Supertrend 等 17 种指标",
+        when: ["RSI", "MACD", "布林带", "KDJ", "ADX", "超买", "超卖", "金叉", "死叉", "技术指标", "指标分析"],
+        go_to: "okx_indicator",
+        also: [
+          "okx_indicator — 单指标计算+信号解读",
+          "okx_indicator_batch — 多指标批量+综合信号",
+          "okx_get_candles — 原始K线数据",
+        ],
+        risk: "READ",
+      },
+      {
+        domain: "聪明钱",
+        what: "交易员排行榜、聪明钱流向、市场情绪分析",
+        when: ["交易员", "排行榜", "聪明钱", "跟谁赚钱", "情绪", "多空比", "恐慌", "smart money"],
+        go_to: "okx_smart_leaderboard",
+        also: [
+          "okx_smart_leaderboard — 交易员排行榜",
+          "okx_smart_trader_detail — 单交易员深度分析",
+          "okx_smart_sentiment — 市场情绪仪表盘",
+          "okx_get_lead_trader_positions — 交易员当前持仓",
+          "okx_get_lead_trader_stats — 交易员历史统计",
+        ],
+        risk: "READ",
+      },
+      {
         domain: "WebSocket 实时",
         what: "实时行情推送、成交推送",
         when: ["实时", "订阅", "推送", "websocket", "ws", "监听"],
@@ -1230,6 +1256,8 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
       "需要 API Key 的工具（账户/交易类）需用户先配置 OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE 环境变量",
       "WRITE 级别工具会修改用户账户，调用前 Agent 必须向用户确认",
       "深度调研某个域时调 agent_catalog_detail { domain } 获取该域全部工具详情",
+      "技术指标用 okx_indicator 单个计算或 okx_indicator_batch 批量，支持 RSI/MACD/布林带等 17 种",
+      "聪明钱分析用 okx_smart_leaderboard 找顶尖交易员 → okx_smart_sentiment 看市场情绪",
     ],
   }
 
@@ -1417,6 +1445,21 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         { name: "okx_predictions_balance", auth: "API Key", params: "无", what: "预测市场余额" },
       ],
     },
+    "技术指标": {
+      workflow: "okx_indicator 单指标计算 → 需要综合判断时 okx_indicator_batch 批量计算",
+      tools: [
+        { name: "okx_indicator", auth: "公开", params: "instId, indicator, period?, bar?", what: "单指标计算+Agent信号解读（17种指标含RSI/MACD/BB/ATR/ADX等）" },
+        { name: "okx_indicator_batch", auth: "公开", params: "instId, indicators(逗号分隔), bar?", what: "多指标批量计算+综合信号共识（最多10个指标）" },
+      ],
+    },
+    "聪明钱": {
+      workflow: "okx_smart_leaderboard 看排行 → okx_smart_trader_detail 深挖 → okx_smart_sentiment 看情绪",
+      tools: [
+        { name: "okx_smart_leaderboard", auth: "公开", params: "instType?, sortBy?, topN?", what: "交易员排行榜（按收益率/总收益/跟单人数排序）" },
+        { name: "okx_smart_trader_detail", auth: "公开", params: "uniqueCode, instType?", what: "单交易员全景：收益率+胜率+回撤+持仓+PnL曲线" },
+        { name: "okx_smart_sentiment", auth: "公开", params: "instFamily?", what: "市场情绪仪表盘：多空比+PCR+资金费率 → 量化评分(0-100)" },
+      ],
+    },
     "WebSocket 实时": {
       workflow: "okx_ws_subscribe 订阅频道 → okx_ws_events 拉取事件",
       tools: [
@@ -1460,7 +1503,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     "agent_catalog_detail",
     "CAT:[系统] | ## 功能：查看某个业务域的详细工具清单——含每个工具的参数提示、鉴权要求、推荐调用顺序\n## 场景：Agent 在 agent_catalog 确定域后，调用此工具获取该域所有工具的精准信息、参数提示和典型 workflow\n## 关键词：目录详情, catalog detail, 工具清单, 域详情, workflow\n## 参数：\n##   - domain: 域名称。可取值: 账户资产 | 行情看盘 | 下单交易 | 风险风控 | 市场扫描 | 盈亏复盘 | 资金管理 | 策略交易 | 预测市场 | WebSocket 实时 | 模拟估算 | 系统工具\n## 鉴权：PUBLIC — 纯索引\n## 风险：READ — 只读\n## 返回量：微小 ~2KB — 单域详情\n## 关联：agent_catalog 选域 → 本工具获取详情 → 直接调用目标工具",
     {
-      domain: z.string().describe("域名称。可选: 账户资产, 行情看盘, 下单交易, 风险风控, 市场扫描, 盈亏复盘, 资金管理, 策略交易, 预测市场, WebSocket 实时, 模拟估算, 系统工具"),
+      domain: z.string().describe("域名称。可选: 账户资产, 行情看盘, 技术指标, 下单交易, 风险风控, 市场扫描, 聪明钱, 盈亏复盘, 资金管理, 策略交易, 预测市场, WebSocket 实时, 模拟估算, 系统工具"),
     },
     async ({ domain }) => {
       try {

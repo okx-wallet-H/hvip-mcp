@@ -83,6 +83,48 @@ function classifyError(msg: string): { errorCode: string; errorCategory: ErrorCa
   return { errorCode: "UNKNOWN_ERROR", errorCategory: "BUSINESS" }
 }
 
+// ── 工具风险分级（只读模式 + 权限感知注册用） ────────────────────────────
+
+export type RiskLevel = "READ" | "WRITE" | "FUND_TRANSFER" | "ADMIN"
+
+/** 根据工具名自动推断风险级别 */
+export function classifyRisk(toolName: string): RiskLevel {
+  // ── ADMIN：修改账户全局配置 ──
+  const admin = ["okx_set_account_mode", "okx_set_position_mode", "okx_set_settle_currency"]
+  if (admin.includes(toolName)) return "ADMIN"
+
+  // ── FUND_TRANSFER：真实资金移动 ──
+  const fund = ["okx_withdrawal"]
+  if (fund.some(p => toolName.startsWith(p))) return "FUND_TRANSFER"
+
+  // ── WRITE：产生交易/修改状态 ──
+  const writePrefixes = [
+    "okx_place_", "okx_cancel_", "okx_amend_", "okx_create_",
+    "okx_stop_", "okx_close_", "okx_batch_", "okx_set_",
+    "okx_transfer", "okx_borrow", "okx_repay",
+    "okx_convert_trade", "okx_preset_", "okx_activate_",
+    "okx_move_", "okx_copy_", "okx_first_",
+    "okx_one_click_", "okx_easy_convert",
+    "agent_quick_trade",
+  ]
+  if (writePrefixes.some(p => toolName.startsWith(p))) return "WRITE"
+
+  // ── 特殊：模拟/预检/反馈 虽是 agent 工具但只读 ──
+  const readSpecials = [
+    "agent_simulate_order", "okx_preflight_check", "okx_agent_feedback",
+    "agent_catalog", "agent_catalog_detail", "agent_hub_status",
+    "agent_hub_dispatch", "agent_hub_review", "agent_room_send", "agent_room_view",
+    "okx_ws_subscribe", "okx_ws_events", "okx_ws_status", "okx_ws_close",
+    "xlayer_subscribe", "xlayer_get_events", "xlayer_unsubscribe",
+  ]
+  if (readSpecials.includes(toolName)) return "READ"
+
+  // ── X Layer 写操作 ──
+  if (toolName.startsWith("xlayer_call")) return "WRITE"
+
+  return "READ"
+}
+
 export function toError(e: unknown): {
   content: [{ type: "text"; text: string }]
   isError: true
