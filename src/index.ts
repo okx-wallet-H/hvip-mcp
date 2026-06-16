@@ -62,6 +62,51 @@ function resolveTransportMode(): TransportMode {
   return "stdio"
 }
 
+function printHelpAndExit(version: string): never {
+  process.stdout.write([
+    ``,
+    `  hvip-mcp v${version} — OKX MCP 服务器（非 OKX 官方产品）`,
+    ``,
+    `  🔗 仓库: https://github.com/okx-wallet-H/hvip-mcp`,
+    ``,
+    `  ⚠️  这不是命令行工具，而是 MCP (Model Context Protocol) 服务器。`,
+    `  你不能直接在终端里运行它——需要配置到 MCP 客户端（Claude Desktop、VS Code、Cline 等）中。`,
+    ``,
+    `  ── 快速开始 ──────────────────────────────────────────────`,
+    ``,
+    `  Claude Desktop（推荐）:`,
+    `    1. 打开 Claude Desktop → 设置 → Developer → Edit Config`,
+    `    2. 在 mcpServers 中添加:`,
+    ``,
+    `       {`,
+    `         "hvip": {`,
+    `           "command": "npx",`,
+    `           "args": ["-y", "hvip-mcp-server"]`,
+    `         }`,
+    `       }`,
+    ``,
+    `  VS Code / Cline:`,
+    `    在 MCP 配置中添加同样的 JSON。`,
+    ``,
+    `  ── 可用参数 ──────────────────────────────────────────────`,
+    ``,
+    `  npx hvip-mcp-server              启动 MCP stdio 服务器`,
+    `  npx hvip-mcp-server start:http   启动 HTTP 模式 (localhost:3000)`,
+    `  npx hvip-mcp-server --help       显示此帮助`,
+    `  npx hvip-mcp-server --version    显示版本号`,
+    ``,
+    `  ── 环境变量 ──────────────────────────────────────────────`,
+    ``,
+    `  OKX_API_KEY       API Key（获取：OKX 官网 → 个人中心 → API）`,
+    `  OKX_SECRET_KEY     Secret Key`,
+    `  OKX_PASSPHRASE     Passphrase`,
+    `  PORT=3000          HTTP 模式端口（默认 3000）`,
+    `  HOST=127.0.0.1     HTTP 模式绑定地址`,
+    ``,
+  ].join("\n") + "\n")
+  process.exit(0)
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 工具注册
 // ═══════════════════════════════════════════════════════════════════════════
@@ -287,6 +332,12 @@ async function startStdio(
 
 async function main() {
   const VERSION = "0.2.54"
+
+  // ── CLI 标志（在 MCP 握手之前处理） ──
+  const argv = process.argv.slice(2)
+  if (argv.includes("--help") || argv.includes("-h")) printHelpAndExit(VERSION)
+  if (argv.includes("--version") || argv.includes("-v")) { process.stdout.write(`hvip-mcp v${VERSION}\n`); process.exit(0) }
+
   const auth = getAuth()
   const mode = resolveTransportMode()
 
@@ -305,6 +356,12 @@ async function main() {
   if (mode === "http") {
     await startHttp(server, VERSION, auth, readOnly, skipped)
   } else {
+    // TTY 检测: 用户直接在终端运行了 hvip-mcp，而不是通过 MCP 客户端
+    if (process.stdin.isTTY && process.env.NODE_ENV !== "production") {
+      process.stderr.write("\n[hint] 检测到你在终端直接运行 hvip-mcp。\n")
+      process.stderr.write("[hint] hvip-mcp 是 MCP 服务器，需要在 MCP 客户端（如 Claude Desktop）中配置。\n")
+      process.stderr.write("[hint] 运行 npx hvip-mcp-server --help 查看配置方法。\n\n")
+    }
     await startStdio(server, VERSION, auth, readOnly, skipped, skipLog)
   }
 }
