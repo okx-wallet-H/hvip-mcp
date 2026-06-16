@@ -7,7 +7,7 @@
  */
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 import { WsManager } from "../adapters/ws.js"
 import type { Auth } from "../adapters/okx.js"
 
@@ -64,8 +64,10 @@ const ALL_CHANNELS = {
 
 export function registerWsTools(server: McpServer, auth: Auth | null): void {
 
-  server.tool(
+  registerTool(
+    server,
     "okx_ws_subscribe",
+    "READ",
     "CAT:[行情-WS] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。纯全局频道（status/instruments/economic-calendar）可传空字符串"),
@@ -95,8 +97,10 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_ws_subscribe_private",
+    "READ",
     "CAT:[行情-WS] | → 请先调用 agent_catalog",
     {
       instId:  z.string().optional().describe("产品ID。账户级频道可不传（如 account/positions/balances）"),
@@ -131,8 +135,10 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_ws_events",
+    "READ",
     "CAT:[行情-WS] | → 请先调用 agent_catalog",
     {
       subscriptionId: z.string().optional().describe("订阅ID"),
@@ -158,8 +164,10 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_ws_status",
+    "READ",
     "CAT:[行情-WS] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -174,8 +182,10 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_ws_close",
+    "READ",
     "CAT:[行情-WS] | → 请先调用 agent_catalog",
     {
       subscriptionId: z.string().optional().describe("订阅ID，不传关闭所有"),

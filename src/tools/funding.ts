@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 export function registerFundingTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_funding_balance",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     { ccy: z.string().optional().describe("指定币种，不填则返回全部") },
     async ({ ccy }) => {
@@ -17,8 +19,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_transfer",
+    "WRITE",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       ccy:  z.string().describe("划转币种"),
@@ -35,8 +39,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_currencies",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     { ccy: z.string().optional().describe("指定币种，如 BTC，不填返回全部") },
     async ({ ccy }) => {
@@ -48,8 +54,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_deposit_address",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     { ccy: z.string().describe("币种，如 USDT、BTC、ETH") },
     async ({ ccy }) => {
@@ -61,8 +69,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_deposit_history",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       ccy:   z.string().optional().describe("币种，不填返回全部"),
@@ -77,8 +87,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_withdrawal_history",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       ccy:   z.string().optional().describe("币种，不填返回全部"),
@@ -93,8 +105,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_withdrawal",
+    "FUND_TRANSFER",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       ccy:    z.string().describe("币种，如 USDT。必填"),
@@ -119,8 +133,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   // ── 资金收尾（第十七批新增） ──────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_deposit_lightning",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       ccy: z.string().describe("币种，如 USDT。必填"),
@@ -134,8 +150,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_withdrawal_lightning",
+    "FUND_TRANSFER",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       ccy: z.string().describe("提现币种。必填"),
@@ -151,8 +169,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_transfer_state",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       transferId: z.string().describe("划转ID（从 okx_transfer 返回获取）。必填"),
@@ -168,8 +188,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   // ── 资产补完（v0.2.26 新缺口） ────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_non_tradable_assets",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -181,8 +203,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_exchange_list",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -193,8 +217,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_deposit_withdraw_status",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -206,8 +232,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_asset_bills_history",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -221,8 +249,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_convert_currency_pair",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -234,8 +264,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_convert_estimate_quote",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {
       fromCcy: z.string().describe("卖出币种。必填"),
@@ -251,8 +283,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_monthly_statement",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -264,8 +298,10 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_asset_balances",
+    "READ",
     "CAT:[资金] | → 请先调用 agent_catalog",
     { ccy: z.string().optional().describe("指定币种，不填返回全部") },
     async ({ ccy }) => {

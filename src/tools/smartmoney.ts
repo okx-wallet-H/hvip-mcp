@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 // ════════════════════════════════════════════════════════════════════════════
 // Smart Money 模块
@@ -14,8 +14,10 @@ import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
 export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): void {
 
   // ── okx_smart_leaderboard ──────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "okx_smart_leaderboard",
+    "READ",
     "CAT:[Smart Money] | → 请先调用 agent_catalog",
     {
       instType: z.enum(["SPOT","SWAP"]).optional().describe("产品类型，默认SPOT"),
@@ -68,8 +70,10 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   )
 
   // ── okx_smart_trader_detail ────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "okx_smart_trader_detail",
+    "READ",
     "CAT:[Smart Money] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("交易员唯一码（如 A12345678）"),
@@ -135,8 +139,10 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   )
 
   // ── okx_smart_sentiment ────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "okx_smart_sentiment",
+    "READ",
     "CAT:[Smart Money] | → 请先调用 agent_catalog",
     {
       instFamily: z.string().optional().describe("产品族，如 BTC-USD、ETH-USD。默认 BTC-USD"),

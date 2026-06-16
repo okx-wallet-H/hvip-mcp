@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 export function registerRfqTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_create_rfq",
+    "WRITE",
     `## 功能：创建报价请求（RFQ，Request For Quote），用于大宗交易询价
 ## 场景：用于向做市商或对手方发起大宗交易询价、获取定制报价
 ## 关键词：询价, RFQ, 报价请求, 大宗交易询价, 请求报价
@@ -35,8 +37,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_execute_quote",
+    "READ",
     `## 功能：执行报价（接受对手方的大宗交易报价）
 ## 场景：用于接受RFQ报价、确认大宗交易成交
 ## 关键词：执行报价, execute quote, 接受报价, 大宗成交, 确认交易
@@ -64,8 +68,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_rfqs",
+    "READ",
     `## 功能：查询询价记录列表
 ## 场景：用于查看历史RFQ、追踪询价状态、确认询价是否已报价
 ## 关键词：询价记录, RFQ列表, 询价历史, RFQ记录, 报价请求记录
@@ -87,8 +93,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_quotes",
+    "READ",
     `## 功能：查询针对某RFQ的报价列表
 ## 场景：用于查看对手方对RFQ的回复报价、选择最优报价执行
 ## 关键词：报价列表, quotes, RFQ报价, 查询报价, 对手方报价
@@ -112,8 +120,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   // ── RFQ 收尾（第八批新增） ───────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_rfq_counterparties",
+    "READ",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -125,8 +135,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_rfq",
+    "WRITE",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       rfqId: z.string().describe("RFQ ID。必填"),
@@ -140,8 +152,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_batch_rfqs",
+    "WRITE",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       rfqIds: z.string().describe("RFQ ID数组JSON字符串，如 '[\"123\",\"456\"]'"),
@@ -156,8 +170,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_all_rfqs",
+    "WRITE",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -169,8 +185,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_create_quote",
+    "WRITE",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
@@ -186,8 +204,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_quote",
+    "WRITE",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
@@ -202,8 +222,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_rfq_trades",
+    "READ",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -214,8 +236,10 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
       } catch (e) { return toError(e) }
     }
   )
-  server.tool(
+  registerTool(
+    server,
     "okx_reset_rfq_mmp",
+    "READ",
     "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {},
     async () => {

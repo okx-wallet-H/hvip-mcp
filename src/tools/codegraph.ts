@@ -13,7 +13,7 @@
  */
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
-import { toResult, toError } from "./shared.js"
+import { toResult, toError , registerTool} from "./shared.js"
 import * as path from "node:path"
 import * as fs from "node:fs"
 
@@ -134,8 +134,10 @@ function getImpact(db: any, nodeId: string, maxDepth = 2, limit = 50): { direct:
 
 export function registerCodeGraphTools(server: McpServer): void {
 
-  server.tool(
+  registerTool(
+    server,
     "codegraph_status",
+    "READ",
     "CAT:[代码智能] | ## 功能：检查代码知识图谱状态——节点数、边数、覆盖文件、被调最多的函数\n## 场景：Agent 首次连接时确认图谱就绪\n## 关键词：代码图谱, codegraph, 知识图谱, 索引状态, 调用排行\n## 参数：无\n## 鉴权：PUBLIC — 本地读 DB\n## 风险：READ — 只读\n## 返回量：微小 ~1KB\n## 关联：确认状态 → codegraph_query 追踪调用链",
     {},
     async () => {
@@ -239,8 +241,10 @@ export function registerCodeGraphTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "codegraph_query",
+    "READ",
     "CAT:[代码智能] | ## 功能：查询代码知识图谱——追踪调用链（callers/callees）、搜索符号、按文件列符号、影响分析\n## 场景：Agent 回答「toResult 被哪些工具调用」「改 shared.ts 影响哪些模块」「WebSocket 在哪些文件里」时调用\n## 关键词：codegraph, 调用链, callers, callees, 搜索, 影响分析, 依赖\n## 参数：\n##   - mode: 查询模式。callers / callees / search / file / impact\n##   - symbol: 符号名或文件名\n##   - limit: 返回数，默认 15\n## 鉴权：PUBLIC — 本地读 DB\n## 风险：READ — 只读\n## 返回量：微小 ~2KB\n## 关联：codegraph_status → codegraph_query",
     {
       mode:   z.enum(["callers","callees","search","file","impact"]).describe("callers=谁调用它, callees=它调用谁, search=搜符号, file=按文件, impact=2跳影响分析"),

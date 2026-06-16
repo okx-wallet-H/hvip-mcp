@@ -1,12 +1,14 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE , registerTool} from "./shared.js"
 
 export function registerSignalTools(server: McpServer, auth: Auth | null): void {
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_bots_pending",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId:   z.string().optional().describe("指定机器人ID，不填返回全部"),
@@ -21,8 +23,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_bots_history",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId:   z.string().optional().describe("指定机器人ID"),
@@ -38,8 +42,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_positions",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("信号机器人ID（从 okx_get_signal_bots_pending 获取）"),
@@ -53,8 +59,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_positions_history",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("信号机器人ID（从 okx_get_signal_bots_history 获取）"),
@@ -69,8 +77,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_sub_orders",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("信号机器人ID"),
@@ -85,8 +95,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_event_history",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("信号机器人ID"),
@@ -103,8 +115,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   // ── 信号操作类（第十五批新增 — 路径经 curl 修正） ──────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_create_signal_bot",
+    "WRITE",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       channel:    z.string().describe("信号渠道。必填"),
@@ -119,8 +133,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_stop_signal_bot",
+    "WRITE",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("信号机器人ID。必填"),
@@ -134,8 +150,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_orders",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("信号机器人ID。必填"),
@@ -149,8 +167,10 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_signal_subscriptions",
+    "READ",
     "CAT:[策略-信号] | → 请先调用 agent_catalog",
     {},
     async () => {

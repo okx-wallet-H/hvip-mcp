@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE, INST_TYPE_PUBLIC } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE, INST_TYPE_PUBLIC , registerTool} from "./shared.js"
 
 export function registerAccountTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_balance",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     { ccy: z.string().optional().describe("指定币种如 BTC、USDT，不填则返回所有币种") },
     async ({ ccy }) => {
@@ -17,8 +19,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_positions",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     { instType: z.enum(INST_TYPE_PUBLIC).optional().describe("产品类型，不填则返回全部") },
     async ({ instType }) => {
@@ -46,8 +50,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_order",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -62,8 +68,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_orders_history",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型"),
@@ -78,8 +86,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_account_bills",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型，不填返回全部"),
@@ -95,8 +105,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_account_config",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -108,8 +120,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_leverage_info",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP"),
@@ -124,8 +138,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_max_size",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
@@ -141,8 +157,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_fee_rates",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型，不填返回全部"),
@@ -158,8 +176,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_positions_history",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_PUBLIC).optional().describe("产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部"),
@@ -175,8 +195,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_leverage",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
@@ -195,8 +217,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_max_loan",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT。必填"),
@@ -211,8 +235,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_interest_accrued",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instId: z.string().optional().describe("产品ID，可选"),
@@ -228,8 +254,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_position_mode",
+    "ADMIN",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       posMode: z.enum(["long_short_mode","net_mode"]).describe("持仓模式。long_short_mode=双向持仓, net_mode=单向持仓"),
@@ -243,8 +271,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_asset_valuation",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       ccy: z.string().optional().describe("计价币种，如 USD、CNY。不填默认按所有币种"),
@@ -258,8 +288,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_convert_currencies",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -271,8 +303,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_convert_trade",
+    "WRITE",
     `## 功能：执行资产兑换（将一种资产直接换成另一种，如 USDT→BTC）
 ## 场景：用于快速换币、小额资产兑换、无需挂单的即时兑换
 ## 关键词：兑换, convert trade, 资产兑换, 换币, 一键兑换, 闪兑
@@ -298,8 +332,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_margin_balance",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT。必填"),
@@ -314,8 +350,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_bills",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型，不填返回全部"),
@@ -331,8 +369,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_interest_rates",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       ccy: z.string().optional().describe("币种，如 USDT、BTC。不填返回全部"),
@@ -350,8 +390,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_max_withdrawal",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       ccy: z.string().optional().describe("币种，如 USDT。不填返回全部"),
@@ -365,8 +407,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_account_greeks",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instType:   z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT/MARGIN/SWAP/FUTURES/OPTION"),
@@ -383,8 +427,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_account_mode",
+    "ADMIN",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       acctLv: z.enum(["1","2","3","4"]).describe("账户层级。1=简单交易, 2=单币种保证金, 3=多币种保证金, 4=组合保证金"),
@@ -398,8 +444,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_account_position_risk",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -411,8 +459,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_interest_limits",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -424,8 +474,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_account_subtypes",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -437,8 +489,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_subaccount_trading_balance",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称。必填"),
@@ -452,8 +506,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_preset_account_switch",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       acctLv: z.string().describe("目标账户层级。必填"),
@@ -467,8 +523,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_activate_option",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -480,8 +538,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_position_builder",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       body: z.string().describe("试算参数JSON字符串。必填"),
@@ -496,8 +556,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_auto_earn",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       ccy:      z.string().describe("币种。必填"),
@@ -512,8 +574,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_fee_type",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       feeType: z.enum(["0","1"]).describe("手续费类型。0=按币, 1=按USDT"),
@@ -527,8 +591,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_settle_currency",
+    "ADMIN",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       ccy: z.string().describe("结算币种，如 USDT。必填"),
@@ -542,8 +608,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_position_builder_graph",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -555,8 +623,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_precheck_delta_neutral",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -568,8 +638,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_trade_fee",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型"),
@@ -585,8 +657,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_risk_state",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -598,8 +672,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_borrow_repay",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       ccy:  z.string().describe("币种。必填"),
@@ -615,8 +691,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_borrow_repay_history",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -632,8 +710,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_account_bills_archive",
+    "READ",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -645,8 +725,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_auto_loan",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       ccy:  z.string().describe("币种。必填"),
@@ -661,8 +743,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_trading_config",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       jsonString: z.string().describe("配置参数JSON字符串。必填"),
@@ -677,8 +761,10 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_move_positions",
+    "WRITE",
     "CAT:[账户] | → 请先调用 agent_catalog",
     {
       body: z.string().describe("迁移参数JSON字符串。必填"),

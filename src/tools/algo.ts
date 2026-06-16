@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE , registerTool} from "./shared.js"
 
 export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_algo_orders",
+    "READ",
     "CAT:[交易-委托] | → 请先调用 agent_catalog",
     {
       ordType:  z.enum(["conditional","oco","trigger","move_order_stop","iceberg","twap"]).describe("策略类型"),
@@ -20,8 +22,10 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_algo_orders_history",
+    "READ",
     "CAT:[交易-委托] | → 请先调用 agent_catalog",
     {
       ordType:  z.enum(["conditional","oco","trigger","move_order_stop","iceberg","twap"]).describe("策略类型"),
@@ -37,8 +41,10 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_place_algo_order",
+    "WRITE",
     "CAT:[交易-委托] | → 请先调用 agent_catalog",
     { params: z.record(z.unknown()).describe("订单参数，参考OKX文档") },
     async ({ params }) => {
@@ -50,8 +56,10 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_algo_order",
+    "WRITE",
     "CAT:[交易-委托] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -66,8 +74,10 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_orders_algo_pending",
+    "READ",
     "CAT:[交易-委托] | → 请先调用 agent_catalog",
     {
       algoId:   z.string().optional().describe("策略订单ID，精确查询"),
@@ -85,8 +95,10 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_amend_algo_order",
+    "WRITE",
     "CAT:[交易-委托] | → 请先调用 agent_catalog",
     {
       orders: z.string().describe("修改策略订单数组JSON字符串，如 '[{\"algoId\":\"123\",\"instId\":\"BTC-USDT\",\"newTpTriggerPx\":\"65000\"}]'"),

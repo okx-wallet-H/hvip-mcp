@@ -1,7 +1,7 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi } from "../adapters/okx.js"
-import { toResult, toError } from "./shared.js"
+import { toResult, toError , registerTool} from "./shared.js"
 
 // ════════════════════════════════════════════════════════════════════════════
 // 技术指标本地计算引擎
@@ -364,8 +364,10 @@ function adxSignal(adx: number, plusDI: number, minusDI: number): { signal: stri
 
 export function registerIndicatorTools(server: McpServer): void {
 
-  server.tool(
+  registerTool(
+    server,
     "okx_indicator",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId:    z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP"),
@@ -575,8 +577,10 @@ export function registerIndicatorTools(server: McpServer): void {
 
   // ── okx_indicator_batch — 多指标批量计算 ────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_indicator_batch",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId:     z.string().describe("产品ID，如 BTC-USDT"),

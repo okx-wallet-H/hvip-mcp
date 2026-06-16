@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 export function registerSpreadTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spreads",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId:  z.string().optional().describe("价差合约ID，如 BTC-USDT_BTC-USDT-SWAP"),
@@ -21,8 +23,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_ticker",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID，如 BTC-USD-SWAP_BTC-USD-260925"),
@@ -39,8 +43,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_orderbook",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID"),
@@ -61,8 +67,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_trades",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID"),
@@ -80,8 +88,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_candles",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID"),
@@ -108,8 +118,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   // ── 价差操作类（第十六批新增） ──────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_place_spread_order",
+    "WRITE",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId:  z.string().describe("价差合约ID。必填"),
@@ -129,8 +141,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_spread_order",
+    "WRITE",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
@@ -145,8 +159,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_orders",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
@@ -160,8 +176,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_amend_spread_order",
+    "WRITE",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
@@ -181,8 +199,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_orders_history",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
@@ -197,8 +217,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_fills",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
@@ -213,8 +235,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_books",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
@@ -236,8 +260,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   // ── 价差收尾（第一批新缺口 v0.2.25） ──────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_orders_pending",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
@@ -251,8 +277,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_orders_history_archive",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
@@ -266,8 +294,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_trades_public",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
@@ -284,8 +314,10 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_spread_trades_fills",
+    "READ",
     "CAT:[策略-价差] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().optional().describe("价差合约ID"),

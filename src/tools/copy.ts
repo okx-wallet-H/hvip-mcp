@@ -1,14 +1,16 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED, INST_TYPE_SWAP_FUT } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED, INST_TYPE_SWAP_FUT , registerTool} from "./shared.js"
 
 export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   // ── 公开接口：查询任意带单员 ──────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_lead_trader_positions",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("带单员唯一标识码，从OKX App「跟单」页面获取"),
@@ -22,8 +24,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_lead_trader_history",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("带单员唯一标识码"),
@@ -38,8 +42,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_lead_trader_stats",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("带单员唯一标识码"),
@@ -56,8 +62,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   // ── 私有接口：查询自己的带单数据 ──────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_my_lead_positions",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型，不填返回全部"),
@@ -71,8 +79,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_my_lead_history",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
@@ -87,8 +97,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_copy_instruments",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
@@ -102,8 +114,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_profit_sharing_total",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
@@ -117,8 +131,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_profit_sharing_details",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
@@ -135,8 +151,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   // ── 跟单操作类（第十批新增） ──────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_copy_trader",
+    "WRITE",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode:  z.string().describe("带单员唯一标识码。必填"),
@@ -155,8 +173,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_stop_copy_trader",
+    "WRITE",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       subPosId: z.string().optional().describe("子持仓ID"),
@@ -172,8 +192,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_copy_settings",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -185,8 +207,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_copy_settings",
+    "WRITE",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().optional().describe("带单员唯一标识码"),
@@ -210,8 +234,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   // ── PUBLIC 跟单查询（第九批新增） ────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_public_lead_traders",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -222,8 +248,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_public_copy_config",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -234,8 +262,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_public_lead_trader_pnl",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("带单员唯一标识码。必填"),
@@ -251,8 +281,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   // ── 私有跟单操作（第九批新增） ────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_copy_traders",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -264,8 +296,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_first_copy_settings",
+    "WRITE",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("带单员唯一标识码。必填"),
@@ -284,8 +318,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_unrealized_profit_sharing",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -297,8 +333,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_total_unrealized_profit_sharing",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -310,8 +348,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_amend_profit_sharing_ratio",
+    "WRITE",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       profitSharingRatio: z.string().describe("分成比例。必填"),
@@ -325,8 +365,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_amend_copy_settings",
+    "WRITE",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       subPosId:   z.string().describe("子持仓ID。必填"),
@@ -345,8 +387,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_public_preference_currency",
+    "READ",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("带单员唯一标识码。必填"),
@@ -359,8 +403,10 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_stop_copy_trading",
+    "WRITE",
     "CAT:[策略-跟单] | → 请先调用 agent_catalog",
     {},
     async () => {

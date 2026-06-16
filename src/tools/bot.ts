@@ -1,14 +1,16 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE , registerTool} from "./shared.js"
 
 export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   // ── 网格交易 ────────────────────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_grid_ai_param",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       instId:      z.string().describe("产品ID，如 BTC-USDT、BTC-USDT-SWAP"),
@@ -23,8 +25,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_grid_orders_pending",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型"),
@@ -40,8 +44,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_grid_orders_history",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型"),
@@ -57,8 +63,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_grid_sub_orders",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoId:      z.string().describe("网格策略ID"),
@@ -76,8 +84,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   // ── 定投 ────────────────────────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_recurring_orders_pending",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -89,8 +99,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_recurring_orders_history",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -104,8 +116,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   // ── 定投操作类（第十一批新增） ──────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_create_recurring_plan",
+    "WRITE",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       instId:   z.string().describe("定投产品ID。必填"),
@@ -122,8 +136,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_stop_recurring_plan",
+    "WRITE",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("定投计划ID。必填"),
@@ -137,8 +153,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_recurring_sub_orders",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("定投计划ID。必填"),
@@ -155,8 +173,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   // ── 网格操作类（第十四批新增） ──────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_create_grid_order",
+    "WRITE",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       instId:      z.string().describe("产品ID。必填"),
@@ -177,8 +197,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_stop_grid_order",
+    "WRITE",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoId:      z.string().describe("网格策略ID。必填"),
@@ -194,8 +216,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_close_grid_position",
+    "WRITE",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoId:      z.string().describe("网格策略ID。必填"),
@@ -210,8 +234,10 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_grid_positions",
+    "READ",
     "CAT:[策略-网格] | → 请先调用 agent_catalog",
     {
       algoId: z.string().describe("网格策略ID。必填"),
