@@ -331,7 +331,7 @@ async function startStdio(
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function main() {
-  const VERSION = "0.2.55"
+  const VERSION = "0.2.56"
 
   // ── CLI 标志（在 MCP 握手之前处理） ──
   const argv = process.argv.slice(2)
