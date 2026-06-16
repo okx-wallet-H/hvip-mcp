@@ -1,4 +1,4 @@
-import type { Server as WSServer } from "ws"
+﻿import type { Server as WSServer } from "ws"
 import { WebSocketServer, WebSocket } from "ws"
 
 // ── 类型 ──────────────────────────────────────────────────────────────────
@@ -100,7 +100,8 @@ class AgentHub {
       ws.on("message", (raw) => {
         try {
           const msg: HubMessage = JSON.parse(raw.toString())
-          this.handleMessage(ws, agentId, msg)
+          const newId = this.handleMessage(ws, agentId, msg)
+          if (newId) agentId = newId
         } catch {
           this.send(ws, { type: "error", message: "消息格式错误：非 JSON" })
         }
@@ -123,9 +124,9 @@ class AgentHub {
   }
 
   // ── 消息路由 ──
-  private handleMessage(ws: WebSocket, authAgentId: string | null, msg: HubMessage): void {
+  private handleMessage(ws: WebSocket, authAgentId: string | null, msg: HubMessage): string | null {
     switch (msg.type) {
-      case "agent:hello":   this.handleHello(ws, msg); break
+      case "agent:hello":   return this.handleHello(ws, msg);
       case "agent:status":  if (authAgentId) this.handleAgentStatus(authAgentId); break
       case "task:claim":    this.handleClaim(msg); break
       case "task:done":     this.handleDone(msg); break
@@ -137,17 +138,18 @@ class AgentHub {
       default:
         this.send(ws, { type: "error", message: `未知消息类型: ${msg.type}` })
     }
+    return null
   }
 
   // ── Agent 注册 ──
-  private handleHello(ws: WebSocket, msg: HubMessage): void {
+  private handleHello(ws: WebSocket, msg: HubMessage): string {
     const agentId = String(msg.agentId || "")
     const name = String(msg.name || agentId || "Unknown")
     const capabilities = Array.isArray(msg.capabilities) ? msg.capabilities as string[] : []
 
     if (!agentId) {
       this.send(ws, { type: "error", message: "缺少 agentId" })
-      return
+      return ""
     }
 
     const existing = this.agents.get(agentId)
@@ -191,6 +193,7 @@ class AgentHub {
         }
       }
     }
+    return agentId
   }
 
   private handleDisconnect(agentId: string): void {
