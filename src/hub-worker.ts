@@ -139,7 +139,7 @@ function doTask(taskId: string, title: string, url: string): void {
       process.stderr.write(`[Worker] ✅ Claude Code 完成 (exit ${code})\n`)
 
       if (mode === "market") {
-        // 行情类任务: 结果发到 #lobby，任务标记 done
+        // 行情类任务: 结果发到 #lobby，任务标记 done，写入记忆
         ws.send(JSON.stringify({
           type: "room:message",
           roomId: "#lobby",
@@ -151,6 +151,8 @@ function doTask(taskId: string, title: string, url: string): void {
           agentId: AGENT_ID,
           result: `${title} — 行情已查询`,
         }))
+        // 自动保存到共享记忆
+        tagAndSave(title, output)
       } else {
         // 写代码任务: 原有逻辑
         const branchMatch = output.match(/push.*?(task\/\S+|feat\/\S+|fix\/\S+)/i)
@@ -194,6 +196,32 @@ function doTask(taskId: string, title: string, url: string): void {
 // ═══════════════════════════════════════════════════════════════════════════
 // 提示词构建
 // ═══════════════════════════════════════════════════════════════════════════
+
+/** 从任务标题提取标签 + 提取核心结论写入记忆 */
+function tagAndSave(title: string, output: string): void {
+  const tags: string[] = []
+  if (/\bBTC\b/i.test(title)) tags.push("BTC")
+  if (/\bETH\b/i.test(title)) tags.push("ETH")
+  if (/行情|价格|涨跌|走势|K线/i.test(title)) tags.push("行情")
+  if (/资金费率/i.test(title)) tags.push("资金费率")
+  if (tags.length === 0) tags.push("分析")
+
+  // 提取「总结」或最后一段作为记忆正文
+  const summaryMatch = output.match(/总结[：:]\s*(.+)/i)
+  const text = summaryMatch ? summaryMatch[1] : output.slice(-500).replace(/\n/g, " ")
+
+  // 通过 Hub REST API 写入记忆
+  const http = require("node:http") as typeof import("node:http")
+  const hubHost = new URL(HUB_URL).hostname
+  const hubPort = new URL(HUB_URL.replace("ws://", "http://")).port || "3000"
+  const body = JSON.stringify({ type: "memory", agentId: AGENT_ID, text, tags, confidence: 0.8 })
+  const req = http.request({ hostname: hubHost, port, method: "POST", path: "/api/memory", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, (res) => {
+    process.stderr.write(`[Worker] 记忆已保存 (${res.statusCode})\n`)
+  })
+  req.on("error", () => {})
+  req.write(body)
+  req.end()
+}
 
 function buildCodePrompt(taskId: string, title: string, url: string): string {
   return [

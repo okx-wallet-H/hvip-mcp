@@ -16,8 +16,10 @@
 import { createServer } from "node:http"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { spawn } from "node:child_process"
+import { URL } from "node:url"
 import { agentHub } from "./adapters/agent-hub.js"
 import { HubDB } from "./adapters/hub-persistence.js"
+import { HubMemory } from "./adapters/hub-memory.js"
 
 const VERSION = "0.3.0"
 
@@ -120,10 +122,19 @@ body{font-family:system-ui,monospace;background:#0d1117;color:#c9d1d9;min-height
     <div class="card-title"><span>📋 任务</span><span id="taskLabel"></span></div>
     <div class="card-body" id="tasks"><div class="empty">暂无任务</div></div>
   </div>
-  <!-- Room Messages -->
+  <!-- Memory -->
   <div class="card" style="grid-column:1/-1">
-    <div class="card-title"><span>💬 实时消息</span><span id="msgLabel">#lobby</span></div>
-    <div class="card-body" id="messages" style="max-height:300px"><div class="empty">暂无消息</div></div>
+    <div class="card-title">
+      <span>🧠 共享记忆</span>
+      <span style="font-weight:400;font-size:11px">
+        <input id="memSearch" placeholder="搜索记忆..." style="background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:2px 8px;border-radius:4px;font-size:11px;width:160px" onkeyup="searchMemory()">
+        <select id="memType" onchange="searchMemory()" style="background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:2px 4px;border-radius:4px;font-size:11px;margin-left:4px">
+          <option value="">全部</option><option value="memory">记忆</option><option value="doc">文档</option><option value="directive">指令</option><option value="skill">技能</option>
+        </select>
+        <span id="memStats" style="color:#484f58;margin-left:8px"></span>
+      </span>
+    </div>
+    <div class="card-body" id="memoryPanel" style="max-height:250px"><div class="empty">加载中...</div></div>
   </div>
 </div>
 
@@ -192,6 +203,13 @@ function addMsg(m){
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
+// ── Memory Panel ──
+async function searchMemory(){const q=document.getElementById('memSearch').value.trim();const url=q?'/api/memory/search?q='+encodeURIComponent(q):'/api/memory';const r=await fetch(url).catch(()=>null);if(!r)return;const entries=await r.json();const stats=await fetch('/api/memory/stats').then(r=>r.json()).catch(()=>({}));document.getElementById('memStats').textContent=stats.total+'条';const el=document.getElementById('memoryPanel');if(!entries.length){el.innerHTML='<div class=empty>无匹配记忆</div>';return}
+el.innerHTML=entries.map(e=>{const conf=Math.round(e.confidence*100);const bar='<div style="display:inline-block;width:50px;height:6px;background:#21262d;border-radius:3px;vertical-align:middle;margin:0 4px"><div style="width:'+conf+'%;height:100%;background:'+(conf>70?'#3fb950':conf>30?'#d29922':'#f85149')+';border-radius:3px"></div></div>';const ts=timeAgo(e.createdAt);return'<div class=msg-row style="display:flex;gap:6px;align-items:flex-start"><span style="font-size:10px;min-width:50px;color:#484f58">'+ts+'</span><span class="badge" style="font-size:10px">'+esc(e.type)+'</span><span style="flex:1;font-size:12px">'+esc(e.text.length>200?e.text.slice(0,200)+'...':e.text)+'</span>'+bar+'<span style="font-size:10px;color:#484f58">'+conf+'%</span><span style="font-size:10px;color:#8b949e">'+esc(e.agentId.slice(0,12))+'</span></div>'}).join('')}
+
+function renderMemoryStats(){fetch('/api/memory/stats').then(r=>r.json()).then(s=>{document.getElementById('memStats').textContent=s.total+'条';searchMemory()}).catch(()=>{})}
+
+
 function showError(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.display='block';setTimeout(()=>b.style.display='none',8000)}
 
 function showOk(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.background='#0d3320';b.style.color='#3fb950';b.style.display='block';setTimeout(()=>{b.style.display='none';b.style.background='#490202';b.style.color='#f85149'},5000)}
@@ -221,6 +239,7 @@ function connect(){
         fetch('/api/status').then(r=>r.json()).then(s=>{
           renderAgents(s.agents); renderTasks(s.tasks)
         }).catch(()=>{})
+        renderMemoryStats()
       }
       if(m.type==='room:history'){ msgs=m.messages||[]; addMsg(null) }
       if(m.type==='agent:update'){ fetch('/api/status').then(r=>r.json()).then(s=>{renderAgents(s.agents);renderTasks(s.tasks)}).catch(()=>{}) }
@@ -317,6 +336,49 @@ function startHttpServer(): void {
       return
     }
 
+    // ── Memory API ──
+    if (_req.method === "POST" && _req.url === "/api/memory") {
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", () => {
+        try {
+          const { type, text, agentId, tags, confidence, parentId } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!text || !agentId) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "text + agentId required" })); return }
+          const entry = memory.store({ type, agentId, text, tags, confidence, parentId })
+          res.writeHead(201, { "Content-Type": "application/json" })
+          res.end(JSON.stringify(entry))
+        } catch { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "JSON parse error" })) }
+      })
+      return
+    }
+    if (_req.method === "GET" && _req.url === "/api/memory/stats") {
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify(memory.stats()))
+      return
+    }
+    if (_req.method === "GET" && _req.url?.startsWith("/api/memory/search")) {
+      const url = new URL(_req.url, `http://${host}:${webPort}`)
+      const q = url.searchParams.get("q") || ""
+      const entries = memory.search(q, 30)
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify(entries))
+      return
+    }
+    if (_req.method === "GET" && _req.url === "/api/memory") {
+      const entries = memory.recent(30)
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify(entries))
+      return
+    }
+    if (_req.method === "GET" && _req.url?.startsWith("/api/memory/")) {
+      const id = _req.url.slice("/api/memory/".length)
+      const entry = memory.get(id)
+      if (!entry) { res.writeHead(404, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "not found" })); return }
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify(entry))
+      return
+    }
+
     // GET /api/health
     if (_req.method === "GET" && _req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" })
@@ -357,6 +419,15 @@ if (db.open()) {
   process.stderr.write(`[Hub] DB 状态: ${stats.taskCount} tasks, ${stats.messageCount} messages\n`)
 }
 
+// 记忆系统
+const memoryPath = flag("memory-db") || process.env.HUB_MEMORY_DB || ".hub/memory.db"
+const memory = new HubMemory(memoryPath)
+const memOk = memory.open()
+if (memOk) {
+  const ms = memory.stats()
+  process.stderr.write(`[Hub] 🧠 记忆: ${ms.total} 条 (doc:${ms.byType.doc||0} directive:${ms.byType.directive||0} memory:${ms.byType.memory||0} skill:${ms.byType.skill||0})\n`)
+}
+
 // 启动 HTTP 仪表盘
 startHttpServer()
 
@@ -369,6 +440,7 @@ function shutdown() {
   process.stderr.write("\n[Hub] 正在关闭...\n")
   agentHub.close()
   db.close()
+  memory.close()
   process.exit(0)
 }
 
