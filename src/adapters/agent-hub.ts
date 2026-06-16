@@ -50,20 +50,53 @@ class AgentHub {
   private rooms = new Map<string, RoomState>()
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private version = "0.0.0"
+  private port = 0
 
   // ── 启动 ──
   start(port: number, host = "0.0.0.0", version = "0.0.0"): void {
     this.version = version
-    this.wss = new WebSocketServer({ port, host })
-    console.log(`[AgentHub] WS Server v${version} started on ws://${host}:${port}`)
+    const startWss = (p: number): Promise<boolean> => {
+      return new Promise((resolve) => {
+        const wss = new WebSocketServer({ port: p, host })
+        let resolved = false
+        const done = (ok: boolean) => { if (!resolved) { resolved = true; resolve(ok) } }
+        wss.on("listening", () => {
+          this.wss = wss
+          this.port = p
+          done(true)
+        })
+        wss.on("error", () => {
+          try { wss.close() } catch {}
+          done(false)
+        })
+        // 超时 1s 判定失败
+        setTimeout(() => done(false), 1000)
+      })
+    }
+    // 异步尝试端口，不阻塞 MCP 启动
+    const ports = [port, port + 1, port + 2]
+    startWss(ports[0]).then(ok => {
+      if (!ok) return startWss(ports[1])
+      return true
+    }).then(ok => {
+      if (!ok) return startWss(ports[2])
+      return ok === true ? true : false
+    }).then(ok => {
+      if (!ok) {
+        process.stderr.write(`[AgentHub] WS Hub 跳过（端口 ${ports.join("/")} 不可用）\n`)
+        return
+      }
+      process.stderr.write(`[AgentHub] WS Hub v${version} ws://${host}:${this.port}\n`)
+      this.setupHub()
+    })
+  }
 
-    // 预设房间
+  private setupHub(): void {
+    if (!this.wss) return
     this.ensureRoom("#lobby")
     this.ensureRoom("#review")
-
     this.wss.on("connection", (ws) => {
       let agentId: string | null = null
-
       ws.on("message", (raw) => {
         try {
           const msg: HubMessage = JSON.parse(raw.toString())
@@ -72,21 +105,18 @@ class AgentHub {
           this.send(ws, { type: "error", message: "消息格式错误：非 JSON" })
         }
       })
-
       ws.on("close", () => {
         if (agentId) this.handleDisconnect(agentId)
       })
-
-      ws.on("error", () => { /* close 事件会处理 */ })
+      ws.on("error", () => {})
     })
-
     this.heartbeatTimer = setInterval(() => {
       const now = Date.now()
       for (const [id, a] of this.agents) {
         if (now - a.lastSeen > 120_000) {
           a.ws.close()
           this.agents.delete(id)
-          console.log(`[AgentHub] Agent 心跳超时: ${id}`)
+          console.log("[AgentHub] Agent 心跳超时: " + id)
         }
       }
     }, 30_000)
