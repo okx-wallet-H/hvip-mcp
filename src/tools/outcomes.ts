@@ -376,7 +376,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_event_place_order",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { instId: z.string().describe("合约ID"), side: z.enum(["buy","sell"]).describe("买卖方向"),
       outcome: z.enum(["yes","no"]).describe("结果方向"), sz: z.string().describe("数量"),
@@ -396,7 +396,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_event_cancel_order",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID") },
     async ({ instId, ordId }) => {
@@ -410,7 +410,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_event_amend_order",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID"),
       newSz: z.string().optional().describe("新数量"), newPx: z.string().optional().describe("新价格") },
@@ -458,7 +458,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_predictions_place_order",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { marketId: z.string().describe("市场ID（必填）"),
       side: z.enum(["buy","sell"]).describe("买卖方向"),
@@ -478,7 +478,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_predictions_cancel_order",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { orderId: z.string().optional().describe("订单ID") },
     async ({ orderId }) => {
@@ -494,7 +494,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_predictions_cancel_all",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { assetIds: z.string().optional().describe("资产ID列表，逗号分隔") },
     async ({ assetIds }) => {
@@ -571,7 +571,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_predictions_split",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { amount: z.string().describe("拆分数量（必填）") },
     async ({ amount }) => {
@@ -585,7 +585,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_predictions_merge",
-    "READ",
+    "WRITE",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { amount: z.string().describe("合并数量（必填）") },
     async ({ amount }) => {
@@ -599,7 +599,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(server,
     "okx_predictions_redeem",
-    "READ",
+    "FUND_TRANSFER",
     "CAT:[预测] | → 请先调用 agent_catalog",
     { assetId: z.string().optional().describe("资产ID") },
     async ({ assetId }) => {

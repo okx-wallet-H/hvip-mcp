@@ -315,7 +315,7 @@ export function classifyRisk(toolNameOrDesc: string): RiskLevel {
   if (admin.includes(toolName)) return "ADMIN"
 
   // ── FUND_TRANSFER：真实资金移动 ──
-  const fund = ["okx_withdrawal"]
+  const fund = ["okx_withdrawal", "okx_predictions_redeem"]
   if (fund.some(p => toolName.startsWith(p))) return "FUND_TRANSFER"
 
   // ── WRITE：产生交易/修改状态 ──

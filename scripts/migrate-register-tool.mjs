@@ -17,7 +17,7 @@ function classifyRisk(toolName) {
   const admin = ["okx_set_account_mode", "okx_set_position_mode", "okx_set_settle_currency"]
   if (admin.includes(toolName)) return "ADMIN"
 
-  const fund = ["okx_withdrawal"]
+  const fund = ["okx_withdrawal", "okx_predictions_redeem"]
   if (fund.some(p => toolName.startsWith(p))) return "FUND_TRANSFER"
 
   const writePrefixes = [
@@ -27,6 +27,10 @@ function classifyRisk(toolName) {
     "okx_convert_trade", "okx_preset_", "okx_activate_",
     "okx_move_", "okx_copy_", "okx_first_",
     "okx_one_click_", "okx_easy_convert",
+    "okx_event_place_", "okx_event_cancel_", "okx_event_amend_",
+    "okx_predictions_place_", "okx_predictions_cancel_",
+    "okx_predictions_split", "okx_predictions_merge",
+    "okx_predictions_redeem",
     "agent_quick_trade",
   ]
   if (writePrefixes.some(p => toolName.startsWith(p))) return "WRITE"
