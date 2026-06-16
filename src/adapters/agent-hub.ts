@@ -327,6 +327,19 @@ class AgentHub {
     })
   }
 
+  // ── 注册任务（不派发，仅登记） ──
+  registerTask(taskId: string, title?: string): void {
+    if (!this.tasks.has(taskId)) {
+      this.tasks.set(taskId, { status: "unassigned" })
+    }
+    // 记录到自定义标题
+    if (title) {
+      const t = this.tasks.get(taskId)!
+      ;(t as any).title = title
+    }
+    console.log(`[AgentHub] 任务注册: ${taskId} "${title || taskId}"`)
+  }
+
   // ── 派发任务 ──
   dispatchTaskTo(taskId: string, agentId: string): void {
     if (!this.tasks.has(taskId)) {
@@ -513,6 +526,10 @@ class AgentHub {
       "T-005": "事件合约交易 (5 端点, EVENTS)",
       "T-006": "H Rails /markets 列表 (1 端点)",
     }
+    // 优先 DB 自定义标题
+    const t = this.tasks.get(taskId)
+    const custom = (t as any)?.title
+    if (custom && custom !== taskId) return custom
     return titles[taskId] || taskId
   }
 

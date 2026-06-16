@@ -15,6 +15,7 @@
 
 import { createServer } from "node:http"
 import type { IncomingMessage, ServerResponse } from "node:http"
+import { spawn } from "node:child_process"
 import { agentHub } from "./adapters/agent-hub.js"
 import { HubDB } from "./adapters/hub-persistence.js"
 
@@ -92,6 +93,26 @@ body{font-family:system-ui,monospace;background:#0d1117;color:#c9d1d9;min-height
   </div>
 </div>
 <div class="error-banner" id="errorBanner"></div>
+
+<!-- 新建任务 -->
+<div style="padding:0 16px;max-width:1400px;margin:0 auto">
+  <div class="card">
+    <div class="card-title">➕ 新建任务</div>
+    <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <div style="flex:1;min-width:100px">
+        <label style="font-size:11px;color:#8b949e;display:block">任务编号</label>
+        <input id="newTaskId" placeholder="如 WS-04" style="width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:6px 8px;border-radius:4px;font-size:13px">
+      </div>
+      <div style="flex:3;min-width:200px">
+        <label style="font-size:11px;color:#8b949e;display:block">任务描述</label>
+        <input id="newTaskDesc" placeholder="告诉 AI Agent 要做什么..." style="width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:6px 8px;border-radius:4px;font-size:13px">
+      </div>
+      <button onclick="createTask()" style="background:#238636;color:white;border:none;padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">创建</button>
+      <button onclick="createAndSpawn()" style="background:#1f6feb;color:white;border:none;padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">创建并拉起 AI</button>
+    </div>
+  </div>
+</div>
+
 <div class="grid">
   <!-- Agents -->
   <div class="card">
@@ -143,9 +164,12 @@ function renderTasks(tasks){
   document.getElementById('taskLabel').textContent=tasks.length+' 个 · '+done+' 已完成'
   if(!tasks.length){el.innerHTML='<div class=empty>暂无任务</div>';return}
   el.innerHTML=tasks.map(t=>{
+    const spawnBtn = (t.status==='unassigned'||t.status==='reviewed')
+      ? ' <button onclick="spawnWorker(\''+esc(t.taskId)+'\')" style="font-size:10px;background:#1f6feb;color:white;border:none;padding:1px 8px;border-radius:8px;cursor:pointer;margin-left:4px">🤖 拉起 AI</button>'
+      : ''
     return '<div class=task-row>'+
       '<b>'+esc(t.taskId)+'</b> '+esc(t.title)+
-      '<span class="tag '+t.status+'">'+t.status+'</span>'+
+      '<span class="tag '+t.status+'">'+t.status+'</span>'+spawnBtn+
       (t.assignedTo?'<br><span style=font-size:11px>认领: <b>'+esc(t.assignedTo)+'</b></span>':'')+
       (t.branch?' <span style=font-size:11px;color:#58a6ff>'+esc(t.branch)+'</span>':'')+
       (t.result?'<br><span style=font-size:11px;color:#8b949e>'+esc(t.result)+'</span>':'')+
@@ -173,6 +197,15 @@ function addMsg(m){
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 function showError(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.display='block';setTimeout(()=>b.style.display='none',8000)}
+
+function showOk(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.background='#0d3320';b.style.color='#3fb950';b.style.display='block';setTimeout(()=>{b.style.display='none';b.style.background='#490202';b.style.color='#f85149'},5000)}
+
+async function createTask(){const id=document.getElementById('newTaskId').value.trim();const desc=document.getElementById('newTaskDesc').value.trim();if(!id){showError('请输入任务编号');return};const r=await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:id,title:desc||id})});if(r.ok){document.getElementById('newTaskId').value='';document.getElementById('newTaskDesc').value='';showOk('任务 '+id+' 已创建');setTimeout(()=>fetch('/api/status').then(r=>r.json()).then(s=>renderTasks(s.tasks)),500)}else{const e=await r.json().catch(()=>({}));showError(e.error||'创建失败')}}
+
+async function spawnWorker(taskId){if(!confirm('启动 AI Agent 处理任务 '+taskId+'？'))return;const r=await fetch('/api/tasks/'+encodeURIComponent(taskId)+'/spawn',{method:'POST'});if(r.ok){showOk('🤖 AI Agent 已启动，正在处理 '+taskId+'... 刷新页面查看进度')}else{const e=await r.json().catch(()=>({}));showError(e.error||'启动失败')}}
+
+async function createAndSpawn(){await createTask();const id=document.getElementById('newTaskId').value||document.getElementById('newTaskId').dataset.lastId;if(id)spawnWorker(id)}
+
 
 // ── WebSocket 实时更新 ──
 function connect(){
@@ -216,7 +249,14 @@ function startHttpServer(): void {
   const httpServer = createServer((_req: IncomingMessage, res: ServerResponse) => {
     // CORS
     res.setHeader("Access-Control-Allow-Origin", "*")
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+
+    if (_req.method === "OPTIONS") {
+      res.writeHead(204)
+      res.end()
+      return
+    }
 
     // GET / — 仪表盘
     if (_req.method === "GET" && (_req.url === "/" || _req.url === "/index.html")) {
@@ -229,6 +269,53 @@ function startHttpServer(): void {
     if (_req.method === "GET" && _req.url === "/api/status") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(agentHub.status()))
+      return
+    }
+
+    // ── POST /api/tasks — 创建任务 ──
+    if (_req.method === "POST" && _req.url === "/api/tasks") {
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", () => {
+        try {
+          const { taskId, title } = JSON.parse(Buffer.concat(chunks).toString())
+          if (!taskId) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
+          // 注册到 Hub 内存 + 持久化
+          agentHub.registerTask(taskId, title || taskId)
+          db?.saveTask({ taskId, status: "unassigned", title: title || taskId })
+          process.stderr.write(`[Hub] 新任务: ${taskId} "${title}"\n`)
+          res.writeHead(201, { "Content-Type": "application/json" })
+          res.end(JSON.stringify({ ok: true, taskId, title }))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json" })
+          res.end(JSON.stringify({ error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // ── POST /api/tasks/<id>/spawn — 拉起 Worker ──
+    if (_req.method === "POST" && _req.url?.startsWith("/api/tasks/") && _req.url.endsWith("/spawn")) {
+      const taskId = _req.url.slice("/api/tasks/".length, -"/spawn".length)
+      if (!taskId) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
+
+      const hubUrl = `ws://127.0.0.1:${wsPort}`
+      const repoPath = process.cwd()
+
+      process.stderr.write(`[Hub] 🤖 拉起 Worker: ${taskId}\n`)
+      const worker = spawn("node", ["dist/hub-worker.js", "--task", taskId, "--hub", hubUrl, "--repo", repoPath], {
+        cwd: repoPath,
+        stdio: "pipe",
+        detached: true,
+      })
+      worker.stdout?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
+      worker.stderr?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
+      worker.on("error", (e: Error) => process.stderr.write(`[Hub] Worker 启动失败: ${e.message}\n`))
+      worker.on("close", (code: number | null) => process.stderr.write(`[Hub] Worker-${taskId} 退出 (${code})\n`))
+      // 不 await — detached 让 Worker 独立运行
+
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ ok: true, taskId, hubUrl, workerPid: worker.pid }))
       return
     }
 
