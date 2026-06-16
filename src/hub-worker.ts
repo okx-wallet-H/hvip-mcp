@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Agent Hub Worker — Hub 自动拉起的 AI Agent
  *
  * 连上 Hub → 注册 → 领任务 → spawn Claude Code → 汇报完成。
@@ -94,11 +94,14 @@ function handleMessage(msg: any): void {
 // 任务类型识别
 // ═══════════════════════════════════════════════════════════════════════════
 
-type TaskMode = "code" | "market"
+type TaskMode = "code" | "market" | "research"
 
 function detectTaskType(title: string): TaskMode {
   const market = /\b(BTC|ETH|SOL|行情|价格|多少钱|涨跌|K线|走势|大盘|资金费率|深度|多空|持仓|市值|什么价|报价|币价|ticker|mark price|funding)\b/i
-  return market.test(title) ? "market" : "code"
+  const research = /\b(搜索|查找|GitHub|插件|工具|框架|分析|比较|列出|整理|TOP|分类|研究|调研|MCP|开源|项目|平台|最新|代理|Agent|协作|编排|Orchestration|Dashboard|面板|设计模式|黑科技|能力|增强|Best|awesome)\b/i
+  if (market.test(title)) return "market"
+  if (research.test(title)) return "research"
+  return "code"
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -114,9 +117,16 @@ function doTask(taskId: string, title: string, url: string): void {
   const mode = detectTaskType(title)
   process.stderr.write(`[Worker] 模式: ${mode}\n`)
 
-  const prompt = mode === "market"
-    ? buildMarketPrompt(title)
+  const prompt = mode === "market" ? buildMarketPrompt(title)
+    : mode === "research" ? buildResearchPrompt(title)
     : buildCodePrompt(taskId, title, url)
+
+  // 立刻推送启动状态
+  ws.send(JSON.stringify({
+    type: "room:message",
+    roomId: "#lobby",
+    text: `🚀 ${title}\n\nWorker 已启动，Claude Code 正在初始化...`,
+  }))
 
   // 启动 Claude Code 干活
   process.stderr.write(`[Worker] 启动 Claude Code...\n`)
@@ -127,32 +137,31 @@ function doTask(taskId: string, title: string, url: string): void {
   })
 
   let output = ""
-  let lastPush = Date.now()
-  function pushProgress() {
-    const now = Date.now()
-    if (now - lastPush < 2000) return  // 最多 2 秒推一次
-    lastPush = now
-    if (output.length > 50) {
-      ws.send(JSON.stringify({
-        type: "room:message",
-        roomId: "#lobby",
-        text: `🔄 ${title}\n\n${output.slice(-800)}`,
-      }))
-    }
-  }
+  let pushCount = 0
+  // 每 5 秒无条件推送一次进度到仪表盘
+  const progressTimer = setInterval(() => {
+    pushCount++
+    const text = output.slice(-800) || "(Claude Code 正在初始化——可能需要 10-30 秒读取代码、搜索网站...)"
+    ws.send(JSON.stringify({
+      type: "room:message",
+      roomId: "#lobby",
+      text: `🔄 ${title} [#${pushCount}]\n\n${text}`,
+    }))
+  }, 5000)
+
   child.stdout.on("data", (chunk: Buffer) => {
     const text = chunk.toString()
     output += text
     process.stderr.write(text)
-    pushProgress()
   })
   child.stderr.on("data", (chunk: Buffer) => process.stderr.write(chunk.toString()))
 
   child.on("close", (code: number | null) => {
+    clearInterval(progressTimer)
     if (code === 0) {
       process.stderr.write(`[Worker] ✅ Claude Code 完成 (exit ${code})\n`)
 
-      if (mode === "market") {
+      if (mode === "market" || mode === "research") {
         // 行情类任务: 结果发到 #lobby，任务标记 done，写入记忆
         ws.send(JSON.stringify({
           type: "room:message",
@@ -196,6 +205,7 @@ function doTask(taskId: string, title: string, url: string): void {
   })
 
   child.on("error", (err: Error) => {
+    clearInterval(progressTimer)
     process.stderr.write(`[Worker] Claude Code 启动失败: ${err.message}\n`)
     ws.send(JSON.stringify({
       type: "room:message",
@@ -268,6 +278,21 @@ function buildCodePrompt(taskId: string, title: string, url: string): string {
     `- 禁止修改 package.json 的 version 字段`,
     `- 禁止修改 dist/index.js（自动构建产物）`,
     `- 完成后输出 "TASK_COMPLETE: <分支名>"`,
+  ].join("\n")
+}
+
+function buildResearchPrompt(title: string): string {
+  return [
+    `你的任务: ${title}`,
+    ``,
+    `## 指令`,
+    `1. 使用 WebSearch 和 WebFetch 工具广泛搜索 GitHub`,
+    `2. 找到相关项目后，进入每个仓库页面阅读 README、架构、特性`,
+    `3. 整理成结构化报告——每个项目包含: 名称、仓库地址、核心特性、技术栈、优势、不足`,
+    `4. 使用表格和分类让结果一目了然`,
+    `5. 最后给出一个总结: 哪些最值得参考、哪些可以集成到我们的项目`,
+    `6. 不要写代码、不要改文件、不要 git 操作`,
+    `7. 搜索时优先找 stars 多、最近更新的项目`,
   ].join("\n")
 }
 
