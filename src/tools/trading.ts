@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE , registerTool} from "./shared.js"
 
 export function registerTradingTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_place_order",
+    "WRITE",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT"),
@@ -26,8 +28,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_order",
+    "WRITE",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -42,8 +46,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_amend_order",
+    "WRITE",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -63,8 +69,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_orders_pending",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部"),
@@ -80,8 +88,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_fills",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
@@ -97,8 +107,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_orders_history_archive",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
@@ -113,8 +125,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_batch_orders",
+    "WRITE",
     `## 功能：批量下单（最多20笔）
 ## 场景：用于需要同时下多个订单的策略（如一篮子建仓、多产品套利布局）
 ## 关键词：批量下单, 批量委托, batch orders, 一篮子订单, 组合下单
@@ -137,8 +151,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_batch_cancel_orders",
+    "WRITE",
     `## 功能：批量撤销订单
 ## 场景：用于一键撤销所有未成交挂单、清空特定产品的订单队列
 ## 关键词：批量撤单, 批量撤销, batch cancel, 一键撤单, 清空挂单
@@ -161,8 +177,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_close_position",
+    "WRITE",
     `## 功能：市价全平某仓位
 ## 场景：用于紧急平仓止损/止盈、清空某方向全部持仓
 ## 关键词：平仓, 市价全平, close position, 止损平仓, 清仓, 紧急平仓
@@ -194,8 +212,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_amend_batch_orders",
+    "WRITE",
     `## 功能：批量修改未成交订单
 ## 场景：用于同时调整多个限价单的价格或数量、批量更新挂单策略
 ## 关键词：批量改单, 批量修改, amend batch orders, 批量改价, 批量调量
@@ -218,8 +238,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_fills_history",
+    "READ",
     `## 功能：查询历史成交明细（最近3个月）
 ## 场景：用于精确计算历史成交均价、复盘交易表现、核对成交记录
 ## 关键词：成交历史, 成交明细, fills history, 历史成交, 逐笔成交历史
@@ -245,8 +267,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_mass_cancel",
+    "WRITE",
     `## 功能：批量撤销某产品类型下所有挂单
 ## 场景：用于极端行情下紧急清空所有挂单、快速重置交易策略
 ## 关键词：批量撤单, 全部撤单, mass cancel, 清空挂单, 紧急撤单
@@ -270,8 +294,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_all_after",
+    "WRITE",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       timeOut: z.string().describe("倒计时秒数，0=取消定时全撤，正数=设N秒后全撤，最大120秒"),
@@ -285,8 +311,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_order_precheck",
+    "READ",
     `## 功能：下单预检（验证订单参数是否合法，不实际下单）
 ## 场景：用于下单前验证参数正确性、检查余额和风控限制、避免因参数错误导致的订单失败
 ## 关键词：下单预检, 预检查, order precheck, 订单验证, 参数检查
@@ -309,8 +337,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_account_rate_limit",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -322,8 +352,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_easy_convert",
+    "WRITE",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       fromCcy: z.string().describe("卖出币种，如 USDT"),
@@ -339,8 +371,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_easy_convert_history",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       after:  z.string().optional().describe("查询此时间之后的记录（毫秒Unix时间戳）"),
@@ -358,8 +392,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   // ── 交易收尾（第十三批新增） ────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_mmp_config",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -371,8 +407,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_mmp_config",
+    "WRITE",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instFamily:     z.string().describe("产品族，如 BTC-USD。必填"),
@@ -389,8 +427,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_order_algo",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       algoId: z.string().optional().describe("策略委托ID"),
@@ -405,8 +445,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
   )
   // ── 交易收尾（第二批新缺口） ────────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_reset_mmp",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instFamily: z.string().describe("产品族，如 BTC-USD。必填"),
@@ -420,8 +462,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_orders_archive",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型"),
@@ -436,8 +480,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_order_by_clOrdId",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID。必填"),
@@ -454,8 +500,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   // ── 一键还款（v0.2.26 新缺口） ─────────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_one_click_repay_list",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -467,8 +515,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_one_click_repay",
+    "WRITE",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {
       ccy:      z.string().describe("还款使用的币种。必填"),
@@ -483,8 +533,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_one_click_repay_history",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -496,8 +548,10 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_easy_convert_currency_list",
+    "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {

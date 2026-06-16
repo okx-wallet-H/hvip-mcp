@@ -1,13 +1,15 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { agentHub } from "../adapters/agent-hub.js"
-import { toResult, toError } from "./shared.js"
+import { toResult, toError , registerTool} from "./shared.js"
 
 export function registerAgentHubTools(server: McpServer): void {
 
   // ── agent_hub_status ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "agent_hub_status",
+    "READ",
     "CAT:[系统] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -18,8 +20,10 @@ export function registerAgentHubTools(server: McpServer): void {
   )
 
   // ── agent_hub_dispatch ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "agent_hub_dispatch",
+    "READ",
     "CAT:[系统] | → 请先调用 agent_catalog",
     {
       taskId:  z.enum(["T-001","T-002","T-003","T-004","T-005","T-006"]).describe("任务编号"),
@@ -72,8 +76,10 @@ export function registerAgentHubTools(server: McpServer): void {
   )
 
   // ── agent_hub_review ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "agent_hub_review",
+    "READ",
     "CAT:[系统] | → 请先调用 agent_catalog",
     {
       taskId:   z.enum(["T-001","T-002","T-003","T-004","T-005","T-006"]).describe("任务编号"),
@@ -109,8 +115,10 @@ export function registerAgentHubTools(server: McpServer): void {
   )
 
   // ── agent_room_send ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "agent_room_send",
+    "READ",
     "CAT:[系统] | → 请先调用 agent_catalog",
     {
       roomId: z.string().describe("房间ID。#lobby / #review / #task-T-003"),
@@ -130,8 +138,10 @@ export function registerAgentHubTools(server: McpServer): void {
   )
 
   // ── agent_room_view ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "agent_room_view",
+    "READ",
     "CAT:[系统] | → 请先调用 agent_catalog",
     {
       roomId: z.string().optional().describe("房间ID，不填列出所有"),

@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 export function registerFinanceTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_savings_balance",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       ccy: z.string().optional().describe("币种，如 USDT，不填则返回全部"),
@@ -19,8 +21,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_savings_history",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       ccy: z.string().optional().describe("币种，如 USDT"),
@@ -34,8 +38,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_staking_offers",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       productId: z.string().optional().describe("指定产品ID，不填则返回全部"),
@@ -49,8 +55,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_eth_staking_balance",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -62,8 +70,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_eth_staking_history",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -77,8 +87,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_sol_staking_balance",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -90,8 +102,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_staking_orders",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       productId: z.string().optional().describe("产品ID，如 ETH。可选"),
@@ -107,8 +121,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_stake_eth",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       amt:  z.string().describe("质押数量（ETH）。必填"),
@@ -125,8 +141,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_unstake_eth",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       amt: z.string().describe("赎回数量（ETH）。必填"),
@@ -140,8 +158,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_sol_staking_history",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -156,8 +176,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
   )
 
 
-  server.tool(
+  registerTool(
+    server,
     "okx_purchase_savings",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       ccy:  z.string().describe("币种。必填"),
@@ -176,8 +198,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_sfp_products",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -189,8 +213,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_redeem_sfp",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       productId: z.string().describe("产品ID。必填"),
@@ -205,8 +231,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_staking_active_orders",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -218,8 +246,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_cancel_redeem_eth",
+    "WRITE",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       amt: z.string().describe("取消赎回数量。必填"),
@@ -233,8 +263,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_purchase_sol_staking",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       amt: z.string().describe("质押数量（SOL）。必填"),
@@ -248,8 +280,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_redeem_sol_staking",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       amt: z.string().describe("赎回数量（SOL）。必填"),
@@ -263,8 +297,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_adjust_collateral",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       ccy:  z.string().describe("抵押币种。必填"),
@@ -280,8 +316,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_flexible_loan_collateral",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -293,8 +331,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_flexible_loan_info",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -306,8 +346,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_flexible_loan_history",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -319,8 +361,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_stable_rewards_product",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -332,8 +376,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_lending_rate_history",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -348,8 +394,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_set_lending_rate",
+    "WRITE",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {
       ccy:  z.string().describe("币种。必填"),
@@ -364,8 +412,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_stable_rewards_apy",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -377,8 +427,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_stable_rewards_history",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -390,8 +442,10 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_sfp_order_history",
+    "READ",
     "CAT:[金融] | → 请先调用 agent_catalog",
     {},
     async () => {

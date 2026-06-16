@@ -1,5 +1,7 @@
 import "dotenv/config"
 import { createServer } from "node:http"
+import { readFileSync, existsSync } from "node:fs"
+import { join } from "node:path"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
@@ -78,7 +80,8 @@ function registerAllTools(
     const orig = (server as any).tool.bind(server)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(server as any).tool = function (name: string, ...args: any[]) {
-      const risk: RiskLevel = classifyRisk(name)
+      const desc = typeof args[0] === "string" ? args[0] : name
+      const risk: RiskLevel = classifyRisk(desc)
       if (risk !== "READ") {
         skipped++
         skipLog.push(`${name} (${risk})`)
@@ -147,6 +150,35 @@ async function startHttp(
       return
     }
 
+    // ── GET / (chat UI) ──
+    if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
+      try {
+        // Try multiple path resolutions (dev vs published npm)
+        const paths = [
+          join(__dirname, "web", "index.html"),   // published npm (dist/index.js → dist/web/)
+          join(__dirname, "..", "src", "web", "index.html"), // dev (dist/index.js → ../src/web/)
+        ]
+        let html = ""
+        for (const p of paths) { if (existsSync(p)) { html = readFileSync(p, "utf-8"); break } }
+        if (!html) throw new Error("file not found")
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(html)
+      } catch {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+        res.end("<html><body style='font-family:sans-serif;text-align:center;margin-top:60px'><h2>hvip Chat UI 未找到</h2><p>请访问 <a href='/mcp'>/mcp</a> 使用 API</p></body></html>")
+      }
+      return
+    }
+
+    // ── GET /config ──
+    if (req.method === "GET" && req.url === "/config") {
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({
+        claudeApiKey: process.env.CLAUDE_API_KEY || "",
+      }))
+      return
+    }
+
     // ── GET /health ──
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" })
@@ -186,14 +218,28 @@ async function startHttp(
   })
 
   httpServer.listen(port, host, () => {
+    const chatUrl = `http://${host}:${port}`
     process.stderr.write([
       `╔══════════════════════════════════════════════╗`,
       `║  hvip-mcp v${version}  HTTP 模式             ║`,
-      `║  POST http://${host}:${port}/mcp              ║`,
-      `║  GET  http://${host}:${port}/health            ║`,
+      `║  🤖 Chat UI → ${chatUrl}         ║`,
+      `║  📡 MCP API → ${chatUrl}/mcp                ║`,
+      `║  ❤️  health  → ${chatUrl}/health              ║`,
       `║  模式: ${readOnly ? "只读" : "完整"}  | 工具: ${readOnly ? "READ only" : "全部"}  ║`,
       `╚══════════════════════════════════════════════╝`,
     ].join("\n") + "\n")
+
+    // 自动打开浏览器
+    const openUrl = `http://127.0.0.1:${port}`
+    const platform = process.platform
+    const cmd = platform === "win32"
+      ? `start ${openUrl}`
+      : platform === "darwin"
+        ? `open ${openUrl}`
+        : `xdg-open ${openUrl}`
+    import("node:child_process").then(cp => {
+      cp.exec(cmd, () => { /* 忽略错误 */ })
+    })
   })
 }
 

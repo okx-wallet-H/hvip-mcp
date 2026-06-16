@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 export function registerSubAccountTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_subaccount_list",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       enable: z.boolean().optional().describe("筛选启用状态，不填则返回全部"),
@@ -19,8 +21,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_list_subaccounts",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       enable: z.boolean().optional().describe("筛选启用状态，不填则返回全部"),
@@ -34,8 +38,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_subaccount_balance",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称"),
@@ -49,8 +55,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_transfer_subaccount",
+    "WRITE",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       ccy:            z.string().describe("划转币种"),
@@ -72,8 +80,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_subaccount_set_transfer_out",
+    "WRITE",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct:        z.string().describe("子账户名称。必填"),
@@ -88,8 +98,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_subaccount_api_key",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称。必填"),
@@ -103,8 +115,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_create_subaccount_api_key",
+    "WRITE",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct:    z.string().describe("子账户名称。必填"),
@@ -124,8 +138,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_reset_subaccount_api_key",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称。必填"),
@@ -147,8 +163,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_delete_subaccount_api_key",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称。必填"),
@@ -163,8 +181,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_subaccount_bills",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称。必填"),
@@ -181,8 +201,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_subaccount_assets",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称。必填"),
@@ -196,8 +218,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_create_subaccount",
+    "WRITE",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct: z.string().describe("子账户名称。必填"),
@@ -214,8 +238,10 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_entrust_subaccount_list",
+    "READ",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {},
     async () => {

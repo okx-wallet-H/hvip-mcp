@@ -1,5 +1,6 @@
 import type { Auth } from "../adapters/okx.js"
 import { createHRailsClient, type HRailsClient } from "../adapters/hrails.js"
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 
 export function getAuth(): Auth | null {
   const apiKey = process.env["OKX_API_KEY"]
@@ -287,14 +288,34 @@ function classifyError(msg: string): { errorCode: string; errorCategory: ErrorCa
 
 export type RiskLevel = "READ" | "WRITE" | "FUND_TRANSFER" | "ADMIN"
 
-/** 根据工具名自动推断风险级别 */
-export function classifyRisk(toolName: string): RiskLevel {
+/**
+ * 结构化注册工具 — 描述前注入 [L:READ] 标记，classifyRisk 可直接解析。
+ * Agent 调用 server.tool() 的地方全部替换为本函数。
+ */
+export function registerTool(
+  server: McpServer,
+  name: string,
+  accessLevel: RiskLevel,
+  description: string,
+  paramsSchema: Record<string, unknown>,
+  callback: (...args: any[]) => any,
+): void {
+  const taggedDesc = `[L:${accessLevel}] ${description}`
+  server.tool(name, taggedDesc, paramsSchema, callback)
+}
+
+/** 从描述中提取 [L:READ] 标记，有则直接返回，无则回退到名称推断 */
+export function classifyRisk(toolNameOrDesc: string): RiskLevel {
+  const m = toolNameOrDesc.match(/\[L:(READ|WRITE|FUND_TRANSFER|ADMIN)\]/)
+  if (m) return m[1] as RiskLevel
+  // 回退：旧工具未加 L: 标记时用名称推断
+  const toolName = toolNameOrDesc
   // ── ADMIN：修改账户全局配置 ──
   const admin = ["okx_set_account_mode", "okx_set_position_mode", "okx_set_settle_currency"]
   if (admin.includes(toolName)) return "ADMIN"
 
   // ── FUND_TRANSFER：真实资金移动 ──
-  const fund = ["okx_withdrawal"]
+  const fund = ["okx_withdrawal", "okx_predictions_redeem"]
   if (fund.some(p => toolName.startsWith(p))) return "FUND_TRANSFER"
 
   // ── WRITE：产生交易/修改状态 ──
@@ -305,6 +326,10 @@ export function classifyRisk(toolName: string): RiskLevel {
     "okx_convert_trade", "okx_preset_", "okx_activate_",
     "okx_move_", "okx_copy_", "okx_first_",
     "okx_one_click_", "okx_easy_convert",
+    "okx_mass_cancel", "okx_subaccount_set_",
+    "okx_event_place_", "okx_event_cancel_", "okx_event_amend_",
+    "okx_predictions_place_", "okx_predictions_cancel_",
+    "okx_predictions_split", "okx_predictions_merge",
     "agent_quick_trade",
   ]
   if (writePrefixes.some(p => toolName.startsWith(p))) return "WRITE"
@@ -314,8 +339,14 @@ export function classifyRisk(toolName: string): RiskLevel {
     "agent_simulate_order", "okx_preflight_check", "okx_agent_feedback",
     "agent_catalog", "agent_catalog_detail", "agent_hub_status",
     "agent_hub_dispatch", "agent_hub_review", "agent_room_send", "agent_room_view",
-    "okx_ws_subscribe", "okx_ws_events", "okx_ws_status", "okx_ws_close",
+    "okx_ws_subscribe", "okx_ws_subscribe_private", "okx_ws_events", "okx_ws_status", "okx_ws_close",
+    "okx_predictions_ws_subscribe", "okx_predictions_ws_unsubscribe",
+    "okx_predictions_ws_events", "okx_predictions_ws_status",
     "xlayer_subscribe", "xlayer_get_events", "xlayer_unsubscribe",
+    "codegraph_status", "codegraph_query",
+    "agent_get_preference", "agent_set_preference",
+    "agent_simulate_transfer", "agent_read_only_trade",
+    "okx_event_instruments",
   ]
   if (readSpecials.includes(toolName)) return "READ"
 

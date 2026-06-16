@@ -4,7 +4,7 @@ import * as os from "node:os"
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 // ── Agent 视角公共工具 ────────────────────────────────────────────────────────
 //
@@ -94,8 +94,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   // okx_account_overview — 账户全景快照
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "okx_account_overview",
+    "READ",
     "CAT:[系统] | ## 功能：一键获取账户全景：余额、持仓、配置、总估值，替代串行调用 4 个工具\n## 场景：用于Agent首次了解用户账户全貌、回答\"我账户现在什么情况\"、每日资产概览\n## 关键词：账户全景, 账户概览, account overview, 资产快照, 持仓汇总, 一键查账\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~3KB — 结构化摘要，非原始JSON堆砌\n## 关联：本工具全景 → okx_get_positions 深入单仓位 → okx_get_balance 看各币种 → okx_place_order 交易",
     {},
     async () => {
@@ -180,8 +182,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   // okx_quick_market — 单产品市场速览
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "okx_quick_market",
+    "READ",
     "CAT:[系统] | ## 功能：单次调用返回指定产品的行情+5档深度+资金费率+产品规格的结构化摘要\n## 场景：用于Agent回答\"现在BTC什么情况\"时一次拿到全部信息、快速判断交易时机\n## 关键词：市场速览, quick market, 行情+深度, 一键看盘, 综合行情, 市场概况\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT、ETH-USDT-SWAP\n## 鉴权：PUBLIC — 公开接口，不需要 API Key\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~2KB — 精简5档深度，非全量订单簿\n## 关联：本工具速览 → okx_get_candles 深入K线分析 → okx_get_orderbook 看全深度 → okx_place_order 下单",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP"),
@@ -263,8 +267,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   // okx_preflight_check — 下单前预检
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "okx_preflight_check",
+    "READ",
     "CAT:[系统] | ## 功能：下单前一次性检查：最大可开数量、限价范围、合约张数换算、当前价格，避免下单后报错\n## 场景：用于Agent下单前必调、验证用户输入的数量和价格是否合法、避免因参数错误被拒\n## 关键词：下单预检, preflight, 下单前检查, 数量换算, 限价检查, 可开检查\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT-SWAP。必填\n##   - tdMode: 交易模式。cash=现货, cross=全仓, isolated=逐仓。必填\n##   - sz: 用户想下单的数量。必填（币数，会自动换算为张数）\n##   - px: 用户想下单的价格（选填，填了会检查是否在限价范围内）\n##   - side: 买卖方向。buy=买入, sell=卖出。填了会查对应方向的最大可开\n##   - ordType: 订单类型。填了会检查是否在限价范围内（限价单才需要）\n## 鉴权：⚠️ 需要 API Key（只读）- 只查询不产生订单\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~1KB\n## 关联：本工具预检通过 → okx_place_order 下单 → okx_get_order 确认成交",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
@@ -390,8 +396,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   // okx_agent_feedback — 反馈留言板
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "okx_agent_feedback",
+    "READ",
     "CAT:[系统] | ## 功能：提交使用反馈——当你遇到多步操作烦琐、参数试错、不知道调用顺序、搜索不到工具、或需要使用手工计算弥补不足时，调用此工具记录下来\n## 场景：用于Agent汇报MCP工具的使用痛点，反馈将直接进入开发团队的待办列表，推动Skill组合和工具优化\n## 关键词：反馈, feedback, 留言, 建议, 痛点, 改善建议\n## 参数：\n##   - title: 一句话标题\n##   - what: 你做了什么操作\n##   - tools: 调用了哪些工具（用逗号分隔）\n##   - pain: 痛点是什么\n##   - suggestion: 你建议怎么改善（想要什么Skill）\n## 鉴权：PUBLIC — 无需 API Key，谁都可以反馈\n## 风险：READ — 只写日志，Agent 可随时调用\n## 返回量：微小 ~200B\n## 关联：任何工具组合遇到阻碍时调用 → 开发者审查反馈 → 创建 Skill 或优化工具",
     {
       title:      z.string().describe("一句话标题"),
@@ -419,8 +427,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // agent_risk_overview — 风险仪表盘 (P0)
   // 替代: getBalance → getPositions → getAccountConfig → getMarkPrice → getFundingRate 串行5步
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "agent_risk_overview",
+    "READ",
     "CAT:[系统] | ## 功能：一键获取全仓风险仪表盘：持仓风险排序、总保证金率、强平预警、资金费率到期提醒\n## 场景：Agent 回答\"我现在风险多大\"、巡检所有持仓健康度、强平前预警通知\n## 关键词：风险, 强平, 保证金率, 风险排序, 健康度, risk, 风控\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询\n## 返回量：微小 ~2KB — 结构化风险摘要\n## 关联：本工具风险巡检 → 高风险仓位 agent_quick_trade 平仓 → agent_pnl_report 盈亏复盘",
     {},
     async () => {
@@ -536,8 +546,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // agent_quick_trade — 一步下单 (P0)
   // 替代: getBalance → getMaxSize → getFeeRates → convertContractCoin → placeOrder 串行5步
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "agent_quick_trade",
+    "WRITE",
     "CAT:[系统] | ## 功能：一步完成交易全流程——自动查余额、算最大可开、检查限价、下单，返回结构化交易确认\n## 场景：Agent 收到用户\"买入0.1 BTC\"时直接调用，无需分别调余额/可开/限价/下单\n## 关键词：一键交易, quick trade, 下单全流程, 自动检查, 一步到位\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT-SWAP\n##   - side: buy=买入, sell=卖出\n##   - sz: 下单数量（币数或张数）\n##   - tdMode: cash=现货, cross=全仓, isolated=逐仓\n##   - px: 限价（选填，不填市价单）\n##   - ordType: 订单类型，默认limit\n## 鉴权：⚠️ 需要 API Key（交易权限）\n## 风险：WRITE — 真实下单，Agent 需用户确认后调用\n## 返回量：微小 ~1KB — 含预检结果+订单确认+风控提醒\n## 关联：agent_risk_overview 看风险 → 本工具下单 → okx_get_order 确认 → agent_pnl_report 复盘",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP"),
@@ -664,8 +676,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // agent_market_scan — 市场扫描 (P1)
   // 替代: getTickers → 手动排序/过滤 → 逐个查费率/成交量 重复N次
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "agent_market_scan",
+    "READ",
     "CAT:[系统] | ## 功能：一键扫描市场异动——涨幅榜、跌幅榜、成交量异动、资金费率异常品种\n## 场景：Agent 回答\"今天有什么机会\"、发现暴涨暴跌、找费率套利目标\n## 关键词：市场扫描, 异动, 涨幅榜, 跌幅榜, 资金费率, 交易机会\n## 参数：\n##   - instType: 产品类型，默认SWAP\n##   - topN: 返回前N条，默认10\n##   - sortBy: 排序字段。change=涨跌幅, vol=成交量, fundingRate=资金费率\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读查询\n## 返回量：微小 ~3KB — 仅返回topN\n## 关联：本工具扫描 → okx_quick_market 深入分析 → agent_quick_trade 下单",
     {
       instType: z.enum(["SPOT","SWAP","FUTURES"]).optional().describe("产品类型，默认SWAP"),
@@ -765,8 +779,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // agent_pnl_report — 盈亏报告 (P2)
   // 替代: getFills → 手动汇总 → 按品种/日期分组计算 重复多次
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "agent_pnl_report",
+    "READ",
     "CAT:[系统] | ## 功能：一键生成盈亏报告——当前持仓浮动盈亏 + 近N日已实现盈亏汇总\n## 场景：Agent 回答\"今天我赚了多少\"、复盘交易绩效、生成每日盈亏报表\n## 关键词：盈亏, PnL, 盈亏报告, 浮动盈亏, 已实现盈亏, 交易复盘\n## 参数：\n##   - days: 统计天数，默认7（近7日已实现盈亏）\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询\n## 返回量：微小 ~2KB\n## 关联：agent_risk_overview 风险 → agent_quick_trade 交易 → 本工具复盘 → 调整策略",
     {
       days: z.number().int().min(1).max(90).optional().describe("统计天数，默认7"),
@@ -844,8 +860,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // agent_simulate_order — 模拟下单沙盒
   // 替代: getTicker → 手动估算滑点 → getFeeRates → 心算成本
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "agent_simulate_order",
+    "READ",
     "CAT:[系统] | ## 功能：模拟下单——不产生真实订单，返回预估成交价、滑点、手续费、资金占用\n## 场景：Agent 回答\"如果我现在买入0.1 BTC会怎样\"时使用，让用户在不冒风险的情况下了解交易成本\n## 关键词：模拟交易, 沙盒, simulate, 预估, 滑点, 手续费, 资金预估\n## 参数：\n##   - instId: 产品ID\n##   - side: buy=买入, sell=卖出\n##   - sz: 下单数量\n##   - tdMode: 交易模式\n##   - px: 限价（选填，用于计算限价单预估）\n## 鉴权：⚠️ 需要 API Key（只读，不产生订单）\n## 风险：READ — 只查询+计算，不产生真实订单\n## 返回量：微小 ~1KB\n## 关联：本工具模拟 → 用户确认 → agent_quick_trade 真实下单",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP"),
@@ -962,8 +980,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   // agent_get_preference — 获取 Agent 偏好
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "agent_get_preference",
+    "READ",
     "CAT:[系统] | ## 功能：读取 Agent 持久化偏好，跨会话保留\n## 场景：Agent 在新会话中恢复用户偏好（如\"只做现货\"\"默认交易对BTC-USDT\"\"风险偏好低\"）\n## 关键词：偏好, preference, 记忆, 持久化, 用户画像\n## 参数：\n##   - key: 偏好键名。不填返回全部偏好\n## 鉴权：PUBLIC — 本地读取\n## 风险：READ — 只读\n## 返回量：微小 ~300B\n## 关联：agent_set_preference 设置偏好 → 本工具 → Agent 根据偏好调整策略",
     {
       key: z.string().optional().describe("偏好键名，不填返回全部"),
@@ -996,8 +1016,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   // agent_set_preference — 设置 Agent 偏好
   // ══════════════════════════════════════════════════════════════════════
-  server.tool(
+  registerTool(
+    server,
     "agent_set_preference",
+    "READ",
     "CAT:[系统] | ## 功能：设置 Agent 持久化偏好，跨会话保留\n## 场景：用户说\"以后默认交易对用BTC-USDT\"时，Agent 保存偏好，下次会话自动恢复\n## 关键词：偏好, preference, 设置, 记忆, 持久化, 用户画像\n## 参数：\n##   - key: 偏好键名\n##   - value: 偏好值\n## 鉴权：PUBLIC — 本地写入\n## 风险：READ — 本地文件写入，无资金风险\n## 返回量：微小 ~200B\n## 关联：本工具设置偏好 → agent_get_preference 读取 → Agent 按偏好决策\n## 常用键名参考:\n##   - default_instId: 默认交易对，如 BTC-USDT-SWAP\n##   - default_tdMode: 默认交易模式 (cross/isolated/cash)\n##   - risk_level: 风险偏好 (low/medium/high)\n##   - trade_mode: 交易模式 (spot_only/swap_permitted/margin_permitted)\n##   - position_size_pct: 单笔仓位占比，如 0.1 (10%)",
     {
       key:   z.string().describe("偏好键名。常用: default_instId, default_tdMode, risk_level, trade_mode, position_size_pct"),
@@ -1276,8 +1298,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     ],
   }
 
-  server.tool(
+  registerTool(
+    server,
     "agent_catalog",
+    "READ",
     "CAT:[系统] | ## 功能：全局工具导航——Agent 首次连接 hvip MCP 后第一个应调用的工具。返回按用户意图分组的工具地图\n## 场景：Agent 首次连接、不确定该用什么工具、想了解 hvip 能做什么。看完目录后 Agent 按域直达目标工具，无需阅读全部 350+ 工具描述\n## 关键词：导航, catalog, 目录, 地图, 入口, 首次连接, 工具发现, 索引, 路由\n## 参数：无\n## 鉴权：PUBLIC — 纯索引，不查任何 API\n## 风险：READ — 只读\n## 返回量：微小 ~5KB — 12 个域的结构化索引\n## 关联：本工具看全局 → agent_catalog_detail { domain } 看域详情 → 直接调用目标工具",
     {},
     async () => {
@@ -1578,8 +1602,10 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     },
   }
 
-  server.tool(
+  registerTool(
+    server,
     "agent_catalog_detail",
+    "READ",
     "CAT:[系统] | ## 功能：查看某个业务域的详细工具清单——含每个工具的参数提示、鉴权要求、推荐调用顺序\n## 场景：Agent 在 agent_catalog 确定域后，调用此工具获取该域所有工具的精准信息、参数提示和典型 workflow\n## 关键词：目录详情, catalog detail, 工具清单, 域详情, workflow\n## 参数：\n##   - domain: 域名称。可取值: 账户资产 | 行情看盘 | 下单交易 | 风险风控 | 市场扫描 | 盈亏复盘 | 资金管理 | 策略交易 | 预测市场 | WebSocket 实时 | 模拟估算 | 系统工具\n## 鉴权：PUBLIC — 纯索引\n## 风险：READ — 只读\n## 返回量：微小 ~2KB — 单域详情\n## 关联：agent_catalog 选域 → 本工具获取详情 → 直接调用目标工具",
     {
       domain: z.string().describe("域名称。可选: 账户资产, 行情看盘, 技术指标, 下单交易, 风险风控, 市场扫描, 聪明钱, 盈亏复盘, 资金管理, 策略交易, 预测市场, 代码智能, WebSocket 实时, 模拟估算, 系统工具"),

@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi } from "../adapters/okx.js"
-import { toResult, toError, INST_TYPE_MARKET } from "./shared.js"
+import { toResult, toError, INST_TYPE_MARKET , registerTool} from "./shared.js"
 
 export function registerMarketTools(server: McpServer): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_ticker",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     { instId: z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。支持逗号分隔批量查询，如 BTC-USDT,ETH-USDT,SOL-USDT") },
     async ({ instId }) => {
@@ -25,8 +27,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_tickers",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     { instType: z.enum(INST_TYPE_MARKET).describe("产品类型") },
     async ({ instType }) => {
@@ -43,8 +47,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_orderbook",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -72,8 +78,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_candles",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -99,8 +107,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_trades",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -118,8 +128,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_history_candles",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT"),
@@ -147,8 +159,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_history_trades",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
@@ -166,8 +180,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_system_status",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -178,8 +194,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_block_tickers",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_MARKET).describe("产品类型"),
@@ -198,8 +216,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_books_full",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT"),
@@ -227,8 +247,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_index_tickers",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       quoteCcy: z.string().optional().describe("计价币种，如 USDT、USD、BTC"),
@@ -246,8 +268,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_index_candles",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("指数产品ID，如 BTC-USDT"),
@@ -277,8 +301,10 @@ export function registerMarketTools(server: McpServer): void {
 
   // ── 市场数据补完（v0.2.26 新缺口） ────────────────────────────────────────
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_block_ticker",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT。必填"),
@@ -295,8 +321,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_history_index_candles",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("指数产品ID，如 BTC-USDT。必填"),
@@ -322,8 +350,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_history_mark_price_candles",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
@@ -349,8 +379,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_mark_price_candles",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
@@ -376,8 +408,10 @@ export function registerMarketTools(server: McpServer): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_sprd_history_candles",
+    "READ",
     "CAT:[行情] | → 请先调用 agent_catalog",
     {
       sprdId: z.string().describe("价差合约ID。必填"),

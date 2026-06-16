@@ -1,13 +1,15 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { xlayerWS } from "../adapters/xlayer-ws.js"
-import { toResult, toError } from "./shared.js"
+import { toResult, toError , registerTool} from "./shared.js"
 
 export function registerXLayerWSTools(server: McpServer): void {
 
   // ── xlayer_subscribe ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "xlayer_subscribe",
+    "READ",
     "CAT:[链上] | → 请先调用 agent_catalog",
     {
       type:    z.enum(["newHeads","logs"]).describe("订阅类型。newHeads=新区块头, logs=合约日志"),
@@ -36,8 +38,10 @@ export function registerXLayerWSTools(server: McpServer): void {
   )
 
   // ── xlayer_get_events ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "xlayer_get_events",
+    "READ",
     "CAT:[链上] | → 请先调用 agent_catalog",
     {
       subscriptionId: z.string().describe("订阅ID，由 xlayer_subscribe 返回"),
@@ -68,8 +72,10 @@ export function registerXLayerWSTools(server: McpServer): void {
   )
 
   // ── xlayer_unsubscribe ──────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "xlayer_unsubscribe",
+    "READ",
     "CAT:[链上] | → 请先调用 agent_catalog",
     {
       subscriptionId: z.string().describe("要取消的订阅ID"),
@@ -83,8 +89,10 @@ export function registerXLayerWSTools(server: McpServer): void {
   )
 
   // ── xlayer_call ──────────────────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "xlayer_call",
+    "WRITE",
     "CAT:[链上] | → 请先调用 agent_catalog",
     {
       method: z.string().describe("JSON-RPC 方法名。常用: eth_blockNumber, eth_getBlockByNumber, eth_getBalance, eth_getTransactionReceipt, eth_call, eth_getLogs"),
@@ -108,8 +116,10 @@ export function registerXLayerWSTools(server: McpServer): void {
   )
 
   // ── xlayer_list_subscriptions ──────────────────────────────────────────
-  server.tool(
+  registerTool(
+    server,
     "xlayer_list_subscriptions",
+    "READ",
     "CAT:[链上] | → 请先调用 agent_catalog",
     {},
     async () => {

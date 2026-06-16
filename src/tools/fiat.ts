@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 export function registerFiatTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_fiat_buy_sell_pair",
+    "READ",
     "CAT:[资金-法币] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -17,8 +19,10 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_fiat_deposit",
+    "READ",
     "CAT:[资金-法币] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -30,8 +34,10 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_fiat_deposit_orders",
+    "READ",
     "CAT:[资金-法币] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -43,8 +49,10 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_fiat_deposit_methods",
+    "READ",
     "CAT:[资金-法币] | → 请先调用 agent_catalog",
     {},
     async () => {

@@ -1,11 +1,13 @@
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED } from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 
 export function registerAffiliateTools(server: McpServer, auth: Auth | null): void {
-  server.tool(
+  registerTool(
+    server,
     "okx_get_affiliate_invitee_list",
+    "READ",
     "CAT:[推广] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -17,8 +19,10 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_affiliate_invitee_detail",
+    "READ",
     "CAT:[推广] | → 请先调用 agent_catalog",
     {
       uid: z.string().optional().describe("用户ID"),
@@ -32,8 +36,10 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_affiliate_link_list",
+    "READ",
     "CAT:[推广] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -45,8 +51,10 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_affiliate_performance",
+    "READ",
     "CAT:[推广] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -58,8 +66,10 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_co_inviter_list",
+    "READ",
     "CAT:[推广] | → 请先调用 agent_catalog",
     {},
     async () => {
@@ -71,8 +81,10 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     }
   )
 
-  server.tool(
+  registerTool(
+    server,
     "okx_get_sub_affiliate_list",
+    "READ",
     "CAT:[推广] | → 请先调用 agent_catalog",
     {},
     async () => {
