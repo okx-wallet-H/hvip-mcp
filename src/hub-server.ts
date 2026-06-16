@@ -97,18 +97,14 @@ body{font-family:system-ui,monospace;background:#0d1117;color:#c9d1d9;min-height
 <!-- 新建任务 -->
 <div style="padding:0 16px;max-width:1400px;margin:0 auto">
   <div class="card">
-    <div class="card-title">➕ 新建任务</div>
+    <div class="card-title">➕ 告诉 AI 做什么（编号自动生成）</div>
     <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-      <div style="flex:1;min-width:100px">
-        <label style="font-size:11px;color:#8b949e;display:block">任务编号</label>
-        <input id="newTaskId" placeholder="如 WS-04" style="width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:6px 8px;border-radius:4px;font-size:13px">
+      <div style="flex:5;min-width:280px">
+        <label style="font-size:11px;color:#8b949e;display:block">用自然语言描述需求，编号自动生成</label>
+        <input id="newTaskDesc" placeholder="例如：写 WebSocket 私有频道、修 agent-hub 心跳超时 bug、给 README 加安装说明..." style="width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:6px 8px;border-radius:4px;font-size:13px">
       </div>
-      <div style="flex:3;min-width:200px">
-        <label style="font-size:11px;color:#8b949e;display:block">任务描述</label>
-        <input id="newTaskDesc" placeholder="告诉 AI Agent 要做什么..." style="width:100%;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:6px 8px;border-radius:4px;font-size:13px">
-      </div>
-      <button onclick="createTask()" style="background:#238636;color:white;border:none;padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">创建</button>
-      <button onclick="createAndSpawn()" style="background:#1f6feb;color:white;border:none;padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">创建并拉起 AI</button>
+      <button onclick="createTask()" style="background:#238636;color:white;border:none;padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">创建任务</button>
+      <button onclick="createAndSpawn()" style="background:#1f6feb;color:white;border:none;padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer;white-space:nowrap">创建并拉起 AI 干活 🤖</button>
     </div>
   </div>
 </div>
@@ -200,11 +196,13 @@ function showError(msg){const b=document.getElementById('errorBanner');b.textCon
 
 function showOk(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.background='#0d3320';b.style.color='#3fb950';b.style.display='block';setTimeout(()=>{b.style.display='none';b.style.background='#490202';b.style.color='#f85149'},5000)}
 
-async function createTask(){const id=document.getElementById('newTaskId').value.trim();const desc=document.getElementById('newTaskDesc').value.trim();if(!id){showError('请输入任务编号');return};const r=await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:id,title:desc||id})});if(r.ok){document.getElementById('newTaskId').value='';document.getElementById('newTaskDesc').value='';showOk('任务 '+id+' 已创建');setTimeout(()=>fetch('/api/status').then(r=>r.json()).then(s=>renderTasks(s.tasks)),500)}else{const e=await r.json().catch(()=>({}));showError(e.error||'创建失败')}}
+function genTaskId(desc){const ts=Date.now().toString(36).slice(-4);const w=desc.replace(/[^\w一-鿿]/g,' ').split(/\s+/).filter(Boolean).slice(0,3).join('-');return (w||'TASK')+'-'+ts}
+
+async function createTask(){const desc=document.getElementById('newTaskDesc').value.trim();if(!desc){showError('请描述你要 AI 做什么');return};const id=genTaskId(desc);const r=await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:id,title:desc})});if(r.ok){document.getElementById('newTaskDesc').value='';showOk('任务 '+id+' 已创建');document.getElementById('newTaskDesc').dataset.lastId=id;setTimeout(()=>fetch('/api/status').then(r=>r.json()).then(s=>renderTasks(s.tasks)),500)}else{const e=await r.json().catch(()=>({}));showError(e.error||'创建失败')}}
 
 async function spawnWorker(taskId){if(!confirm('启动 AI Agent 处理任务 '+taskId+'？'))return;const r=await fetch('/api/tasks/'+encodeURIComponent(taskId)+'/spawn',{method:'POST'});if(r.ok){showOk('🤖 AI Agent 已启动，正在处理 '+taskId+'... 刷新页面查看进度')}else{const e=await r.json().catch(()=>({}));showError(e.error||'启动失败')}}
 
-async function createAndSpawn(){await createTask();const id=document.getElementById('newTaskId').value||document.getElementById('newTaskId').dataset.lastId;if(id)spawnWorker(id)}
+async function createAndSpawn(){const desc=document.getElementById('newTaskDesc').value.trim();if(!desc){showError('请描述你要 AI 做什么');return};const id=genTaskId(desc);const r=await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:id,title:desc})});if(!r.ok){const e=await r.json().catch(()=>({}));showError(e.error||'创建失败');return};document.getElementById('newTaskDesc').value='';showOk('🤖 任务 '+id+' 已创建，AI 正在启动...');fetch('/api/status').then(r=>r.json()).then(s=>renderTasks(s.tasks));spawnWorker(id)}
 
 
 // ── WebSocket 实时更新 ──
