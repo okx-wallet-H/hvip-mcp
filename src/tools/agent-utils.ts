@@ -1621,6 +1621,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     async ({ domain }) => {
       try {
         const detail = DOMAIN_DETAILS[domain]
+        const hasAuth = auth !== null
         if (!detail) {
           return toResult({
             found: false,
@@ -1630,9 +1631,14 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
             tsIso: new Date().toISOString(),
           })
         }
+        const needsKey = detail.authRequired && !hasAuth
         return toResult({
           found: true,
           domain,
+          authRequired: detail.authRequired,
+          keyAvailable: hasAuth,
+          usable: !detail.authRequired || hasAuth,
+          _authWarning: needsKey ? "⚠️ 此域需要 API Key，当前未配置。告诉用户去 OKX 官网创建 Key 后重连。" : null,
           ...detail,
           tsIso: new Date().toISOString(),
         })
