@@ -270,7 +270,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
   registerTool(
     server,
     "okx_mass_cancel",
-    "READ",
+    "WRITE",
     `## 功能：批量撤销某产品类型下所有挂单
 ## 场景：用于极端行情下紧急清空所有挂单、快速重置交易策略
 ## 关键词：批量撤单, 全部撤单, mass cancel, 清空挂单, 紧急撤单

@@ -83,7 +83,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
   registerTool(
     server,
     "okx_subaccount_set_transfer_out",
-    "READ",
+    "WRITE",
     "CAT:[账户-子账户] | → 请先调用 agent_catalog",
     {
       subAcct:        z.string().describe("子账户名称。必填"),

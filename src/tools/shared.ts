@@ -326,6 +326,10 @@ export function classifyRisk(toolNameOrDesc: string): RiskLevel {
     "okx_convert_trade", "okx_preset_", "okx_activate_",
     "okx_move_", "okx_copy_", "okx_first_",
     "okx_one_click_", "okx_easy_convert",
+    "okx_mass_cancel", "okx_subaccount_set_",
+    "okx_event_place_", "okx_event_cancel_", "okx_event_amend_",
+    "okx_predictions_place_", "okx_predictions_cancel_",
+    "okx_predictions_split", "okx_predictions_merge",
     "agent_quick_trade",
   ]
   if (writePrefixes.some(p => toolName.startsWith(p))) return "WRITE"
