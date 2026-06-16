@@ -16,7 +16,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   // ── okx_smart_leaderboard ──────────────────────────────────────────────
   server.tool(
     "okx_smart_leaderboard",
-    "CAT:[Smart Money] | ## 功能：交易员排行榜——按收益率/总收益排序，含近N日胜率、最大回撤、跟单人数\n## 场景：Agent 回答「哪些交易员厉害」「跟谁赚钱」、寻找优质交易员、分析聪明钱流向\n## 关键词：交易员, 排行榜, leaderboard, 聪明钱, smart money, 跟单, 收益排名\n## 参数：\n##   - instType: 产品类型。SPOT=现货, SWAP=永续。默认SPOT\n##   - sortBy: 排序字段。pnl=收益率, totalPnl=总收益, followers=跟单人数\n##   - topN: 返回条数，默认10\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读\n## 返回量：微小 ~3KB\n## 关联：本工具排行 → okx_smart_trader_detail 看详情 → okx_copy_trader 跟单（需确认）",
+    "CAT:[Smart Money] | → 请先调用 agent_catalog",
     {
       instType: z.enum(["SPOT","SWAP"]).optional().describe("产品类型，默认SPOT"),
       sortBy:   z.enum(["pnl","totalPnl","followers"]).optional().describe("排序。pnl=收益率, totalPnl=总收益, followers=跟单人数"),
@@ -70,7 +70,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   // ── okx_smart_trader_detail ────────────────────────────────────────────
   server.tool(
     "okx_smart_trader_detail",
-    "CAT:[Smart Money] | ## 功能：单交易员全景分析——收益率+胜率+回撤+当前持仓+近30天PnL曲线\n## 场景：Agent 深入了解某位交易员（从排行榜点击进入）、判断是否值得跟单\n## 关键词：交易员详情, trader detail, 跟单分析, 持仓查看, 业绩分析\n## 参数：\n##   - uniqueCode: 交易员唯一码（从排行榜中获取）\n##   - instType: 产品类型。SPOT=现货, SWAP=永续\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读\n## 返回量：微小 ~3KB\n## 关联：okx_smart_leaderboard 排行 → 本工具详情 → okx_copy_trader 跟单",
+    "CAT:[Smart Money] | → 请先调用 agent_catalog",
     {
       uniqueCode: z.string().describe("交易员唯一码（如 A12345678）"),
       instType:   z.enum(["SPOT","SWAP"]).optional().describe("产品类型，默认SPOT"),
@@ -137,7 +137,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   // ── okx_smart_sentiment ────────────────────────────────────────────────
   server.tool(
     "okx_smart_sentiment",
-    "CAT:[Smart Money] | ## 功能：市场情绪仪表盘——综合多空比、期权PCR、资金费率、成交量，给出量化情绪评分\n## 场景：Agent 回答「现在市场情绪怎么样」「散户和聪明钱在做什么」「该追多还是观望」\n## 关键词：市场情绪, sentiment, 多空比, PCR, 资金费率, 恐慌贪婪, 情绪指标\n## 参数：\n##   - instFamily: 产品族，如 BTC-USD。默认 BTC-USD\n## 鉴权：PUBLIC — 公开接口\n## 风险：READ — 只读\n## 返回量：微小 ~2KB\n## 关联：本工具看情绪 → agent_market_scan 看异动 → agent_quick_trade 下单",
+    "CAT:[Smart Money] | → 请先调用 agent_catalog",
     {
       instFamily: z.string().optional().describe("产品族，如 BTC-USD、ETH-USD。默认 BTC-USD"),
     },

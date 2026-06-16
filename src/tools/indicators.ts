@@ -366,7 +366,7 @@ export function registerIndicatorTools(server: McpServer): void {
 
   server.tool(
     "okx_indicator",
-    "CAT:[行情] | ## 功能：计算指定产品的单个技术指标，返回原始值 + 中文Agent信号解读（超买/超卖/金叉/死叉/趋势方向）\n## 场景：Agent 回答「RSI 多少」「MACD 金叉了吗」「布林带什么位置」等指标问题时调用，一次拿到计算结果和操作建议\n## 关键词：技术指标, indicator, RSI, MACD, 布林带, KDJ, ADX, 超买, 超卖, 金叉, 死叉, 均线\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT\n##   - indicator: 指标名 (sma/ema/rsi/macd/bb/atr/stoch/wr/cci/obv/vwap/adx/mfi/cmf/supertrend/keltner/pattern)\n##   - period: 周期参数，默认值因指标而异（RSI=14，MACD=12/26/9 等）\n##   - bar: K线粒度，默认 1H。支持 1m/5m/15m/30m/1H/2H/4H/6H/12H/1D\n## 鉴权：PUBLIC — 公开接口（基于 okx_get_candles）\n## 风险：READ — 只计算不交易\n## 返回量：微小 ~1KB\n## 关联：本工具计算指标 → okx_quick_market 看盘口 → agent_quick_trade 下单",
+    "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId:    z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP"),
       indicator: z.enum(["sma","ema","rsi","macd","bb","atr","stoch","wr","cci","obv","vwap","adx","mfi","cmf","supertrend","keltner","pattern"]).describe("指标名"),
@@ -577,7 +577,7 @@ export function registerIndicatorTools(server: McpServer): void {
 
   server.tool(
     "okx_indicator_batch",
-    "CAT:[行情] | ## 功能：批量计算多个技术指标，一次性返回全部指标值和综合交易信号总结\n## 场景：Agent 需要综合分析多个指标（如同时看RSI+MACD+布林带）时调用，一次拿到所有结果和综合判断\n## 关键词：批量指标, indicator batch, 多指标, 综合信号, 技术分析, 指标组合\n## 参数：\n##   - instId: 产品ID\n##   - indicators: 指标名列表，用逗号分隔。如 RSI,MACD,BB,ATR\n##   - bar: K线粒度，默认 1H\n## 鉴权：PUBLIC\n## 风险：READ\n## 返回量：微小 ~3KB\n## 关联：本工具批量 → 单指标深入用 okx_indicator → agent_quick_trade 下单",
+    "CAT:[行情] | → 请先调用 agent_catalog",
     {
       instId:     z.string().describe("产品ID，如 BTC-USDT"),
       indicators: z.string().describe("指标名列表，逗号分隔。可选: sma,ema,rsi,macd,bb,atr,stoch,wr,cci,obv,vwap,adx,mfi,cmf,supertrend,keltner,pattern"),

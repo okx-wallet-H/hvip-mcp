@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE } from "./shared.js"
 export function registerTradingTools(server: McpServer, auth: Auth | null): void {
   server.tool(
     "okx_place_order",
-    "CAT:[交易] | ## 功能：在OKX下单（市价/限价/只挂/全部成交或取消/立即成交并取消剩余）\n## 场景：用于开仓做多/做空、限价挂单、市价快速成交、只挂单不成交（post_only）\n## 关键词：下单, place order, 市价单, 限价单, 开仓, 平仓, 买入, 卖出\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT\n##   - tdMode: 交易模式。cash=现货, isolated=逐仓, cross=全仓\n##   - side: 买卖方向。buy=买入, sell=卖出\n##   - ordType: 订单类型。market=市价, limit=限价, post_only=只挂, fok=全成或取消, ioc=立即成交并取消\n##   - sz: 委托数量（根据产品不同可为张数或币数，下单前建议先用 okx_convert_contract_coin 换算）\n##   - px: 委托价格（限价单必填）\n## 鉴权：🔴 需要 API Key（交易）- 会产生真实订单，调用前必须向用户明确确认\n## 风险：WRITE — 创建真实订单，调用前必须向用户确认产品、方向、数量和价格\n## 返回量：微小 ~500B\n## 关联：okx_get_ticker 看价格 → okx_get_balance 确认余额 → 本工具下单 → okx_get_order 确认成交",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT"),
       tdMode:  z.enum(["cash","isolated","cross"]).describe("交易模式：cash=现货，isolated=逐仓，cross=全仓"),
@@ -28,7 +28,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_cancel_order",
-    "CAT:[交易] | ## 功能：撤销指定订单\n## 场景：用于取消未成交的限价单、纠正误下单、清空某产品挂单\n## 关键词：撤单, cancel order, 撤销订单, 取消挂单, 取消委托\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT\n##   - ordId: 订单ID，由 okx_place_order 返回\n## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认\n## 风险：WRITE — 撤销订单，调用前必须向用户确认\n## 返回量：微小 ~300B\n## 关联：okx_place_order 下单 → okx_get_orders_pending 查看挂单 → 本工具撤单 → okx_get_order 确认撤销",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
       ordId:  z.string().describe("订单ID"),
@@ -44,7 +44,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_amend_order",
-    "CAT:[交易] | ## 功能：修改未成交订单的价格或数量\n## 场景：用于调整限价单价格跟进市场、减少委托数量、修改挂单参数\n## 关键词：改单, amend order, 修改订单, 改价, 改量, 调整委托\n## 参数：\n##   - instId: 产品ID，如 BTC-USDT\n##   - ordId: 订单ID\n##   - newSz: 新委托数量（可选）\n##   - newPx: 新委托价格（可选）\n## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认\n## 风险：WRITE — 修改订单，调用前必须向用户确认\n## 返回量：微小 ~300B\n## 关联：okx_get_orders_pending 查看挂单 → 本工具改单 → okx_get_order 确认修改",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID"),
       ordId:  z.string().describe("订单ID"),
@@ -65,7 +65,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_orders_pending",
-    "CAT:[交易] | ## 功能：查询当前所有未成交挂单列表\n## 场景：用于监控未成交订单、检查限价单是否仍在队列中、批量查看挂单状态\n## 关键词：挂单查询, orders pending, 未成交订单, 限价单状态, 委托列表, 当前挂单\n## 参数：\n##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部\n##   - instId: 产品ID，精确筛选\n##   - ordType: 订单类型筛选。market/limit/post_only/fok/ioc\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：okx_place_order 下单 → 本工具查看挂单 → okx_cancel_order 撤单 / okx_amend_order 改单",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部"),
       instId:   z.string().optional().describe("产品ID，精确筛选"),
@@ -82,7 +82,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_fills",
-    "CAT:[交易] | ## 功能：查询最近的成交明细（逐笔成交），含成交价、成交量和手续费\n## 场景：用于精确计算成交均价、核对每笔成交手续费、比订单历史更细粒度地复盘\n## 关键词：成交明细, fills, 逐笔成交, 成交记录, 手续费明细, 均价计算\n## 参数：\n##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权\n##   - instId: 产品ID\n##   - limit: 返回条数，默认100，最大100\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：100条 ~10KB — 中等\n## 关联：okx_place_order 下单 → 本工具看成交明细 → okx_get_fills_history 查历史成交",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       instId:   z.string().optional().describe("产品ID"),
@@ -99,7 +99,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_orders_history_archive",
-    "CAT:[交易] | ## 功能：查询3个月以前的完整历史订单（归档数据）\n## 场景：用于长期交易记录分析、年度交易复盘、审计归档数据\n## 关键词：归档订单, orders history archive, 历史归档, 长期记录, 订单存档\n## 参数：\n##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权\n##   - limit: 返回条数，默认50，最大100\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：okx_get_orders_history 查近期订单 → 本工具查归档 → 完整交易复盘",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       limit:    z.number().int().min(1).max(100).optional().describe("返回条数，默认50"),
@@ -272,7 +272,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_cancel_all_after",
-    "CAT:[交易] | ## 功能：设置定时全撤（N秒后自动撤销所有挂单）\n## 场景：用于极端行情下启动紧急撤单倒计时、程序化风险控制、超时自动清空挂单\n## 关键词：定时全撤, cancel all after, 倒计时撤单, 紧急风控, 自动撤单\n## 参数：\n##   - timeOut: 倒计时秒数。0=取消定时全撤, 正数=设N秒后全撤。最大120秒\n## 鉴权：🔴 需要 API Key（交易）- 风控核心工具，调用前必须确认\n## 风险：FUND_TRANSFER — 定时撤销所有挂单，影响范围极大，调用前必须向用户确认\n## 返回量：微小 ~300B\n## 关联：okx_get_orders_pending 确认当前挂单 → 本工具设倒计时 → 到时间自动撤销",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       timeOut: z.string().describe("倒计时秒数，0=取消定时全撤，正数=设N秒后全撤，最大120秒"),
     },
@@ -311,7 +311,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_account_rate_limit",
-    "CAT:[交易] | ## 功能：查询当前账户的API频率限制使用情况\n## 场景：用于高频交易前检查剩余配额、避免触发限频、调整请求节奏\n## 关键词：频率限制, rate limit, API配额, 限频查询, 剩余次数\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~500B\n## 关联：本工具查看剩余配额 → 高频下单前确认 → 避免 HTTP 429 错误",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -324,7 +324,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_easy_convert",
-    "CAT:[交易] | ## 功能：闪兑（一键兑换不同币种）\n## 场景：用于快速兑换USDT到BTC/ETH等、小额换币需求、无需挂单即时成交\n## 关键词：闪兑, easy convert, 币种兑换, 一键换币, 快速兑换\n## 参数：\n##   - fromCcy: 卖出币种，如 USDT。必填\n##   - toCcy: 买入币种，如 BTC。必填\n##   - sz: 卖出数量。必填\n## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认兑换币种和数量\n## 风险：FUND_TRANSFER — 产生真实兑换交易，调用前必须向用户确认\n## 返回量：微小 ~500B\n## 关联：okx_get_ticker 看当前价 → 本工具闪兑 → okx_get_easy_convert_history 查记录",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       fromCcy: z.string().describe("卖出币种，如 USDT"),
       toCcy:   z.string().describe("买入币种，如 BTC"),
@@ -341,7 +341,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_easy_convert_history",
-    "CAT:[交易] | ## 功能：查询闪兑历史记录\n## 场景：用于复盘闪兑交易、核对兑换汇率、统计换币成本\n## 关键词：闪兑历史, easy convert history, 兑换记录, 换币历史\n## 参数：\n##   - after: 查询此时间之后的记录（毫秒Unix时间戳）\n##   - before: 查询此时间之前的记录（毫秒Unix时间戳）\n##   - limit: 返回条数，默认100\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_easy_convert 闪兑 → 本工具查历史 → okx_get_account_bills 对账",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       after:  z.string().optional().describe("查询此时间之后的记录（毫秒Unix时间戳）"),
       before: z.string().optional().describe("查询此时间之前的记录（毫秒Unix时间戳）"),
@@ -360,7 +360,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_mmp_config",
-    "CAT:[交易] | ## 功能：查询MMP（做市商保护）配置\n## 场景：用于查看当前做市商保护参数、确认风控设置\n## 关键词：做市商保护, MMP, mmp config, 做市商风控, 市场保护\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~500B\n## 关联：本工具查看配置 → okx_set_mmp_config 修改",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -373,7 +373,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_set_mmp_config",
-    "CAT:[交易] | ## 功能：设置MMP（做市商保护）参数\n## 场景：用于配置做市商风控参数、保护做市策略\n## 参数：\n##   - instFamily: 产品族，如 BTC-USD。必填\n##   - timeInterval: 时间窗口（毫秒）。必填\n##   - frozenInterval: 冻结时间（毫秒）。必填\n##   - limit: 限制量。必填\n## 鉴权：🔴 需要 API Key（交易）- 修改MMP参数影响做市策略，调用前必须确认\n## 风险：ADMIN — 修改风控配置可能影响交易执行，调用前必须确认\n## 返回量：微小 ~500B\n## 关联：okx_get_mmp_config 查看当前 → 本工具修改 → 生效",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instFamily:     z.string().describe("产品族，如 BTC-USD。必填"),
       timeInterval:   z.string().describe("时间窗口（毫秒）。必填"),
@@ -391,7 +391,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_order_algo",
-    "CAT:[交易] | ## 功能：查询指定策略委托的详情\n## 场景：用于追踪策略委托状态、查看触发条件和执行结果\n## 关键词：策略委托详情, order algo, 策略单查询, 条件单详情\n## 参数：\n##   - algoId: 策略委托ID。可选\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~2KB\n## 关联：okx_get_orders_algo_pending 查看策略列表 → 本工具查详情",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       algoId: z.string().optional().describe("策略委托ID"),
     },
@@ -407,7 +407,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_reset_mmp",
-    "CAT:[交易] | ## 功能：重置MMP（做市商保护）状态\n## 场景：用于在触发MMP保护后手动重置、恢复做市交易\n## 关键词：重置MMP, reset mmp, 做市商重置, MMP复位\n## 参数：\n##   - instFamily: 产品族，如 BTC-USD。必填\n## 鉴权：🔴 需要 API Key（交易）- 将重置MMP保护状态，调用前必须确认\n## 风险：WRITE — 重置MMP后做市商可恢复交易，调用前必须确认\n## 返回量：微小 ~300B\n## 关联：okx_get_mmp_config 查看MMP状态 → 本工具重置 → 恢复正常做市",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instFamily: z.string().describe("产品族，如 BTC-USD。必填"),
     },
@@ -422,7 +422,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_orders_archive",
-    "CAT:[交易] | ## 功能：查询3个月以前的完整历史订单（归档数据）\n## 场景：用于长期交易记录分析、年度复盘\n## 关键词：归档订单, orders archive, 历史归档, 订单存档\n## 参数：\n##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权\n##   - limit: 返回条数，默认50，最大100\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~10KB\n## 关联：okx_get_orders_history 查近期订单 → 本工具查归档 → 完整复盘",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型"),
       limit:    z.number().int().min(1).max(100).optional().describe("返回条数，默认50"),
@@ -438,7 +438,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_order_by_clOrdId",
-    "CAT:[交易] | ## 功能：通过客户端自定义ID查询订单详情\n## 场景：用于追踪使用自定义订单ID下单后的执行状态、在自有系统中关联订单\n## 关键词：订单ID, clOrdId, 自定义订单, 客户端ID, 订单查询\n## 参数：\n##   - instId: 产品ID。必填\n##   - clOrdId: 客户端自定义订单ID。必填\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~500B\n## 关联：okx_place_order 下单时设置clOrdId → 本工具查询 → 确认订单状态",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID。必填"),
       clOrdId: z.string().describe("客户端自定义订单ID。必填"),
@@ -456,7 +456,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_one_click_repay_list",
-    "CAT:[交易] | ## 功能：获取一键还款支持的币种列表\n## 场景：用于查看哪些币种支持一键还款、了解可还款的债务类型\n## 关键词：一键还款, one click repay, 还款币种, 债务偿还\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：微小 ~2KB\n## 关联：本工具查看支持币种 → okx_one_click_repay 执行还款",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -469,7 +469,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_one_click_repay",
-    "CAT:[交易] | ## 功能：执行一键还款（使用账户资金自动偿还借币债务）\n## 场景：用于快速偿还杠杆借贷利息、避免利息累积\n## 参数：\n##   - ccy: 还款使用的币种。必填\n##   - repayCcy: 要偿还的债务币种。必填\n## 鉴权：🔴 需要 API Key（交易）- 将使用账户资金还款，调用前必须确认\n## 风险：FUND_TRANSFER — 还款移动真实资金，调用前必须确认\n## 返回量：微小 ~500B\n## 关联：okx_get_one_click_repay_list 查支持币种 → 本工具还款 → okx_one_click_repay_history 查记录",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       ccy:      z.string().describe("还款使用的币种。必填"),
       repayCcy: z.string().describe("要偿还的债务币种。必填"),
@@ -485,7 +485,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_one_click_repay_history",
-    "CAT:[交易] | ## 功能：查询一键还款历史记录\n## 场景：用于查看以往的还款操作、核对还款金额和币种\n## 关键词：还款历史, repay history, 一键还款记录, 债务偿还记录\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询，Agent 可自动调用\n## 返回量：中等 ~5KB\n## 关联：okx_one_click_repay 还款 → 本工具查记录 → 确认还款完成",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -498,7 +498,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   server.tool(
     "okx_get_easy_convert_currency_list",
-    "CAT:[交易] | ## 功能：获取闪兑支持的币种列表\n## 场景：用于查看哪些币种支持闪兑\n## 关键词：闪兑列表, easy convert list, 闪兑币种\n## 参数：无\n## 鉴权：⚠️ 需要 API Key（只读）\n## 风险：READ — 只读查询\n## 返回量：中等 ~5KB",
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
