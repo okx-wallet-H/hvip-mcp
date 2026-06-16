@@ -91,6 +91,17 @@ function handleMessage(msg: any): void {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 任务类型识别
+// ═══════════════════════════════════════════════════════════════════════════
+
+type TaskMode = "code" | "market"
+
+function detectTaskType(title: string): TaskMode {
+  const market = /\b(BTC|ETH|SOL|行情|价格|多少钱|涨跌|K线|走势|大盘|资金费率|深度|多空|持仓|市值|什么价|报价|币价|ticker|mark price|funding)\b/i
+  return market.test(title) ? "market" : "code"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 执行任务
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -100,8 +111,12 @@ function doTask(taskId: string, title: string, url: string): void {
   // 认领
   ws.send(JSON.stringify({ type: "task:claim", taskId, agentId: AGENT_ID }))
 
-  // 构建 Claude Code 任务提示词
-  const prompt = buildPrompt(taskId, title, url)
+  const mode = detectTaskType(title)
+  process.stderr.write(`[Worker] 模式: ${mode}\n`)
+
+  const prompt = mode === "market"
+    ? buildMarketPrompt(title)
+    : buildCodePrompt(taskId, title, url)
 
   // 启动 Claude Code 干活
   process.stderr.write(`[Worker] 启动 Claude Code...\n`)
@@ -121,18 +136,33 @@ function doTask(taskId: string, title: string, url: string): void {
 
   child.on("close", (code: number | null) => {
     if (code === 0) {
-      // 尝试从输出中提取分支名
-      const branchMatch = output.match(/push.*?(task\/\S+|feat\/\S+|fix\/\S+)/i)
-      const branch = branchMatch ? branchMatch[1] : `worker/${AGENT_ID}`
-
       process.stderr.write(`[Worker] ✅ Claude Code 完成 (exit ${code})\n`)
-      ws.send(JSON.stringify({
-        type: "task:done",
-        taskId,
-        agentId: AGENT_ID,
-        branch,
-        result: `${title} — Claude Code 自动完成`,
-      }))
+
+      if (mode === "market") {
+        // 行情类任务: 结果发到 #lobby，任务标记 done
+        ws.send(JSON.stringify({
+          type: "room:message",
+          roomId: "#lobby",
+          text: `📊 ${title}\n\n${output.slice(-3000)}`,
+        }))
+        ws.send(JSON.stringify({
+          type: "task:done",
+          taskId,
+          agentId: AGENT_ID,
+          result: `${title} — 行情已查询`,
+        }))
+      } else {
+        // 写代码任务: 原有逻辑
+        const branchMatch = output.match(/push.*?(task\/\S+|feat\/\S+|fix\/\S+)/i)
+        const branch = branchMatch ? branchMatch[1] : `worker/${AGENT_ID}`
+        ws.send(JSON.stringify({
+          type: "task:done",
+          taskId,
+          agentId: AGENT_ID,
+          branch,
+          result: `${title} — Claude Code 自动完成`,
+        }))
+      }
     } else {
       process.stderr.write(`[Worker] ❌ Claude Code 失败 (exit ${code})\n`)
       ws.send(JSON.stringify({
@@ -165,7 +195,7 @@ function doTask(taskId: string, title: string, url: string): void {
 // 提示词构建
 // ═══════════════════════════════════════════════════════════════════════════
 
-function buildPrompt(taskId: string, title: string, url: string): string {
+function buildCodePrompt(taskId: string, title: string, url: string): string {
   return [
     `你是一个 AI 开发 Agent，正在为 hvip-mcp 项目工作。`,
     ``,
@@ -196,6 +226,18 @@ function buildPrompt(taskId: string, title: string, url: string): string {
     `- 禁止修改 package.json 的 version 字段`,
     `- 禁止修改 dist/index.js（自动构建产物）`,
     `- 完成后输出 "TASK_COMPLETE: <分支名>"`,
+  ].join("\n")
+}
+
+function buildMarketPrompt(title: string): string {
+  return [
+    `你的任务: ${title}`,
+    ``,
+    `## 指令`,
+    `1. 使用 hvip MCP 工具（如 okx_get_ticker, okx_get_tickers, okx_get_candles, okx_get_funding_rate, okx_get_orderbook 等）查询所需数据`,
+    `2. 把结果整理成清晰的中文回复（价格、涨跌幅、成交量、关键支撑阻力位等）`,
+    `3. 不要写代码、不要改文件、不要 git 操作`,
+    `4. 完成后用简洁的一段话总结核心结论`,
   ].join("\n")
 }
 
