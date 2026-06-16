@@ -214,7 +214,7 @@ function showError(msg){const b=document.getElementById('errorBanner');b.textCon
 
 function showOk(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.background='#0d3320';b.style.color='#3fb950';b.style.display='block';setTimeout(()=>{b.style.display='none';b.style.background='#490202';b.style.color='#f85149'},5000)}
 
-function genTaskId(desc){const ts=Date.now().toString(36).slice(-4);const w=desc.replace(/[^a-zA-Z0-9_\\u4e00-\\u9fff]/g,' ').split(/\\s+/).filter(Boolean).slice(0,3).join('-');return (w||'TASK')+'-'+ts}
+function genTaskId(desc){const ts=Date.now().toString(36).slice(-4);const market=/\b(BTC|ETH|SOL|行情|价格|多少钱|涨跌|K线|走势|大盘|资金费率)\b/i;const prefix=market.test(desc)?'M':'C';const w=desc.replace(/[^a-zA-Z0-9]/g,'-').split(/-+/).filter(Boolean).slice(0,2).join('-').toLowerCase();return prefix+'-'+(w||'task')+'-'+ts}
 
 async function createTask(){const desc=document.getElementById('newTaskDesc').value.trim();if(!desc){showError('请描述你要 AI 做什么');return};const id=genTaskId(desc);const r=await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:id,title:desc})});if(r.ok){document.getElementById('newTaskDesc').value='';showOk('任务 '+id+' 已创建');document.getElementById('newTaskDesc').dataset.lastId=id;setTimeout(()=>fetch('/api/status').then(r=>r.json()).then(s=>renderTasks(s.tasks)),500)}else{const e=await r.json().catch(()=>({}));showError(e.error||'创建失败')}}
 
@@ -313,7 +313,8 @@ function startHttpServer(): void {
 
     // ── POST /api/tasks/<id>/spawn — 拉起 Worker ──
     if (_req.method === "POST" && _req.url?.startsWith("/api/tasks/") && _req.url.endsWith("/spawn")) {
-      const taskId = _req.url.slice("/api/tasks/".length, -"/spawn".length)
+      const rawId = _req.url.slice("/api/tasks/".length, -"/spawn".length)
+      const taskId = decodeURIComponent(rawId)
       if (!taskId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
 
       const hubUrl = `ws://127.0.0.1:${wsPort}`
