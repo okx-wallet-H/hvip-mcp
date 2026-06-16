@@ -276,7 +276,7 @@ function startHttpServer(): void {
       _req.on("data", (c: Buffer) => chunks.push(c))
       _req.on("end", () => {
         try {
-          const { taskId, title } = JSON.parse(Buffer.concat(chunks).toString())
+          const { taskId, title } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
           if (!taskId) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
           // 注册到 Hub 内存 + 持久化
           agentHub.registerTask(taskId, title || taskId)
