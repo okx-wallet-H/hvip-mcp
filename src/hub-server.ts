@@ -296,15 +296,15 @@ function startHttpServer(): void {
       _req.on("end", () => {
         try {
           const { taskId, title } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
-          if (!taskId) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
+          if (!taskId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
           // 注册到 Hub 内存 + 持久化
           agentHub.registerTask(taskId, title || taskId)
           db?.saveTask({ taskId, status: "unassigned", title: title || taskId })
           process.stderr.write(`[Hub] 新任务: ${taskId} "${title}"\n`)
-          res.writeHead(201, { "Content-Type": "application/json" })
+          res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
           res.end(JSON.stringify({ ok: true, taskId, title }))
         } catch {
-          res.writeHead(400, { "Content-Type": "application/json" })
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
           res.end(JSON.stringify({ error: "JSON 解析失败" }))
         }
       })
@@ -314,7 +314,7 @@ function startHttpServer(): void {
     // ── POST /api/tasks/<id>/spawn — 拉起 Worker ──
     if (_req.method === "POST" && _req.url?.startsWith("/api/tasks/") && _req.url.endsWith("/spawn")) {
       const taskId = _req.url.slice("/api/tasks/".length, -"/spawn".length)
-      if (!taskId) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
+      if (!taskId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
 
       const hubUrl = `ws://127.0.0.1:${wsPort}`
       const repoPath = process.cwd()
@@ -331,7 +331,7 @@ function startHttpServer(): void {
       worker.on("close", (code: number | null) => process.stderr.write(`[Hub] Worker-${taskId} 退出 (${code})\n`))
       // 不 await — detached 让 Worker 独立运行
 
-      res.writeHead(200, { "Content-Type": "application/json" })
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify({ ok: true, taskId, hubUrl, workerPid: worker.pid }))
       return
     }
@@ -343,16 +343,16 @@ function startHttpServer(): void {
       _req.on("end", () => {
         try {
           const { type, text, agentId, tags, confidence, parentId } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
-          if (!text || !agentId) { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "text + agentId required" })); return }
+          if (!text || !agentId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "text + agentId required" })); return }
           const entry = memory.store({ type, agentId, text, tags, confidence, parentId })
-          res.writeHead(201, { "Content-Type": "application/json" })
+          res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
           res.end(JSON.stringify(entry))
-        } catch { res.writeHead(400, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "JSON parse error" })) }
+        } catch { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "JSON parse error" })) }
       })
       return
     }
     if (_req.method === "GET" && _req.url === "/api/memory/stats") {
-      res.writeHead(200, { "Content-Type": "application/json" })
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(memory.stats()))
       return
     }
@@ -360,34 +360,34 @@ function startHttpServer(): void {
       const url = new URL(_req.url, `http://${host}:${webPort}`)
       const q = url.searchParams.get("q") || ""
       const entries = memory.search(q, 30)
-      res.writeHead(200, { "Content-Type": "application/json" })
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(entries))
       return
     }
     if (_req.method === "GET" && _req.url === "/api/memory") {
       const entries = memory.recent(30)
-      res.writeHead(200, { "Content-Type": "application/json" })
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(entries))
       return
     }
     if (_req.method === "GET" && _req.url?.startsWith("/api/memory/")) {
       const id = _req.url.slice("/api/memory/".length)
       const entry = memory.get(id)
-      if (!entry) { res.writeHead(404, { "Content-Type": "application/json" }); res.end(JSON.stringify({ error: "not found" })); return }
-      res.writeHead(200, { "Content-Type": "application/json" })
+      if (!entry) { res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "not found" })); return }
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(entry))
       return
     }
 
     // GET /api/health
     if (_req.method === "GET" && _req.url === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" })
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify({ status: "ok", name: "hvip-hub", version: VERSION, wsPort, webPort, db: dbPath }))
       return
     }
 
     // 404
-    res.writeHead(404, { "Content-Type": "application/json" })
+    res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" })
     res.end(JSON.stringify({ error: "Not Found" }))
   })
 
