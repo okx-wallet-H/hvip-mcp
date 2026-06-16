@@ -127,10 +127,24 @@ function doTask(taskId: string, title: string, url: string): void {
   })
 
   let output = ""
+  let lastPush = Date.now()
+  function pushProgress() {
+    const now = Date.now()
+    if (now - lastPush < 2000) return  // 最多 2 秒推一次
+    lastPush = now
+    if (output.length > 50) {
+      ws.send(JSON.stringify({
+        type: "room:message",
+        roomId: "#lobby",
+        text: `🔄 ${title}\n\n${output.slice(-800)}`,
+      }))
+    }
+  }
   child.stdout.on("data", (chunk: Buffer) => {
     const text = chunk.toString()
     output += text
     process.stderr.write(text)
+    pushProgress()
   })
   child.stderr.on("data", (chunk: Buffer) => process.stderr.write(chunk.toString()))
 

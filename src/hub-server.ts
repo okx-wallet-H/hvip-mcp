@@ -136,12 +136,19 @@ body{font-family:system-ui,monospace;background:#0d1117;color:#c9d1d9;min-height
     </div>
     <div class="card-body" id="memoryPanel" style="max-height:250px"><div class="empty">加载中...</div></div>
   </div>
+  <!-- Live Feed -->
+  <div class="card" style="grid-column:1/-1">
+    <div class="card-title"><span>📡 实时动态</span><span id="feedLabel" style="font-weight:400;color:#484f58"></span></div>
+    <div class="card-body" id="liveFeed" style="max-height:180px"><div class="empty">等待事件...</div></div>
+  </div>
 </div>
 
 <script>
 const HOST = '${host}'
 const WS_PORT = ${wsPort}
 let msgs = []
+let feed = []
+let taskProgress = {}  // taskId -> latest progress text
 
 function timeAgo(iso){const d=new Date(iso);const s=Math.floor((Date.now()-d)/1e3);if(s<10)return'刚刚';if(s<60)return s+'s前';if(s<3600)return Math.floor(s/60)+'m前';return Math.floor(s/3600)+'h前'}
 
@@ -171,12 +178,13 @@ function renderTasks(tasks){
   document.getElementById('taskLabel').textContent=tasks.length+' 个 · '+done+' 已完成'
   if(!tasks.length){el.innerHTML='<div class=empty>暂无任务</div>';return}
   el.innerHTML=tasks.map(t=>{
+    const progressText = t._progress ? '<div style="font-size:11px;color:#8b949e;margin-top:2px;padding:4px;background:#0d1117;border-radius:4px;max-height:80px;overflow:hidden;white-space:pre-wrap">'+esc(t._progress)+'</div>' : ''
     const spawnBtn = (t.status==='unassigned'||t.status==='reviewed')
       ? ' <button onclick="spawnWorker(\\''+esc(t.taskId)+'\\')" style="font-size:10px;background:#1f6feb;color:white;border:none;padding:1px 8px;border-radius:8px;cursor:pointer;margin-left:4px">🤖 拉起 AI</button>'
       : ''
     return '<div class=task-row>'+
       '<b>'+esc(t.taskId)+'</b> '+esc(t.title)+
-      '<span class="tag '+t.status+'">'+t.status+'</span>'+spawnBtn+
+      '<span class="tag '+t.status+'">'+t.status+'</span>'+spawnBtn+progressText+
       (t.assignedTo?'<br><span style=font-size:11px>认领: <b>'+esc(t.assignedTo)+'</b></span>':'')+
       (t.branch?' <span style=font-size:11px;color:#58a6ff>'+esc(t.branch)+'</span>':'')+
       (t.result?'<br><span style=font-size:11px;color:#8b949e>'+esc(t.result)+'</span>':'')+
@@ -202,6 +210,28 @@ function addMsg(m){
 }
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ── Live Feed + Task Progress ──
+function addFeed(m){
+  feed.unshift(m); if(feed.length>50) feed.pop()
+  const el=document.getElementById('liveFeed')
+  document.getElementById('feedLabel').textContent=feed.length+'条'
+  el.innerHTML=feed.slice(0,20).map(f=>{
+    return '<div class=msg-row style="font-size:12px">'+
+      '<span style=color:#58a6ff>'+esc(f.from||f.agentId||'?')+'</span>'+
+      ' <span class=ts>'+timeAgo(f.ts||new Date().toISOString())+'</span>'+
+      '<br>'+esc((f.text||f.message||'').substring(0,200))+
+      '</div>'
+  }).join('')
+}
+
+function updateTaskProgress(taskId, text){
+  taskProgress[taskId] = text
+  fetch('/api/status').then(r=>r.json()).then(s=>{
+    s.tasks.forEach(t=>{ if(t.taskId===taskId) t._progress=taskProgress[taskId] })
+    renderTasks(s.tasks)
+  }).catch(()=>{})
+}
 
 // ── Memory Panel ──
 async function searchMemory(){const q=document.getElementById('memSearch').value.trim();const url=q?'/api/memory/search?q='+encodeURIComponent(q):'/api/memory';const r=await fetch(url).catch(()=>null);if(!r)return;const entries=await r.json();const stats=await fetch('/api/memory/stats').then(r=>r.json()).catch(()=>({}));document.getElementById('memStats').textContent=stats.total+'条';const el=document.getElementById('memoryPanel');if(!entries.length){el.innerHTML='<div class=empty>无匹配记忆</div>';return}
@@ -243,8 +273,17 @@ function connect(){
       }
       if(m.type==='room:history'){ msgs=m.messages||[]; addMsg(null) }
       if(m.type==='agent:update'){ fetch('/api/status').then(r=>r.json()).then(s=>{renderAgents(s.agents);renderTasks(s.tasks)}).catch(()=>{}) }
-      if(m.type==='room:message'){ addMsg(m) }
+      if(m.type==='room:message'){
+        addMsg(m); addFeed(m)
+        // 提取 Worker 进度更新
+        const wid=m.from||''
+        if(wid.startsWith('worker-')&&m.text){
+          const tidMatch=wid.match(/worker-(\S+?)-\d+/)
+          if(tidMatch) updateTaskProgress(tidMatch[1], m.text.slice(-500))
+        }
+      }
       if(m.type==='task:completed'||m.type==='task:released'||m.type==='task:dispatch'){ fetch('/api/status').then(r=>r.json()).then(s=>renderTasks(s.tasks)).catch(()=>{}) }
+      if(m.type==='agent:registered'||m.type==='agent:update'||m.type==='room:member_joined'){ addFeed({from:'system',text:'Agent '+m.agentId+' '+m.type,ts:new Date().toISOString()}) }
       if(m.type==='agent:registered'&&m.agentId!=='dashboard'){ fetch('/api/status').then(r=>r.json()).then(s=>renderAgents(s.agents)).catch(()=>{}) }
     }catch(ex){}
   }
