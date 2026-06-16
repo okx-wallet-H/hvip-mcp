@@ -161,7 +161,7 @@ function renderTasks(tasks){
   if(!tasks.length){el.innerHTML='<div class=empty>暂无任务</div>';return}
   el.innerHTML=tasks.map(t=>{
     const spawnBtn = (t.status==='unassigned'||t.status==='reviewed')
-      ? ' <button onclick="spawnWorker(\''+esc(t.taskId)+'\')" style="font-size:10px;background:#1f6feb;color:white;border:none;padding:1px 8px;border-radius:8px;cursor:pointer;margin-left:4px">🤖 拉起 AI</button>'
+      ? ' <button onclick="spawnWorker(\\''+esc(t.taskId)+'\\')" style="font-size:10px;background:#1f6feb;color:white;border:none;padding:1px 8px;border-radius:8px;cursor:pointer;margin-left:4px">🤖 拉起 AI</button>'
       : ''
     return '<div class=task-row>'+
       '<b>'+esc(t.taskId)+'</b> '+esc(t.title)+
