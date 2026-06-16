@@ -5,7 +5,7 @@
  * 持久化：tasks 状态、room messages（agents/connections 属会话级，不持久化）
  *
  * Usage:
- *   const db = new HubDB(".hub/data.db")
+ *   const db = new HubDB(".hub/hub.db")
  *   db.loadTasks(hub)   // 启动时恢复
  *   db.saveTask(...)    // 状态变化时保存
  */
