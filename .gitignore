@@ -5,3 +5,4 @@ dist/
 *.tsbuildinfo
 *.tar.gz
 *.zip
+.hub/

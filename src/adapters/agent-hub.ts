@@ -1,5 +1,6 @@
 import type { Server as WSServer } from "ws"
 import { WebSocketServer, WebSocket } from "ws"
+import type { HubDB } from "./hub-persistence.js"
 
 // ── 类型 ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,27 @@ class AgentHub {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private version = "0.0.0"
   private port = 0
+  private db: HubDB | null = null
+
+  // ── 持久化绑定 ──
+
+  setDB(db: HubDB): void {
+    this.db = db
+    // 从 DB 恢复任务
+    const rows = db.loadTasks()
+    for (const r of rows) {
+      this.tasks.set(r.taskId, {
+        status: r.status as TaskState["status"],
+        assignedTo: r.assignedTo || undefined,
+        claimedAt: r.claimedAt || undefined,
+        result: r.result || undefined,
+        branch: r.branch || undefined,
+      })
+    }
+    if (rows.length > 0) {
+      console.log(`[AgentHub] 从 DB 恢复 ${rows.length} 个任务`)
+    }
+  }
 
   // ── 启动 ──
   start(port: number, host = "0.0.0.0", version = "0.0.0"): void {
@@ -100,7 +122,8 @@ class AgentHub {
       ws.on("message", (raw) => {
         try {
           const msg: HubMessage = JSON.parse(raw.toString())
-          this.handleMessage(ws, agentId, msg)
+          const newId = this.handleMessage(ws, agentId, msg)
+          if (newId) agentId = newId
         } catch {
           this.send(ws, { type: "error", message: "消息格式错误：非 JSON" })
         }
@@ -123,9 +146,9 @@ class AgentHub {
   }
 
   // ── 消息路由 ──
-  private handleMessage(ws: WebSocket, authAgentId: string | null, msg: HubMessage): void {
+  private handleMessage(ws: WebSocket, authAgentId: string | null, msg: HubMessage): string | null {
     switch (msg.type) {
-      case "agent:hello":   this.handleHello(ws, msg); break
+      case "agent:hello":   return this.handleHello(ws, msg);
       case "agent:status":  if (authAgentId) this.handleAgentStatus(authAgentId); break
       case "task:claim":    this.handleClaim(msg); break
       case "task:done":     this.handleDone(msg); break
@@ -137,17 +160,18 @@ class AgentHub {
       default:
         this.send(ws, { type: "error", message: `未知消息类型: ${msg.type}` })
     }
+    return null
   }
 
   // ── Agent 注册 ──
-  private handleHello(ws: WebSocket, msg: HubMessage): void {
+  private handleHello(ws: WebSocket, msg: HubMessage): string {
     const agentId = String(msg.agentId || "")
     const name = String(msg.name || agentId || "Unknown")
     const capabilities = Array.isArray(msg.capabilities) ? msg.capabilities as string[] : []
 
     if (!agentId) {
       this.send(ws, { type: "error", message: "缺少 agentId" })
-      return
+      return ""
     }
 
     const existing = this.agents.get(agentId)
@@ -191,6 +215,7 @@ class AgentHub {
         }
       }
     }
+    return agentId
   }
 
   private handleDisconnect(agentId: string): void {
@@ -198,12 +223,12 @@ class AgentHub {
     console.log(`[AgentHub] Agent 离线: ${agentId} (${info?.name || "?"})`)
 
     // 离开所有房间
-    for (const [, room] of this.rooms) {
+    for (const [roomId, room] of this.rooms) {
       if (room.members.has(agentId)) {
         room.members.delete(agentId)
         this.sendToRoomMembers(room, {
           type: "room:member_left",
-          roomId: agentId,  // fixed below
+          roomId,
           agentId,
         })
       }
@@ -216,6 +241,7 @@ class AgentHub {
         t.status = "unassigned"
         t.assignedTo = undefined
         t.claimedAt = undefined
+        this.db?.saveTask({ taskId: tid, status: "unassigned" })
         this.broadcast({ type: "task:released", taskId: tid, reason: "Agent 离线" })
       }
     }
@@ -256,6 +282,7 @@ class AgentHub {
     this.joinRoom(agentId, `#task-${taskId}`)
 
     console.log(`[AgentHub] ${agentId} 认领 ${taskId}`)
+    this.db?.saveTask({ taskId, status: "assigned", title: this.getTaskTitle(taskId), assignedTo: agentId, claimedAt: task.claimedAt })
     this.sendTo(agentId, {
       type: "task:assigned",
       taskId,
@@ -286,6 +313,7 @@ class AgentHub {
     if (a) a.status = "idle"
 
     console.log(`[AgentHub] ${agentId} 完成 ${taskId}: ${result}`)
+    this.db?.saveTask({ taskId, status: "done", title: this.getTaskTitle(taskId), assignedTo: agentId, result, branch })
 
     // 发到任务房间
     this.sendToRoom(`#task-${taskId}`, agentId, `已完成 ${taskId}: ${result} (branch: ${branch})，等待审核。`)
@@ -322,10 +350,12 @@ class AgentHub {
 
     if (verdict === "approved") {
       task.status = "reviewed"
+      this.db?.saveTask({ taskId, status: "reviewed", reviewedAt: new Date().toISOString() })
     } else {
       task.status = "unassigned"
       task.assignedTo = undefined
       task.claimedAt = undefined
+      this.db?.saveTask({ taskId, status: "unassigned" })
     }
 
     const roomId = `#task-${taskId}`
@@ -388,6 +418,7 @@ class AgentHub {
     const msg: RoomMessage = { roomId, from, text, ts: new Date().toISOString() }
     room.messages.push(msg)
     if (room.messages.length > MAX_ROOM_MESSAGES) room.messages.shift()
+    this.db?.saveMessage(roomId, from, text, msg.ts)
 
     // 广播给房间成员
     const raw = JSON.stringify({ type: "room:message", ...msg })
