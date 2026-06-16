@@ -1,4 +1,4 @@
-﻿import type { Server as WSServer } from "ws"
+import type { Server as WSServer } from "ws"
 import { WebSocketServer, WebSocket } from "ws"
 
 // ── 类型 ──────────────────────────────────────────────────────────────────
