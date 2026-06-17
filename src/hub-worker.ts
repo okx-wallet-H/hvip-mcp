@@ -134,7 +134,7 @@ function doTask(taskId: string, title: string, url: string): void {
   process.stderr.write(`[Worker] 启动 Claude Code...\n`)
   const child = spawn(CLAUDE_CLI, ["-p", prompt], {
     cwd: REPO_PATH,
-    stdio: ["pipe", "pipe", "pipe"],
+    stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, NO_COLOR: "1" },
   })
 
