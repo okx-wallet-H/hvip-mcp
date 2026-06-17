@@ -120,6 +120,8 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     },
     async ({ ccy, amt, dest, toAddr, chain, fee }) => {
       if (!auth) return toError(AUTH_REQUIRED)
+      if (dest === "4" && !toAddr) return toError(new Error("链上提币必须提供 toAddr（目标地址）"))
+      if (dest === "4" && toAddr && !/^[A-Za-z0-9]{20,}$/.test(toAddr)) return toError(new Error(`目标地址 "${toAddr}" 格式无效`))
       try {
         const body: Record<string, unknown> = { ccy, amt, dest }
         if (toAddr) body.toAddr = toAddr

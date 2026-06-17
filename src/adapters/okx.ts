@@ -46,11 +46,18 @@ async function request<T>(
     if (options.auth.isDemo) headers["x-simulated-trading"] = "1"
   }
 
-  const res = await fetch(BASE + fullPath, {
-    method,
-    headers,
-    ...(bodyStr ? { body: bodyStr } : {}),
-  })
+  // 超时保护：30s 无响应则中止
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30_000)
+  let res: Response
+  try {
+    res = await fetch(BASE + fullPath, {
+      method,
+      headers,
+      body: bodyStr || undefined,
+      signal: controller.signal,
+    })
+  } finally { clearTimeout(timer) }
 
   if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
 

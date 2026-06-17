@@ -51,7 +51,7 @@ const workers: ReturnType<typeof spawn>[] = []
 function startHttpServer(): void {
   const httpServer = createServer((_req: IncomingMessage, res: ServerResponse) => {
     // CORS
-    res.setHeader("Access-Control-Allow-Origin", "*")
+    res.setHeader("Access-Control-Allow-Origin", `http://${host}:${webPort}`)
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     res.setHeader("Access-Control-Allow-Headers", "Content-Type")
 

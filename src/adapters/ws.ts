@@ -226,7 +226,7 @@ export class WsManager {
                        `OKX WS 错误 ${parsed.code}`,
               },
             })
-            if (this.events.length > 10000) this.events = this.events.slice(-5000)
+            if (this.events.length > 10000) { if (this.events.length === 10001) process.stderr.write(`[WS] ⚠️ 事件缓冲已满(>10000)，开始截断旧事件\n`); this.events = this.events.slice(-5000) }
             return
           }
 
@@ -240,12 +240,12 @@ export class WsManager {
                   ts: Date.now(),
                   data: parsed.data,
                 })
-                if (this.events.length > 10000) this.events = this.events.slice(-5000)
+                if (this.events.length > 10000) { if (this.events.length === 10001) process.stderr.write(`[WS] ⚠️ 事件缓冲已满(>10000)，开始截断旧事件\n`); this.events = this.events.slice(-5000) }
                 break
               }
             }
           }
-        } catch { /* ignore parse errors */ }
+        } catch { /* malformed WS message — OKX 有时发 pong/控制帧 */ }
       })
 
       ws.on("error", (err: Error) => { clearTimeout(timeout); reject(err) })

@@ -185,7 +185,7 @@ async function startHttp(
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     // CORS
-    res.setHeader("Access-Control-Allow-Origin", "*")
+    res.setHeader("Access-Control-Allow-Origin", `http://${host}:${port}`)
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id")
 
@@ -215,14 +215,7 @@ async function startHttp(
       return
     }
 
-    // ── GET /config ──
-    if (req.method === "GET" && req.url === "/config") {
-      res.writeHead(200, { "Content-Type": "application/json" })
-      res.end(JSON.stringify({
-        claudeApiKey: process.env.CLAUDE_API_KEY || "",
-      }))
-      return
-    }
+    // GET /config — 已移除（安全审计：不应通过 HTTP 明文返回 API Key）
 
     // ── GET /health ──
     if (req.method === "GET" && req.url === "/health") {
