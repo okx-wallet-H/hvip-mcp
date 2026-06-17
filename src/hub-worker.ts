@@ -24,6 +24,8 @@ const REPO_PATH  = flag("repo") || process.env.REPO_PATH || process.cwd()
 
 const AGENT_ID = `worker-${TASK_ID}-${Date.now()}`
 const AGENT_NAME = `Worker·${TASK_ID}`
+const CLAUDE_CLI = process.env.CLAUDE_CLI || "claude"
+const WORKER_TIMEOUT_MS = parseInt(process.env.HUB_WORKER_TIMEOUT || "600000", 10) // 10 分钟默认
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WebSocket 客户端
@@ -130,7 +132,7 @@ function doTask(taskId: string, title: string, url: string): void {
 
   // 启动 Claude Code 干活
   process.stderr.write(`[Worker] 启动 Claude Code...\n`)
-  const child = spawn("claude", ["-p", prompt], {
+  const child = spawn(CLAUDE_CLI, ["-p", prompt], {
     cwd: REPO_PATH,
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env, NO_COLOR: "1" },
@@ -149,6 +151,12 @@ function doTask(taskId: string, title: string, url: string): void {
     }))
   }, 5000)
 
+  // 超时保护 — 防止 Claude Code 卡死
+  const timeoutTimer = setTimeout(() => {
+    process.stderr.write(`[Worker] ⏰ 超时 (${WORKER_TIMEOUT_MS/1000}s)，强制终止\n`)
+    try { child.kill("SIGKILL") } catch {}
+  }, WORKER_TIMEOUT_MS)
+
   child.stdout.on("data", (chunk: Buffer) => {
     const text = chunk.toString()
     output += text
@@ -157,7 +165,7 @@ function doTask(taskId: string, title: string, url: string): void {
   child.stderr.on("data", (chunk: Buffer) => process.stderr.write(chunk.toString()))
 
   child.on("close", (code: number | null) => {
-    clearInterval(progressTimer)
+    clearInterval(progressTimer); clearTimeout(timeoutTimer)
     if (code === 0) {
       process.stderr.write(`[Worker] ✅ Claude Code 完成 (exit ${code})\n`)
 
@@ -205,7 +213,7 @@ function doTask(taskId: string, title: string, url: string): void {
   })
 
   child.on("error", (err: Error) => {
-    clearInterval(progressTimer)
+    clearInterval(progressTimer); clearTimeout(timeoutTimer)
     process.stderr.write(`[Worker] Claude Code 启动失败: ${err.message}\n`)
     ws.send(JSON.stringify({
       type: "room:message",

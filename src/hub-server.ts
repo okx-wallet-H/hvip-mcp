@@ -221,7 +221,7 @@ function addMsg(m){
   el.scrollTop=el.scrollHeight
 }
 
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;')}
 
 // ── Live Feed + Task Progress ──
 function addFeed(m){
@@ -262,7 +262,7 @@ function showError(msg){const b=document.getElementById('errorBanner');b.textCon
 
 function showOk(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.background='#0d3320';b.style.color='#3fb950';b.style.display='block';setTimeout(()=>{b.style.display='none';b.style.background='#490202';b.style.color='#f85149'},5000)}
 
-function genTaskId(desc){const ts=Date.now().toString(36).slice(-4);const market=/\b(BTC|ETH|SOL|行情|价格|多少钱|涨跌|K线|走势|大盘|资金费率)\b/i;const prefix=market.test(desc)?'M':'C';const w=desc.replace(/[^a-zA-Z0-9]/g,'-').split(/-+/).filter(Boolean).slice(0,2).join('-').toLowerCase();return prefix+'-'+(w||'task')+'-'+ts}
+function genTaskId(desc){const ts=Date.now().toString(36).slice(-4);const rnd=Math.random().toString(36).slice(2,6);const market=/\b(BTC|ETH|SOL|行情|价格|多少钱|涨跌|K线|走势|大盘|资金费率)\b/i;const prefix=market.test(desc)?'M':'C';const w=desc.replace(/[^a-zA-Z0-9]/g,'-').split(/-+/).filter(Boolean).slice(0,2).join('-').toLowerCase();return prefix+'-'+(w||'task')+'-'+ts+'-'+rnd}
 
 async function createTask(){const desc=document.getElementById('newTaskDesc').value.trim();if(!desc){showError('请描述你要 AI 做什么');return};const id=genTaskId(desc);const r=await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:id,title:desc})});if(r.ok){document.getElementById('newTaskDesc').value='';showOk('任务 '+id+' 已创建');document.getElementById('newTaskDesc').dataset.lastId=id;setTimeout(()=>fetch('/api/status').then(r=>r.json()).then(s=>renderTasks(s.tasks)),500)}else{const e=await r.json().catch(()=>({}));showError(e.error||'创建失败')}}
 
@@ -318,6 +318,8 @@ setInterval(()=>{fetch('/api/status').then(r=>r.json()).then(s=>{renderAgents(s.
 // ═══════════════════════════════════════════════════════════════════════════
 // HTTP 服务器
 // ═══════════════════════════════════════════════════════════════════════════
+
+const workers: ReturnType<typeof spawn>[] = []
 
 function startHttpServer(): void {
   const httpServer = createServer((_req: IncomingMessage, res: ServerResponse) => {
@@ -386,7 +388,12 @@ function startHttpServer(): void {
       worker.stdout?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
       worker.stderr?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
       worker.on("error", (e: Error) => process.stderr.write(`[Hub] Worker 启动失败: ${e.message}\n`))
-      worker.on("close", (code: number | null) => process.stderr.write(`[Hub] Worker-${taskId} 退出 (${code})\n`))
+      worker.on("close", (code: number | null) => {
+        process.stderr.write(`[Hub] Worker-${taskId} 退出 (${code})\n`)
+        const idx = workers.indexOf(worker); if (idx >= 0) workers.splice(idx, 1)
+      })
+      workers.push(worker)
+      process.stderr.write(`[Hub] 活跃 Worker: ${workers.length}\n`)
       // 不 await — detached 让 Worker 独立运行
 
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
@@ -428,8 +435,8 @@ function startHttpServer(): void {
       res.end(JSON.stringify(entries))
       return
     }
-    if (_req.method === "GET" && _req.url?.startsWith("/api/memory/")) {
-      const id = _req.url.slice("/api/memory/".length)
+    if (_req.method === "GET" && _req.url?.startsWith("/api/memory/by-id/")) {
+      const id = _req.url.slice("/api/memory/by-id/".length)
       const entry = memory.get(id)
       if (!entry) { res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "not found" })); return }
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
@@ -529,6 +536,7 @@ agentHub.start(wsPort, host, VERSION)
 
 function shutdown() {
   process.stderr.write("\n[Hub] 正在关闭...\n")
+  for (const w of workers) { try { w.kill() } catch {} }
   agentHub.close()
   db.close()
   memory.close()
