@@ -334,9 +334,9 @@ export function classifyRisk(toolNameOrDesc: string): RiskLevel {
   ]
   if (writePrefixes.some(p => toolName.startsWith(p))) return "WRITE"
 
-  // ── 特殊：模拟/预检/反馈 虽是 agent 工具但只读 ──
+  // ── 特殊：模拟/预检 虽是 agent 工具但只读 ──
   const readSpecials = [
-    "agent_simulate_order", "okx_preflight_check", "okx_agent_feedback",
+    "agent_simulate_order", "okx_preflight_check",
     "agent_catalog", "agent_catalog_detail", "agent_hub_status",
     "agent_hub_dispatch", "agent_hub_review", "agent_room_send", "agent_room_view",
     "okx_ws_subscribe", "okx_ws_subscribe_private", "okx_ws_events", "okx_ws_status", "okx_ws_close",
@@ -344,11 +344,14 @@ export function classifyRisk(toolNameOrDesc: string): RiskLevel {
     "okx_predictions_ws_events", "okx_predictions_ws_status",
     "xlayer_subscribe", "xlayer_get_events", "xlayer_unsubscribe",
     "codegraph_status", "codegraph_query",
-    "agent_get_preference", "agent_set_preference",
+    "agent_get_preference",
     "agent_simulate_transfer", "agent_read_only_trade",
     "okx_event_instruments",
   ]
   if (readSpecials.includes(toolName)) return "READ"
+
+  // ── 反馈/偏好写入虽是 agent 工具，但有磁盘写入副作用 ──
+  if (["okx_agent_feedback", "agent_set_preference"].includes(toolName)) return "WRITE"
 
   // ── X Layer 写操作 ──
   if (toolName.startsWith("xlayer_call")) return "WRITE"

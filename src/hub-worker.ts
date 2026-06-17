@@ -53,7 +53,7 @@ function connect(): void {
     try {
       const msg = JSON.parse(raw.toString())
       handleMessage(msg)
-    } catch {}
+    } catch { process.stderr.write(`[Worker] ⚠️ 畸形消息: ${raw.toString().slice(0, 80)}\n`) }
   })
 
   ws.on("close", () => {
@@ -63,7 +63,7 @@ function connect(): void {
     }
   })
 
-  ws.on("error", () => {})
+  ws.on("error", (e: Error) => { process.stderr.write(`[Worker] WS 错误: ${e.message}\n`) })
 }
 
 function handleMessage(msg: any): void {

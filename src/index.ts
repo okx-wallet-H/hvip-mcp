@@ -176,7 +176,11 @@ async function startHttp(
   skipped: number,
 ) {
   const port = parseInt(process.env.PORT || "3000", 10)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    process.stderr.write(`[hvip] ❌ 无效端口: ${process.env.PORT}，使用默认 3000\n`)
+  }
   const host = process.env.HOST || "127.0.0.1"
+  const token = process.env.MCP_AUTH_TOKEN || ""  // PSK 鉴权令牌
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless
   })
@@ -184,10 +188,20 @@ async function startHttp(
   await server.connect(transport)
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    // ── Auth guard: PSK token 校验（/health 例外） ──
+    if (token && req.url !== "/health") {
+      const provided = req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      if (provided !== token) {
+        res.writeHead(401, { "Content-Type": "application/json" })
+        res.end(JSON.stringify({ error: "Unauthorized — 请在 Authorization 头携带有效 token" }))
+        return
+      }
+    }
+
     // CORS
     res.setHeader("Access-Control-Allow-Origin", `http://${host}:${port}`)
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id")
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Mcp-Session-Id, Authorization")
 
     if (req.method === "OPTIONS") {
       res.writeHead(204)
@@ -313,7 +327,8 @@ async function startStdio(
   }
 
   const wsHost = process.env.WS_BIND_HOST || "127.0.0.1"
-  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"), wsHost, version)
+  const wsToken = process.env.HUB_AUTH_TOKEN || ""
+  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"), wsHost, version, wsToken)
 
   const transport = new StdioServerTransport()
   await server.connect(transport)
