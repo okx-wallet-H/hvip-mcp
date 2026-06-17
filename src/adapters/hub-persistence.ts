@@ -120,14 +120,15 @@ export class HubDB {
         task.assignedTo || null, task.claimedAt || null,
         task.result || null, task.branch || null, task.reviewedAt || null,
       )
-    } catch {}
+    } catch (e: unknown) { process.stderr.write(`[HubDB] saveTask(${task.taskId}) 失败: ${String(e)}\n`) }
   }
 
   loadTasks(): TaskRow[] {
     if (!this.db) return []
     try {
       return this.db.prepare("SELECT * FROM hub_tasks ORDER BY taskId").all() as TaskRow[]
-    } catch {
+    } catch (e: unknown) {
+      process.stderr.write(`[HubDB] loadTasks 失败: ${String(e)}\n`)
       return []
     }
   }
@@ -144,7 +145,7 @@ export class HubDB {
           SELECT id FROM hub_messages WHERE roomId = ? ORDER BY id DESC LIMIT 500
         )
       `).run(roomId, roomId)
-    } catch {}
+    } catch (e: unknown) { process.stderr.write(`[HubDB] saveMessage(${roomId}) 失败: ${String(e)}\n`) }
   }
 
   loadMessages(roomId: string, limit = 50): MessageRow[] {
@@ -153,7 +154,8 @@ export class HubDB {
       return this.db.prepare(
         `SELECT * FROM hub_messages WHERE roomId = ? ORDER BY id DESC LIMIT ?`
       ).all(roomId, limit).reverse() as MessageRow[]
-    } catch {
+    } catch (e: unknown) {
+      process.stderr.write(`[HubDB] loadMessages(${roomId}) 失败: ${String(e)}\n`)
       return []
     }
   }

@@ -412,8 +412,19 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
     },
     async ({ title, what, tools, pain, suggestion }) => {
       try {
-        const logDir = process.env.OKX_FEEDBACK_DIR || os.homedir()
+        // 固定日志目录（安全审计：不再从环境变量读取，防止路径注入）
+        const logDir = path.join(os.homedir(), ".hvip")
+        fs.mkdirSync(logDir, { recursive: true })
         const logFile = path.join(logDir, "hvip-mcp-feedback.log")
+        // 日志轮转：超过 10MB 后重命名为 .1
+        try {
+          const stat = fs.statSync(logFile)
+          if (stat.size > 10 * 1024 * 1024) {
+            const rotated = logFile + ".1"
+            if (fs.existsSync(rotated)) fs.unlinkSync(rotated)
+            fs.renameSync(logFile, rotated)
+          }
+        } catch {}
         const entry = JSON.stringify({
           time: new Date().toISOString(),
           title, what, tools, pain, suggestion,
@@ -1567,7 +1578,12 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         let prefs: Record<string, string> = {}
         try {
           if (fs.existsSync(prefPath)) { prefs = JSON.parse(fs.readFileSync(prefPath, "utf-8")) }
-        } catch {}
+        } catch (e: unknown) {
+          // 备份损坏文件，防止偏好静默丢失
+          const corrupted = prefPath + ".corrupted." + new Date().toISOString().replace(/[:.]/g, "-")
+          try { fs.renameSync(prefPath, corrupted) } catch {}
+          process.stderr.write(`[hvip] ⚠️ preferences.json 损坏，已备份为 ${corrupted}，重置为空\n`)
+        }
         const result = key
           ? { key, value: prefs[key] ?? null, found: key in prefs }
           : { all: prefs, count: Object.keys(prefs).length }
@@ -1602,7 +1618,11 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
           if (fs.existsSync(prefPath)) {
             prefs = JSON.parse(fs.readFileSync(prefPath, "utf-8"))
           }
-        } catch {}
+        } catch (e: unknown) {
+          const corrupted = prefPath + ".corrupted." + new Date().toISOString().replace(/[:.]/g, "-")
+          try { fs.renameSync(prefPath, corrupted) } catch {}
+          process.stderr.write(`[hvip] ⚠️ preferences.json 损坏，已备份为 ${corrupted}，重置为空\n`)
+        }
         prefs[key] = value
         fs.writeFileSync(prefPath, JSON.stringify(prefs, null, 2), "utf-8")
 
