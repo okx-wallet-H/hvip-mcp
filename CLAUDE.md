@@ -3,7 +3,7 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.3.0 · 365 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
+hvip-mcp-server v0.3.1 · 365 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
 入口 → src/index.ts → 注册全部 19 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
