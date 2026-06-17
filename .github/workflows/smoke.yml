@@ -1,0 +1,38 @@
+name: Smoke Test (Playwright)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - run: npm ci && npm run build
+
+      - name: Start Hub
+        run: node dist/hub-server.js --port 9329 --web-port 3009 &
+
+      - name: Start MCP HTTP
+        run: node dist/index.js start:http &
+        env: { PORT: "3002" }
+
+      - name: Install Playwright
+        run: npm install -D playwright && npx playwright install chromium
+
+      - name: Run Smoke Tests
+        run: node tests/smoke.mjs
+
+      - name: Upload Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshots
+          path: docs/smoke-*.png

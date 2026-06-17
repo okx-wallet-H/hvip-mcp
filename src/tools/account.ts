@@ -50,23 +50,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  registerTool(
-    server,
-    "okx_get_order",
-    "READ",
-    "CAT:[账户] | → 请先调用 agent_catalog",
-    {
-      instId: z.string().describe("产品ID"),
-      ordId:  z.string().describe("订单ID"),
-    },
-    async ({ instId, ordId }) => {
-      if (!auth) return toError(AUTH_REQUIRED)
-      try {
-        const data = await privateApi.getOrder(auth, instId, ordId)
-        return toResult(data)
-      } catch (e) { return toError(e) }
-    }
-  )
+  // okx_get_order 已在 trading.ts 注册，此处不再重复
 
   registerTool(
     server,
