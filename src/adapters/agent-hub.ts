@@ -144,7 +144,7 @@ class AgentHub {
       ws.on("close", () => {
         if (agentId) this.handleDisconnect(agentId)
       })
-      ws.on("error", () => {})
+      ws.on("error", (e: Error) => { process.stderr.write(`[AgentHub] WS 错误: ${e.message}\n`) })
     })
     this.heartbeatTimer = setInterval(() => {
       const now = Date.now()
