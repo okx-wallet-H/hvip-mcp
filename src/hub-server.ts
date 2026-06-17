@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Agent Hub 独立服务器
  *
  * 不依赖 MCP server，可 7×24 守护运行。
@@ -20,6 +20,7 @@ import { URL } from "node:url"
 import { agentHub } from "./adapters/agent-hub.js"
 import { HubDB } from "./adapters/hub-persistence.js"
 import { HubMemory } from "./adapters/hub-memory.js"
+import { HubRegistry } from "./adapters/hub-registry.js"
 
 const VERSION = "0.3.0"
 
@@ -136,6 +137,17 @@ body{font-family:system-ui,monospace;background:#0d1117;color:#c9d1d9;min-height
     </div>
     <div class="card-body" id="memoryPanel" style="max-height:250px"><div class="empty">加载中...</div></div>
   </div>
+  <!-- Store -->
+  <div class="card" style="grid-column:1/-1">
+    <div class="card-title">
+      <span>🛒 MCP 插件商店</span>
+      <span style="font-weight:400;font-size:11px">
+        <input id="storeSearch" placeholder="搜索插件..." style="background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:2px 8px;border-radius:4px;font-size:11px;width:140px" onkeyup="renderStore()">
+        <span id="storeCount" style="color:#484f58;margin-left:8px"></span>
+      </span>
+    </div>
+    <div class="card-body" id="storePanel" style="max-height:320px"><div class="empty">加载中...</div></div>
+  </div>
   <!-- Live Feed -->
   <div class="card" style="grid-column:1/-1">
     <div class="card-title"><span>📡 实时动态</span><span id="feedLabel" style="font-weight:400;color:#484f58"></span></div>
@@ -237,6 +249,12 @@ function updateTaskProgress(taskId, text){
 async function searchMemory(){const q=document.getElementById('memSearch').value.trim();const url=q?'/api/memory/search?q='+encodeURIComponent(q):'/api/memory';const r=await fetch(url).catch(()=>null);if(!r)return;const entries=await r.json();const stats=await fetch('/api/memory/stats').then(r=>r.json()).catch(()=>({}));document.getElementById('memStats').textContent=stats.total+'条';const el=document.getElementById('memoryPanel');if(!entries.length){el.innerHTML='<div class=empty>无匹配记忆</div>';return}
 el.innerHTML=entries.map(e=>{const conf=Math.round(e.confidence*100);const bar='<div style="display:inline-block;width:50px;height:6px;background:#21262d;border-radius:3px;vertical-align:middle;margin:0 4px"><div style="width:'+conf+'%;height:100%;background:'+(conf>70?'#3fb950':conf>30?'#d29922':'#f85149')+';border-radius:3px"></div></div>';const ts=timeAgo(e.createdAt);return'<div class=msg-row style="display:flex;gap:6px;align-items:flex-start"><span style="font-size:10px;min-width:50px;color:#484f58">'+ts+'</span><span class="badge" style="font-size:10px">'+esc(e.type)+'</span><span style="flex:1;font-size:12px">'+esc(e.text.length>200?e.text.slice(0,200)+'...':e.text)+'</span>'+bar+'<span style="font-size:10px;color:#484f58">'+conf+'%</span><span style="font-size:10px;color:#8b949e">'+esc(e.agentId.slice(0,12))+'</span></div>'}).join('')}
 
+// ── Store Panel ──
+let storeData = {}
+async function renderStore(){const q=document.getElementById('storeSearch').value.trim();const url=q?'/api/store/search?q='+encodeURIComponent(q):'/api/store';const r=await fetch(url).catch(()=>null);if(!r)return;let cats=[],count=0;if(q){const list=await r.json();cats=[{category:'搜索结果',plugins:list}];list.forEach(()=>count++)}else{storeData=await r.json();cats=Object.entries(storeData).map(([k,v])=>({category:k,plugins:v}));Object.values(storeData).forEach(v=>v.forEach(()=>count++))}document.getElementById('storeCount').textContent=count+'个插件';const el=document.getElementById('storePanel');if(!count){el.innerHTML='<div class=empty>无匹配插件</div>';return}
+el.innerHTML=cats.map(c=>{if(!c.plugins.length)return'';return'<div style="margin-bottom:10px"><div style="font-size:11px;color:#58a6ff;font-weight:600;margin-bottom:4px">'+esc(c.category)+' ('+c.plugins.length+')</div>'+c.plugins.map(p=>'<div class=msg-row style="display:flex;gap:6px;align-items:flex-start;padding:4px 0"><span style="min-width:14px;font-size:12px">'+(p.verified?'✅':'')+'</span><div style="flex:1"><b style="font-size:12px;color:#c9d1d9">'+esc(p.name)+'</b> <span class=badge style="font-size:9px">'+esc(p.stars)+' ★</span><br><span style="font-size:11px;color:#8b949e">'+esc(p.description)+'</span><br><span style="font-size:10px;color:#484f58">📦 '+esc(p.install)+'</span> <span style="font-size:10px;color:#58a6ff;cursor:pointer" onclick="navigator.clipboard.writeText(\''+esc(p.install)+'\').then(()=>showOk(\'已复制安装命令\'))">📋复制</span></div></div>').join('')+'</div>'}).join('')}
+function loadStore(){renderStore()}
+
 function renderMemoryStats(){fetch('/api/memory/stats').then(r=>r.json()).then(s=>{document.getElementById('memStats').textContent=s.total+'条';searchMemory()}).catch(()=>{})}
 
 
@@ -269,7 +287,7 @@ function connect(){
         fetch('/api/status').then(r=>r.json()).then(s=>{
           renderAgents(s.agents); renderTasks(s.tasks)
         }).catch(()=>{})
-        renderMemoryStats()
+        renderMemoryStats(); loadStore()
       }
       if(m.type==='room:history'){ msgs=m.messages||[]; addMsg(null) }
       if(m.type==='agent:update'){ fetch('/api/status').then(r=>r.json()).then(s=>{renderAgents(s.agents);renderTasks(s.tasks)}).catch(()=>{}) }
@@ -419,10 +437,38 @@ function startHttpServer(): void {
       return
     }
 
+    // ── Registry API (MCP商店) ──
+    if (_req.method === "GET" && _req.url === "/api/store") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(registry.byCategory()))
+      return
+    }
+    if (_req.method === "GET" && _req.url?.startsWith("/api/store/search")) {
+      const qs = (_req.url || "").split("?")[1] || ""; const params = new Map<string,string>()
+      qs.split("&").forEach(p => { const [k,v] = p.split("="); if(k) params.set(decodeURIComponent(k), decodeURIComponent(v||"")) })
+      const q = params.get("q") || ""; const cat = params.get("cat") || ""
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(registry.search(q, cat || undefined, 30)))
+      return
+    }
+    if (_req.method === "GET" && _req.url?.startsWith("/api/store/")) {
+      const id = _req.url.slice("/api/store/".length)
+      const p = registry.get(id);
+      if (!p) { res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "not found" })); return }
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(p)); return
+    }
+    if (_req.method === "POST" && _req.url === "/api/store") {
+      const chunks: Buffer[] = []; _req.on("data",(c:Buffer)=>chunks.push(c)); _req.on("end",()=>{
+        try { const b = JSON.parse(Buffer.concat(chunks).toString("utf-8")); const p = registry.add(b); res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify(p)) }
+        catch { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "parse error" })) }
+      }); return
+    }
+
     // GET /api/health
     if (_req.method === "GET" && _req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
-      res.end(JSON.stringify({ status: "ok", name: "hvip-hub", version: VERSION, wsPort, webPort, db: dbPath }))
+      res.end(JSON.stringify({ status: "ok", name: "hvip-hub", version: VERSION, wsPort, webPort, db: dbPath, registry: registry.all().length + " plugins" }))
       return
     }
 
@@ -467,6 +513,11 @@ if (memOk) {
   const ms = memory.stats()
   process.stderr.write(`[Hub] 🧠 记忆: ${ms.total} 条 (doc:${ms.byType.doc||0} directive:${ms.byType.directive||0} memory:${ms.byType.memory||0} skill:${ms.byType.skill||0})\n`)
 }
+
+// 插件商店
+const registryPath = flag("registry-db") || process.env.HUB_REGISTRY_DB || ".hub/registry.db"
+const registry = new HubRegistry(registryPath)
+registry.open()
 
 // 启动 HTTP 仪表盘
 startHttpServer()
