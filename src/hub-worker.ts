@@ -21,6 +21,7 @@ function flag(name: string): string | undefined {
 const HUB_URL    = flag("hub")  || process.env.HUB_URL  || "ws://127.0.0.1:9321"
 const TASK_ID    = flag("task") || process.env.TASK_ID   || ""
 const REPO_PATH  = flag("repo") || process.env.REPO_PATH || process.cwd()
+const PROMPT_B64 = flag("prompt-b64") || ""  // Hub v2: pre-built prompt from template
 
 const AGENT_ID = `worker-${TASK_ID}-${Date.now()}`
 const AGENT_NAME = `Worker·${TASK_ID}`
@@ -69,12 +70,16 @@ function handleMessage(msg: any): void {
   switch (msg.type) {
     case "agent:registered":
       process.stderr.write(`[Worker] 注册成功。可用任务: [${(msg.pendingTasks || []).join(", ")}]\n`)
+      if (!taskReceived) {
+        taskReceived = true
+        doTask(TASK_ID, `Hub任务: ${TASK_ID}`, "", PROMPT_B64)
+      }
       break
 
     case "task:dispatch":
       if (msg.taskId === TASK_ID && !taskReceived) {
         taskReceived = true
-        doTask(msg.taskId, msg.title || TASK_ID, msg.url || "")
+        doTask(msg.taskId, msg.title || TASK_ID, msg.url || "", PROMPT_B64)
       }
       break
 
@@ -110,18 +115,26 @@ function detectTaskType(title: string): TaskMode {
 // 执行任务
 // ═══════════════════════════════════════════════════════════════════════════
 
-function doTask(taskId: string, title: string, url: string): void {
+function doTask(taskId: string, title: string, url: string, promptB64?: string): void {
   process.stderr.write(`[Worker] 🚀 开始执行 ${taskId}: ${title}\n`)
 
   // 认领
   ws.send(JSON.stringify({ type: "task:claim", taskId, agentId: AGENT_ID }))
 
-  const mode = detectTaskType(title)
-  process.stderr.write(`[Worker] 模式: ${mode}\n`)
-
-  const prompt = mode === "market" ? buildMarketPrompt(title)
-    : mode === "research" ? buildResearchPrompt(title)
-    : buildCodePrompt(taskId, title, url)
+  // Hub v2: 如果有预构建的 prompt，直接用
+  let prompt: string
+  let mode = "code"
+  if (promptB64) {
+    prompt = Buffer.from(promptB64, "base64").toString("utf-8")
+    mode = "template"
+    process.stderr.write(`[Worker] 模式: template (预构建 prompt, ${prompt.length} chars)\n`)
+  } else {
+    mode = detectTaskType(title)
+    process.stderr.write(`[Worker] 模式: ${mode}\n`)
+    prompt = mode === "market" ? buildMarketPrompt(title)
+      : mode === "research" ? buildResearchPrompt(title)
+      : buildCodePrompt(taskId, title, url)
+  }
 
   // 立刻推送启动状态
   ws.send(JSON.stringify({
@@ -134,9 +147,10 @@ function doTask(taskId: string, title: string, url: string): void {
   process.stderr.write(`[Worker] 启动 Claude Code...\n`)
   const child = spawn(CLAUDE_CLI, ["-p", prompt], {
     cwd: REPO_PATH,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env, NO_COLOR: "1" },
   })
+  child.stdin.end()  // 关键: 关闭 stdin 让 Claude Code 知道没有更多输入
 
   let output = ""
   let pushCount = 0
@@ -169,7 +183,7 @@ function doTask(taskId: string, title: string, url: string): void {
     if (code === 0) {
       process.stderr.write(`[Worker] ✅ Claude Code 完成 (exit ${code})\n`)
 
-      if (mode === "market" || mode === "research") {
+      if (mode === "market" || mode === "research" || mode === "template") {
         // 行情类任务: 结果发到 #lobby，任务标记 done，写入记忆
         ws.send(JSON.stringify({
           type: "room:message",
@@ -182,8 +196,8 @@ function doTask(taskId: string, title: string, url: string): void {
           agentId: AGENT_ID,
           result: `${title} — 行情已查询`,
         }))
-        // 自动保存到共享记忆
-        tagAndSave(title, output)
+        // 自动保存到共享记忆（失败不阻断）
+        try { tagAndSave(title, output) } catch {}
       } else {
         // 写代码任务: 原有逻辑
         const branchMatch = output.match(/push.*?(task\/\S+|feat\/\S+|fix\/\S+)/i)
@@ -247,7 +261,7 @@ function tagAndSave(title: string, output: string): void {
   const hubHost = new URL(HUB_URL).hostname
   const hubPort = new URL(HUB_URL.replace("ws://", "http://")).port || "3000"
   const body = JSON.stringify({ type: "memory", agentId: AGENT_ID, text, tags, confidence: 0.8 })
-  const req = http.request({ hostname: hubHost, port, method: "POST", path: "/api/memory", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, (res) => {
+  const req = http.request({ hostname: hubHost, port: parseInt(hubPort), method: "POST", path: "/api/memory", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, (res) => {
     process.stderr.write(`[Worker] 记忆已保存 (${res.statusCode})\n`)
   })
   req.on("error", () => {})

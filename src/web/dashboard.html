@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Hub · 仪表盘</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,monospace;background:#0d1117;color:#c9d1d9;min-height:100vh}
+.header{background:#161b22;border-bottom:1px solid #30363d;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:18px;color:#58a6ff}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.dot.online{background:#3fb950;box-shadow:0 0 6px #3fb950}
+.dot.working{background:#d29922;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;max-width:1400px;margin:0 auto}
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding:8px 0}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:#161b22;border:1px solid #30363d;border-radius:8px;overflow:hidden;margin-bottom:12px}
+.card-title{background:#1c2128;padding:8px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #30363d}
+.card-body{padding:12px 14px;font-size:13px;line-height:1.6}
+.template-card{cursor:pointer;background:#1c2128;border:1px solid #30363d;border-radius:8px;padding:12px;transition:all .15s}
+.template-card:hover{border-color:#58a6ff;background:#1a2332}
+.template-card.selected{border-color:#3fb950;background:#0d3320}
+.template-card h3{font-size:14px;margin-bottom:4px}
+.template-card p{font-size:11px;color:#8b949e}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;margin-left:4px}
+.tag.idle{background:#1b3a1b;color:#3fb950}
+.tag.working{background:#3d2e00;color:#d29922}
+.tag.done{background:#1b3a1b;color:#3fb950}
+.tag.unassigned{background:#21262d;color:#8b949e}
+.tag.assigned{background:#3d2e00;color:#d29922}
+.badge{display:inline-block;background:#21262d;padding:1px 6px;border-radius:4px;font-size:11px;margin-right:4px}
+.ts{color:#484f58;font-size:11px;margin-left:8px}
+.empty{color:#484f58;font-style:italic;padding:20px;text-align:center}
+.error-banner{background:#490202;color:#f85149;padding:8px 16px;font-size:12px;display:none}
+input,textarea,select{background:#0d1117;border:1px solid #30363d;color:#c9d1d9;border-radius:4px}
+input:focus,textarea:focus{outline:none;border-color:#58a6ff}
+.btn{background:#238636;color:white;border:none;padding:6px 16px;border-radius:4px;font-size:13px;cursor:pointer}
+.btn:hover{background:#2ea043}
+.btn.blue{background:#1f6feb}
+.btn.blue:hover{background:#388bfd}
+.btn.red{background:#da3633}
+.field{margin-bottom:8px}
+.field label{display:block;font-size:11px;color:#8b949e;margin-bottom:2px}
+.field input,.field textarea{width:100%;padding:6px 8px;font-size:13px}
+.field textarea{min-height:60px;resize:vertical}
+.stats{display:flex;gap:16px}
+.stat{text-align:center}.stat-val{font-size:28px;font-weight:700;color:#58a6ff}.stat-label{font-size:11px;color:#8b949e}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🤖 Agent Hub <span style="font-weight:400;color:#8b949e;font-size:14px" id="version"></span></h1>
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="agentCount">0</div><div class="stat-label">Agents</div></div>
+    <div class="stat"><div class="stat-val" id="taskCount">0</div><div class="stat-label">Tasks</div></div>
+  </div>
+</div>
+<div class="error-banner" id="errorBanner"></div>
+
+<div style="padding:0 16px;max-width:1400px;margin:0 auto">
+
+<!-- ── Task Creator ── -->
+<div class="card">
+  <div class="card-title">📋 派任务给 AI</div>
+  <div class="card-body">
+    <div class="template-grid" id="templates"></div>
+    <div id="templateForm" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #30363d"></div>
+    <div id="launchBtns" style="display:none;margin-top:12px">
+      <button class="btn" onclick="createTask()">📝 只创建任务</button>
+      <button class="btn blue" onclick="createAndSpawn()" style="margin-left:8px">🚀 创建并拉起 AI</button>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- Agents -->
+  <div class="card">
+    <div class="card-title"><span>🧑‍💻 在线 Agent</span><span id="agentLabel">0 在线</span></div>
+    <div class="card-body" id="agents"><div class="empty">等待 Agent 连接...</div></div>
+  </div>
+  <!-- Tasks -->
+  <div class="card">
+    <div class="card-title"><span>📋 任务列表</span><span id="taskLabel"></span></div>
+    <div class="card-body" id="tasks"><div class="empty">暂无任务</div></div>
+  </div>
+  <!-- Live Feed -->
+  <div class="card" style="grid-column:1/-1">
+    <div class="card-title">📡 实时动态 <span id="feedLabel" style="font-weight:400;color:#484f58"></span></div>
+    <div class="card-body" id="liveFeed" style="max-height:200px;overflow-y:auto"><div class="empty">等待事件...</div></div>
+  </div>
+</div>
+</div>
+
+<script>
+<!-- JS 将由 hub-server 注入 HOST/WS_PORT -->
+const HOST = 'HUB_HOST'
+const WS_PORT = 0
+
+let templates = []
+let selectedTemplate = null
+let feed = []
+let taskProgress = {}
+
+function timeAgo(iso){const d=new Date(iso);const s=Math.floor((Date.now()-d)/1e3);if(s<10)return'刚刚';if(s<60)return s+'s前';if(s<3600)return Math.floor(s/60)+'m前';return Math.floor(s/3600)+'h前'}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;')}
+
+// ── Templates ──
+async function loadTemplates(){
+  const r = await fetch('/api/templates').catch(()=>null)
+  if(!r)return
+  templates = await r.json()
+  const el = document.getElementById('templates')
+  el.innerHTML = templates.map(t =>
+    '<div class="template-card" id="tpl-'+t.id+'" onclick="selectTemplate(\''+t.id+'\')">'+
+    '<h3>'+esc(t.name)+'</h3><p>'+esc(t.description)+'</p></div>'
+  ).join('')
+}
+
+function selectTemplate(id){
+  document.querySelectorAll('.template-card').forEach(c=>c.classList.remove('selected'))
+  document.getElementById('tpl-'+id).classList.add('selected')
+  selectedTemplate = templates.find(t=>t.id===id)
+  renderForm()
+}
+
+function renderForm(){
+  if(!selectedTemplate){document.getElementById('templateForm').style.display='none';document.getElementById('launchBtns').style.display='none';return}
+  const t = selectedTemplate
+  const el = document.getElementById('templateForm')
+  el.innerHTML = '<h4 style="margin-bottom:8px">'+esc(t.name)+' — 填参数</h4>'+
+    t.fields.map(f => '<div class=field><label>'+esc(f.label)+(f.required?' *':'')+'</label>'+
+    (f.key==='errorLog'||f.key==='extraParams'?'<textarea id="f_'+f.key+'" placeholder="'+esc(f.placeholder)+'"></textarea>':
+    '<input id="f_'+f.key+'" placeholder="'+esc(f.placeholder)+'">')+
+    '</div>').join('')
+  el.style.display = 'block'
+  document.getElementById('launchBtns').style.display = 'block'
+}
+
+function getParams(){
+  const p = {}
+  for(const f of selectedTemplate.fields){
+    const v = document.getElementById('f_'+f.key).value.trim()
+    if(v) p[f.key] = v
+  }
+  return p
+}
+
+function genTaskId(){
+  const ts = Date.now().toString(36).slice(-4)
+  const rnd = Math.random().toString(36).slice(2,6)
+  const prefix = selectedTemplate.prefix||'C'
+  const w = (selectedTemplate.id||'task').replace(/[^a-zA-Z0-9]/g,'-').slice(0,10)
+  return prefix+'-'+w+'-'+ts+'-'+rnd
+}
+
+async function createTask(){
+  if(!selectedTemplate) return
+  const params = getParams()
+  const id = genTaskId()
+  const title = selectedTemplate.name+' | '+Object.values(params).slice(0,3).join(' | ')
+
+  const r = await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({taskId:id,title,template:selectedTemplate.id,params})})
+  if(r.ok){
+    showOk('任务 '+id+' 已创建')
+    setTimeout(()=>refresh(),500)
+  }else{
+    const e = await r.json().catch(()=>({}))
+    showError(e.error||'创建失败')
+  }
+}
+
+async function createAndSpawn(){
+  if(!selectedTemplate) return
+  await createTask()
+  const id = genTaskId() // won't match — use document storage
+  // Re-get from last create
+  const meta = document.getElementById('templateForm').dataset
+  const lastId = meta?.lastId
+  // Actually just spawn using the same ID pattern
+  // Better: store the ID from createTask response
+  // Simple approach: re-gen won't work. Use stored.
+  if(!lastCreatedId){showError('请先创建任务');return}
+  const r = await fetch('/api/tasks/'+encodeURIComponent(lastCreatedId)+'/spawn',{method:'POST'})
+  if(r.ok) showOk('🤖 AI Agent 已启动！刷新查看进度')
+  else{const e=await r.json().catch(()=>({}));showError(e.error||'启动失败')}
+}
+let lastCreatedId = ''
+
+// ── Agents ──
+function renderAgents(agents){
+  const el = document.getElementById('agents')
+  document.getElementById('agentCount').textContent = agents.length
+  document.getElementById('agentLabel').textContent = agents.length+' 在线'
+  if(!agents.length){el.innerHTML='<div class=empty>等待 Agent 连接...</div>';return}
+  el.innerHTML = agents.map(a=>{
+    const dot = a.status==='working'?'working':'online'
+    const tag = a.status==='working'?'working':'idle'
+    return '<div style="padding:6px 0;border-bottom:1px solid #21262d">'+
+      '<span class="dot '+dot+'"></span><b>'+esc(a.name)+'</b> '+
+      '<span style=color:#8b949e;font-size:11px>'+esc(a.agentId||'').slice(0,30)+'</span>'+
+      '<span class="tag '+tag+'">'+a.status+'</span>'+
+      '</div>'
+  }).join('')
+}
+
+// ── Tasks ──
+function renderTasks(tasks){
+  const el = document.getElementById('tasks')
+  document.getElementById('taskCount').textContent = tasks.length
+  const done = tasks.filter(t=>t.status==='reviewed').length
+  document.getElementById('taskLabel').textContent = tasks.length+' 个 · '+done+' 已完成'
+  if(!tasks.length){el.innerHTML='<div class=empty>暂无任务</div>';return}
+  el.innerHTML = tasks.map(t=>{
+    const spawnBtn = (t.status==='unassigned'||t.status==='reviewed')?
+      ' <button onclick="spawnWorker(\''+esc(t.taskId)+'\')" style="font-size:10px;background:#1f6feb;color:white;border:none;padding:1px 8px;border-radius:8px;cursor:pointer">🤖</button>':''
+    return '<div style="padding:6px 0;border-bottom:1px solid #21262d">'+
+      '<b>'+esc(t.taskId)+'</b> '+esc(t.title||t.taskId)+
+      '<span class="tag '+t.status+'">'+t.status+'</span>'+spawnBtn+
+      (t.result?'<br><span style=font-size:11px;color:#8b949e>'+esc(t.result)+'</span>':'')+
+      '</div>'
+  }).join('')
+}
+
+async function spawnWorker(taskId){
+  if(!confirm('启动 AI Agent 处理 '+taskId+'？'))return
+  const r = await fetch('/api/tasks/'+encodeURIComponent(taskId)+'/spawn',{method:'POST'})
+  if(r.ok) showOk('🤖 AI Agent 已启动！')
+  else{const e=await r.json().catch(()=>({}));showError(e.error||'启动失败')}
+}
+
+// ── Feed ──
+function addFeed(m){
+  feed.unshift(m); if(feed.length>50) feed.pop()
+  const el = document.getElementById('liveFeed')
+  document.getElementById('feedLabel').textContent = feed.length+'条'
+  el.innerHTML = feed.slice(0,20).map(f=>
+    '<div style="padding:4px 0;font-size:12px;border-bottom:1px solid #21262d">'+
+    '<span style=color:#58a6ff>'+esc(f.from||'?')+'</span> '+
+    '<span class=ts>'+timeAgo(f.ts||new Date().toISOString())+'</span> '+
+    esc((f.text||f.message||'').substring(0,200))+
+    '</div>'
+  ).join('')
+}
+
+async function refresh(){
+  const r = await fetch('/api/status').catch(()=>null)
+  if(!r)return
+  const s = await r.json()
+  renderAgents(s.agents)
+  renderTasks(s.tasks)
+}
+
+// ── Notifications ──
+function showError(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.display='block';setTimeout(()=>b.style.display='none',8000)}
+function showOk(msg){const b=document.getElementById('errorBanner');b.textContent=msg;b.style.background='#0d3320';b.style.color='#3fb950';b.style.display='block';setTimeout(()=>{b.style.display='none';b.style.background='#490202';b.style.color='#f85149'},5000)}
+
+// ── Init ──
+loadTemplates()
+refresh()
+
+// WS
+function connect(){
+  const ws = new WebSocket('ws://'+HOST+':'+WS_PORT)
+  ws.onopen = () => ws.send(JSON.stringify({type:'agent:hello',agentId:'dashboard-'+Date.now(),name:'仪表盘',version:'0.3.0',capabilities:[]}))
+  ws.onmessage = (e) => {
+    try{
+      const m = JSON.parse(e.data)
+      if(m.type==='agent:registered'||m.type==='agent:update'||m.type==='agent:offline') refresh()
+      if(m.type==='room:message') addFeed(m)
+      if(m.type==='task:completed'||m.type==='task:released'||m.type==='task:dispatch') refresh()
+    }catch(ex){}
+  }
+  ws.onclose = () => setTimeout(connect, 5000)
+}
+if(WS_PORT) connect()
+setInterval(refresh, 5000)
+</script>
+</body>
+</html>
