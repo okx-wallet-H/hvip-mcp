@@ -3,7 +3,7 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.2.57 · 365 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
+hvip-mcp-server v0.2.58 · 365 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
 入口 → src/index.ts → 注册全部 19 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
@@ -139,4 +139,4 @@ Issue/任务 → 分支(feat/fix/task) → 开发 → build → push → CI → 
 
 ## 当前状态
 
-v0.2.57 · 365 MCP 工具 · 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
+v0.2.58 · 365 MCP 工具 · 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
