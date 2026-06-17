@@ -90,6 +90,24 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
+    "okx_get_order",
+    "READ",
+    "CAT:[交易] | → 请先调用 agent_catalog",
+    {
+      instId: z.string().describe("产品ID，如 BTC-USDT"),
+      ordId:  z.string().describe("订单ID"),
+    },
+    async ({ instId, ordId }) => {
+      if (!auth) return toError(AUTH_REQUIRED)
+      try {
+        const data = await privateApi.getOrder(auth, instId, ordId)
+        return toResult(data)
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  registerTool(
+    server,
     "okx_get_fills",
     "READ",
     "CAT:[交易] | → 请先调用 agent_catalog",
@@ -129,15 +147,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_batch_orders",
     "WRITE",
-    `## 功能：批量下单（最多20笔）
-## 场景：用于需要同时下多个订单的策略（如一篮子建仓、多产品套利布局）
-## 关键词：批量下单, 批量委托, batch orders, 一篮子订单, 组合下单
-## 参数：
-##   - orders: 订单数组（JSON数组字符串），每项含 instId/tdMode/side/ordType/sz/px 等字段。最多20笔
-## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认每笔订单内容
-## 风险：WRITE — 创建订单，调用前必须向用户逐笔确认
-## 返回量：微小 ~2KB
-## 关联：okx_get_instruments 获取产品列表 → 本工具批量下单 → okx_batch_cancel_orders 撤销`,
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       orders: z.string().describe("订单数组JSON字符串，如 '[{\"instId\":\"BTC-USDT\",\"tdMode\":\"cash\",\"side\":\"buy\",\"ordType\":\"limit\",\"sz\":\"0.001\",\"px\":\"60000\"}]'。最多20笔"),
     },
@@ -155,15 +165,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_batch_cancel_orders",
     "WRITE",
-    `## 功能：批量撤销订单
-## 场景：用于一键撤销所有未成交挂单、清空特定产品的订单队列
-## 关键词：批量撤单, 批量撤销, batch cancel, 一键撤单, 清空挂单
-## 参数：
-##   - orders: 撤单数组（JSON数组字符串），每项含 instId/ordId。不填instId则撤销该产品所有挂单
-## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认
-## 风险：WRITE — 撤销订单，调用前必须向用户确认
-## 返回量：微小 ~2KB
-## 关联：okx_get_orders_pending 查看挂单 → 本工具批量撤销 → okx_get_orders_history 确认撤销`,
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       orders: z.string().describe("撤单数组JSON字符串，如 '[{\"instId\":\"BTC-USDT\",\"ordId\":\"123456\"}]'"),
     },
@@ -181,18 +183,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_close_position",
     "WRITE",
-    `## 功能：市价全平某仓位
-## 场景：用于紧急平仓止损/止盈、清空某方向全部持仓
-## 关键词：平仓, 市价全平, close position, 止损平仓, 清仓, 紧急平仓
-## 参数：
-##   - instId: 产品ID，如 BTC-USDT-SWAP。必填
-##   - posSide: 持仓方向。long=平多头, short=平空头。不填则按mgnMode自动判断
-##   - mgnMode: 保证金模式。cross=全仓, isolated=逐仓
-##   - ccy: 保证金币种（全仓时选填）
-## 鉴权：🔴 需要 API Key（交易）- 风控核心工具，调用前必须二次确认
-## 风险：FUND_TRANSFER — 平仓操作直接影响持仓和资金，调用前必须向用户确认
-## 返回量：微小 ~300B
-## 关联：okx_get_positions 确认持仓 → 本工具市价全平 → okx_get_orders_history 确认成交`,
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       posSide: z.enum(["long","short"]).optional().describe("持仓方向。long=平多头, short=平空头。全仓必填"),
@@ -216,15 +207,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_amend_batch_orders",
     "WRITE",
-    `## 功能：批量修改未成交订单
-## 场景：用于同时调整多个限价单的价格或数量、批量更新挂单策略
-## 关键词：批量改单, 批量修改, amend batch orders, 批量改价, 批量调量
-## 参数：
-##   - orders: 改单数组（JSON数组字符串），每项含 instId/ordId/newSz/newPx。最多20笔
-## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认
-## 风险：WRITE — 修改订单，调用前必须向用户确认
-## 返回量：微小 ~2KB
-## 关联：okx_get_orders_pending 查看挂单 → 本工具批量改单 → okx_get_order 确认修改`,
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       orders: z.string().describe("改单数组JSON字符串，如 '[{\"instId\":\"BTC-USDT\",\"ordId\":\"123\",\"newPx\":\"62000\"}]'。最多20笔"),
     },
@@ -242,17 +225,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_fills_history",
     "READ",
-    `## 功能：查询历史成交明细（最近3个月）
-## 场景：用于精确计算历史成交均价、复盘交易表现、核对成交记录
-## 关键词：成交历史, 成交明细, fills history, 历史成交, 逐笔成交历史
-## 参数：
-##   - instType: 产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。可选
-##   - instId: 产品ID，如 BTC-USDT。可选
-##   - limit: 返回条数，默认100
-## 鉴权：⚠️ 需要 API Key（只读）
-## 风险：READ — 只读查询，Agent 可自动调用
-## 返回量：中等 ~10KB
-## 关联：okx_get_fills 查最近成交 → 本工具查历史成交 → okx_get_orders_history 对账`,
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       instId:   z.string().optional().describe("产品ID，如 BTC-USDT"),
@@ -271,16 +244,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_mass_cancel",
     "WRITE",
-    `## 功能：批量撤销某产品类型下所有挂单
-## 场景：用于极端行情下紧急清空所有挂单、快速重置交易策略
-## 关键词：批量撤单, 全部撤单, mass cancel, 清空挂单, 紧急撤单
-## 参数：
-##   - instType: 产品类型。SPOT/MARGIN/SWAP/FUTURES/OPTION。必填
-##   - instFamily: 产品族，如 BTC-USDT。可选（仅合约需要）
-## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认
-## 风险：WRITE — 撤销所有挂单，影响范围大，调用前必须确认
-## 返回量：微小 ~500B
-## 关联：okx_get_orders_pending 确认挂单 → 本工具全部撤销 → okx_get_orders_history 确认`,
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       instType:   z.enum(INST_TYPE_TRADE).describe("产品类型"),
       instFamily: z.string().optional().describe("产品族，如 BTC-USDT。仅合约需填"),
@@ -315,15 +279,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_order_precheck",
     "READ",
-    `## 功能：下单预检（验证订单参数是否合法，不实际下单）
-## 场景：用于下单前验证参数正确性、检查余额和风控限制、避免因参数错误导致的订单失败
-## 关键词：下单预检, 预检查, order precheck, 订单验证, 参数检查
-## 参数：
-##   - params: 订单参数JSON对象，与 okx_place_order 参数相同。必填
-## 鉴权：⚠️ 需要 API Key（只读）
-## 风险：READ — 只读预检，不产生实际订单，Agent 可自动调用
-## 返回量：微小 ~500B
-## 关联：okx_place_order 下单前 → 本工具预检参数 → 通过后正式下单`,
+    "CAT:[交易] | → 请先调用 agent_catalog",
     {
       params: z.string().describe("订单参数JSON字符串，如 '{\"instId\":\"BTC-USDT\",\"tdMode\":\"cash\",\"side\":\"buy\",\"ordType\":\"limit\",\"sz\":\"0.001\",\"px\":\"60000\"}'"),
     },

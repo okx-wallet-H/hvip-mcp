@@ -357,16 +357,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_option_instrument_family_trades",
     "READ",
-    `## 功能：按产品族获取期权链最新成交（按期权类型归组）
-## 场景：用于快速浏览某BTC/ETH期权链整体成交概况、对比看涨/看跌成交分布、发现大额期权异动
-## 关键词：期权族成交, option family trades, 期权链成交, 期权成交概况, 期权成交汇总
-## 参数：
-##   - instFamily: 产品族，如 BTC-USD。必填
-##   - limit: 返回条数，默认不填则返回全部
-## 鉴权：PUBLIC — 公开接口，不需要 API Key
-## 风险：READ — 只读查询，Agent 可自动调用
-## 返回量：中等 ~5KB
-## 关联：先调 okx_get_instruments(instType=OPTION) 获取期权产品 → 本工具看族成交 → okx_get_option_trades 看单笔`,
+    "CAT:[公共] | → 请先调用 agent_catalog",
     {
       instFamily: z.string().describe("产品族，如 BTC-USD。必填"),
       limit:      z.number().int().min(1).max(100).optional().describe("返回条数"),
@@ -383,17 +374,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_option_trades",
     "READ",
-    `## 功能：获取期权逐笔成交记录
-## 场景：用于分析具体期权合约的成交价量分布、判断主动买卖方向、跟踪期权大单
-## 关键词：期权成交, option trades, 逐笔期权成交, 期权明细, 期权大单, option fill
-## 参数：
-##   - instFamily: 产品族，如 BTC-USD。与instId二选一
-##   - instId: 期权产品ID，如 BTC-USD-260612-64000-C。与instFamily二选一
-##   - limit: 返回条数，默认100，最大100
-## 鉴权：PUBLIC — 公开接口，不需要 API Key
-## 风险：READ — 只读查询，Agent 可自动调用
-## 返回量：100条 ~5KB — 中等
-## 关联：okx_get_option_instrument_family_trades 看族概况 → 本工具看逐笔 → okx_get_opt_summary 看波动率`,
+    "CAT:[公共] | → 请先调用 agent_catalog",
     {
       instFamily: z.string().optional().describe("产品族，如 BTC-USD。与instId二选一"),
       instId:     z.string().optional().describe("期权产品ID，如 BTC-USD-260612-64000-C。与instFamily二选一"),

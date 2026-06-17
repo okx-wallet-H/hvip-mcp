@@ -307,17 +307,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_convert_trade",
     "WRITE",
-    `## 功能：执行资产兑换（将一种资产直接换成另一种，如 USDT→BTC）
-## 场景：用于快速换币、小额资产兑换、无需挂单的即时兑换
-## 关键词：兑换, convert trade, 资产兑换, 换币, 一键兑换, 闪兑
-## 参数：
-##   - fromCcy: 卖出币种，如 USDT。必填
-##   - toCcy: 买入币种，如 BTC。必填
-##   - sz: 卖出数量。必填
-## 鉴权：🔴 需要 API Key（交易）- 调用前须向用户确认兑换方向和数量
-## 风险：FUND_TRANSFER — 产生真实兑换交易，调用前必须向用户确认
-## 返回量：微小 ~500B
-## 关联：okx_get_convert_currencies 查支持币种 → 本工具兑换 → okx_get_balance 确认到账`,
+    "CAT:[账户] | → 请先调用 agent_catalog",
     {
       fromCcy: z.string().describe("卖出币种，如 USDT。必填"),
       toCcy:   z.string().describe("买入币种，如 BTC。必填"),

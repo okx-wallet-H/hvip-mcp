@@ -5,15 +5,7 @@
  * SQLite 持久化，启动时预置精选插件。
  */
 
-let DatabaseSync: any = null
-let _available: boolean | null = null
-function ready(): boolean { return _available === true }
-
-function ensure(): boolean {
-  if (_available !== null) return _available
-  try { DatabaseSync = (require("node:sqlite") as any).DatabaseSync; _available = true } catch { _available = false }
-  return _available
-}
+import { isSqliteAvailable, openDB, ensureDir } from "./shared-sqlite.js"
 
 export interface MCPPlugin {
   id: string; name: string; category: string; description: string
@@ -54,11 +46,10 @@ export class HubRegistry {
   constructor(private dbPath: string) {}
 
   open(): boolean {
-    if (!ensure()) return false
+    if (!isSqliteAvailable()) return false
     try {
-      const fs = require("node:fs"), path = require("node:path")
-      const dir = path.dirname(this.dbPath); if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-      this.db = new DatabaseSync(this.dbPath, { create: true })
+      ensureDir(this.dbPath)
+      this.db = openDB(this.dbPath, { create: true })
       this.db.exec(`CREATE TABLE IF NOT EXISTS registry (id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT, description TEXT, repo TEXT, install TEXT, stars TEXT, tags TEXT, verified INTEGER DEFAULT 0, createdAt TEXT DEFAULT (datetime('now')))`)
       this.db.exec(`CREATE INDEX IF NOT EXISTS idx_registry_name ON registry(name); CREATE INDEX IF NOT EXISTS idx_registry_category ON registry(category); CREATE INDEX IF NOT EXISTS idx_registry_tags ON registry(tags)`)
       const n = (this.db.prepare("SELECT COUNT(*) as n FROM registry").get() as any)?.n || 0

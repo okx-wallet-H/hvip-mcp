@@ -11,17 +11,7 @@
  *   mem.search("BTC 行情")  // 关键词 + 标签搜索
  */
 
-let DatabaseSync: any = null
-let _available: boolean | null = null
-
-function isSqliteAvailable(): boolean {
-  if (_available !== null) return _available
-  try {
-    DatabaseSync = (require("node:sqlite") as any).DatabaseSync
-    _available = true
-    return true
-  } catch { _available = false; return false }
-}
+import { isSqliteAvailable, openDB, ensureDir } from "./shared-sqlite.js"
 
 // ── 类型 ─────────────────────────────────────────────────────────────────
 
@@ -77,10 +67,8 @@ export class HubMemory {
       return false
     }
     try {
-      const fs = require("node:fs"), path = require("node:path")
-      const dir = path.dirname(this.dbPath)
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-      this.db = new DatabaseSync(this.dbPath, { create: true })
+      ensureDir(this.dbPath)
+      this.db = openDB(this.dbPath, { create: true })
       this.migrate()
       process.stderr.write(`[Memory] 已打开 ${this.dbPath}\n`)
       this.startDecay()

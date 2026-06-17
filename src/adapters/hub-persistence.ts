@@ -10,21 +10,7 @@
  *   db.saveTask(...)    // 状态变化时保存
  */
 
-let DatabaseSync: any = null
-let _available: boolean | null = null
-
-function isSqliteAvailable(): boolean {
-  if (_available !== null) return _available
-  try {
-    const sqlite = require("node:sqlite") as { DatabaseSync: new (p: string, o?: any) => any }
-    DatabaseSync = sqlite.DatabaseSync
-    _available = true
-    return true
-  } catch {
-    _available = false
-    return false
-  }
-}
+import { isSqliteAvailable, openDB, ensureDir } from "./shared-sqlite.js"
 
 // ── DB 类型 ─────────────────────────────────────────────────────────────────
 
@@ -68,12 +54,8 @@ export class HubDB {
     }
     try {
       // 确保目录存在
-      const fs = require("node:fs")
-      const path = require("node:path")
-      const dir = path.dirname(this.dbPath)
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-
-      this.db = new DatabaseSync(this.dbPath, { create: true })
+      ensureDir(this.dbPath)
+      this.db = openDB(this.dbPath, { create: true })
       this.migrate()
       process.stderr.write(`[HubDB] 已打开 ${this.dbPath}\n`)
       return true

@@ -8,18 +8,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_create_rfq",
     "WRITE",
-    `## 功能：创建报价请求（RFQ，Request For Quote），用于大宗交易询价
-## 场景：用于向做市商或对手方发起大宗交易询价、获取定制报价
-## 关键词：询价, RFQ, 报价请求, 大宗交易询价, 请求报价
-## 参数：
-##   - instId: 产品ID。必填
-##   - side: 买卖方向。buy=买入, sell=卖出。必填
-##   - sz: 数量。必填
-##   - szType: 数量类型。base=按币, quote=按计价币。可选
-## 鉴权：🔴 需要 API Key（交易）- 将发送大宗交易询价，调用前必须向用户确认
-## 风险：WRITE — 发送RFQ后会收到报价，调用前必须确认
-## 返回量：微小 ~500B
-## 关联：本工具询价 → okx_get_quotes 查收到的报价 → okx_execute_quote 执行报价`,
+    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       instId: z.string().describe("产品ID。必填"),
       side:   z.enum(["buy","sell"]).describe("买卖方向。buy=买入, sell=卖出"),
@@ -41,18 +30,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_execute_quote",
     "READ",
-    `## 功能：执行报价（接受对手方的大宗交易报价）
-## 场景：用于接受RFQ报价、确认大宗交易成交
-## 关键词：执行报价, execute quote, 接受报价, 大宗成交, 确认交易
-## 参数：
-##   - instId: 产品ID。必填
-##   - quoteId: 报价ID。必填
-##   - rfqId: RFQ ID。必填
-##   - sz: 成交数量。必填
-## 鉴权：🔴 需要 API Key（交易）- 将执行大宗交易成交，调用前必须向用户确认
-## 风险：WRITE — 执行报价后即成交，调用前必须确认
-## 返回量：微小 ~500B
-## 关联：okx_create_rfq 发起询价 → okx_get_quotes 查看报价 → 本工具成交`,
+    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       instId:  z.string().describe("产品ID。必填"),
       quoteId: z.string().describe("报价ID。必填"),
@@ -72,15 +50,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_rfqs",
     "READ",
-    `## 功能：查询询价记录列表
-## 场景：用于查看历史RFQ、追踪询价状态、确认询价是否已报价
-## 关键词：询价记录, RFQ列表, 询价历史, RFQ记录, 报价请求记录
-## 参数：
-##   - state: 状态筛选。active=进行中, executed=已成交, canceled=已取消。可选
-## 鉴权：⚠️ 需要 API Key（只读）
-## 风险：READ — 只读查询，Agent 可自动调用
-## 返回量：中等 ~5KB
-## 关联：本工具查询价列表 → okx_get_quotes 查看对应报价 → 管理大宗交易`,
+    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       state: z.enum(["active","executed","canceled"]).optional().describe("状态筛选。active=进行中, executed=已成交, canceled=已取消"),
     },
@@ -97,15 +67,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_quotes",
     "READ",
-    `## 功能：查询针对某RFQ的报价列表
-## 场景：用于查看对手方对RFQ的回复报价、选择最优报价执行
-## 关键词：报价列表, quotes, RFQ报价, 查询报价, 对手方报价
-## 参数：
-##   - rfqId: RFQ ID。必填
-## 鉴权：⚠️ 需要 API Key（只读）
-## 风险：READ — 只读查询，Agent 可自动调用
-## 返回量：中等 ~5KB
-## 关联：okx_get_rfqs 查询价 → 本工具查看报价 → okx_execute_quote 执行`,
+    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
     {
       rfqId: z.string().describe("RFQ ID。必填"),
     },
