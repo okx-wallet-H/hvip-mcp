@@ -9,7 +9,17 @@
 
 ---
 
-## 安装
+## 🚀 一行安装
+
+```bash
+npx -y hvip-mcp-server
+```
+
+就这么简单。MCP 客户端（Claude Desktop / Claude Code / Cursor / VS Code）会自动接管。
+
+---
+
+## 配置到 AI 客户端
 
 **这不是命令行工具**——hvip-mcp 是 MCP (Model Context Protocol) 服务器，由 AI 客户端在后台自动运行。你只需要在配置文件中加一行 JSON，AI 自己会启动它。
 
