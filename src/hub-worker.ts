@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Agent Hub Worker — Hub 自动拉起的 AI Agent
  *
  * 连上 Hub → 注册 → 领任务 → spawn Claude Code → 汇报完成。
