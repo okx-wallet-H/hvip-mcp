@@ -46,14 +46,30 @@ const host     = flag("host")              || process.env.HUB_HOST      || "127.
 const webPort  = parseInt(flag("web-port") || process.env.HUB_WEB_PORT  || "3000", 10)
 const dbPath   = flag("db")               || process.env.HUB_DB_PATH   || ".hub/hub.db"
 
+const token = process.env.HUB_AUTH_TOKEN || ""  // PSK 鉴权令牌
 const workers: ReturnType<typeof spawn>[] = []
+
+// taskId 白名单校验 — 防止路径遍历注入
+function validateTaskId(id: string): boolean {
+  return /^[A-Za-z0-9_-]+$/.test(id) && !id.includes("..") && id.length <= 64
+}
 
 function startHttpServer(): void {
   const httpServer = createServer((_req: IncomingMessage, res: ServerResponse) => {
+    // ── Auth guard: PSK token 校验（/health 例外） ──
+    if (token && _req.url !== "/health") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      if (provided !== token) {
+        res.writeHead(401, { "Content-Type": "application/json" })
+        res.end(JSON.stringify({ error: "Unauthorized" }))
+        return
+      }
+    }
+
     // CORS
     res.setHeader("Access-Control-Allow-Origin", `http://${host}:${webPort}`)
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
     if (_req.method === "OPTIONS") {
       res.writeHead(204)
@@ -83,6 +99,7 @@ function startHttpServer(): void {
         try {
           const { taskId, title, template, params } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
           if (!taskId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
+          if (!validateTaskId(taskId)) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "taskId 格式无效，仅允许字母数字下划线连字符" })); return }
           // 注册到 Hub 内存 + 持久化
           agentHub.registerTask(taskId, title || taskId)
           db?.saveTask({ taskId, status: "unassigned", title: title || taskId })
@@ -102,7 +119,7 @@ function startHttpServer(): void {
     if (_req.method === "POST" && _req.url?.startsWith("/api/tasks/") && _req.url.endsWith("/spawn")) {
       const rawId = _req.url.slice("/api/tasks/".length, -"/spawn".length)
       const taskId = decodeURIComponent(rawId)
-      if (!taskId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
+      if (!taskId || !validateTaskId(taskId)) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "taskId 缺失或格式无效" })); return }
 
       const hubUrl = `ws://127.0.0.1:${wsPort}`
       const repoPath = process.cwd()
@@ -264,7 +281,7 @@ registry.open()
 startHttpServer()
 
 // 启动 WebSocket Hub
-agentHub.start(wsPort, host, VERSION)
+agentHub.start(wsPort, host, VERSION, token)
 
 // ── 优雅退出 ──────────────────────────────────────────────────────────────
 

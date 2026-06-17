@@ -245,7 +245,7 @@ export class WsManager {
               }
             }
           }
-        } catch { /* malformed WS message — OKX 有时发 pong/控制帧 */ }
+        } catch { process.stderr.write(`[WS] ⚠️ 畸形 WS 消息: ${raw.toString().slice(0, 80)}\n`) }
       })
 
       ws.on("error", (err: Error) => { clearTimeout(timeout); reject(err) })

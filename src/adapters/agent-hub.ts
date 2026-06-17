@@ -53,6 +53,7 @@ class AgentHub {
   private version = "0.0.0"
   private port = 0
   private db: HubDB | null = null
+  private token = ""  // PSK 鉴权令牌
 
   // ── 持久化绑定 ──
 
@@ -75,8 +76,9 @@ class AgentHub {
   }
 
   // ── 启动 ──
-  start(port: number, host = "0.0.0.0", version = "0.0.0"): void {
+  start(port: number, host = "0.0.0.0", version = "0.0.0", token = ""): void {
     this.version = version
+    this.token = token
     const startWss = (p: number): Promise<boolean> => {
       return new Promise((resolve) => {
         const wss = new WebSocketServer({ port: p, host })
@@ -117,7 +119,18 @@ class AgentHub {
     if (!this.wss) return
     this.ensureRoom("#lobby")
     this.ensureRoom("#review")
-    this.wss.on("connection", (ws) => {
+    this.wss.on("connection", (ws, req) => {
+      // ── Auth guard: PSK token 校验 ──
+      if (this.token) {
+        const urlParams = new URL(req.url || "/", "http://localhost").searchParams
+        const provided = urlParams.get("token") || ""
+        if (provided !== this.token) {
+          ws.send(JSON.stringify({ type: "error", message: "未授权 — 请在 WS URL 中携带 ?token=..." }))
+          ws.close()
+          return
+        }
+      }
+
       let agentId: string | null = null
       ws.on("message", (raw) => {
         try {
@@ -599,6 +612,6 @@ export const agentHub = new AgentHub()
 export type { HubStatus }
 
 // 便利函数
-export function startAgentHub(port: number, host = "0.0.0.0", version = "0.0.0"): void {
-  agentHub.start(port, host, version)
+export function startAgentHub(port: number, host = "0.0.0.0", version = "0.0.0", token = ""): void {
+  agentHub.start(port, host, version, token)
 }
