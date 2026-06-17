@@ -26,7 +26,9 @@
     "hvip-mcp": "dist/index.js"
   },
   "files": [
-    "dist/index.js"
+    "dist/index.js",
+    "dist/hub-server.js",
+    "dist/hub-worker.js"
   ],
   "publishConfig": {
     "access": "public"
