@@ -328,6 +328,17 @@ const schedules: ScheduledJob[] = [
 ]
 
 function runScheduledJob(job: ScheduledJob): void {
+  // 检查上次任务是否还在跑/积压，跳过本轮避免重复
+  const status = agentHub.status()
+  const prevTasks = status.tasks.filter(t =>
+    t.status === "unassigned" || t.status === "assigned"
+  ).filter(t => t.taskId.startsWith(job.id + "-"))
+  if (prevTasks.length > 0) {
+    process.stderr.write(`[Scheduler] ⏭️  ${job.name} 上次任务未完成 (${prevTasks.map(t=>t.taskId).join(",")})，跳过\n`)
+    scheduleNext(job)
+    return
+  }
+
   const taskId = `${job.id}-${Date.now().toString(36)}`
   const title = `[定时] ${job.name} #${job.count + 1}`
   process.stderr.write(`[Scheduler] ⏰ ${job.name} → ${taskId}\n`)
