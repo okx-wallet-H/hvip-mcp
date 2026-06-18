@@ -309,48 +309,29 @@ function startHttpServer(): void {
       return
     }
 
-    // ── POST /mcp — MCP 代理（带 session 管理）──
+    // ── POST /mcp — MCP 代理 ──
     if (_req.method === "POST" && _req.url === "/mcp") {
       const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", async () => {
         try {
           const bodyStr = Buffer.concat(chunks).toString("utf-8")
-          const req = JSON.parse(bodyStr)
-
-          // Auto-initialize MCP session if needed
-          if (!mcpSessionId || req.method === "initialize") {
-            const initRes = await fetch("http://127.0.0.1:9222/mcp", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
-              body: JSON.stringify({ jsonrpc: "2.0", method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "hub-proxy", version: "1.0" } }, id: 0 }),
-            })
-            const sid = initRes.headers.get("mcp-session-id")
-            if (sid) mcpSessionId = sid
-            // Read and discard init response body
-            await initRes.text()
-            // If client sent initialize, return the init response
-            if (req.method === "initialize") {
-              res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Mcp-Session-Id": sid || "" })
-              res.end(JSON.stringify({ jsonrpc: "2.0", id: 0, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "hvip-mcp", version: "1.0" } } }))
-              return
-            }
-          }
-
-          // Forward with session + required headers
           const headers: Record<string, string> = {
-            "Content-Type": _req.headers["content-type"] || "application/json",
+            "Content-Type": "application/json",
             Accept: "application/json, text/event-stream",
           }
           if (mcpSessionId) headers["Mcp-Session-Id"] = mcpSessionId
+
           const mcpRes = await fetch("http://127.0.0.1:9222/mcp", {
             method: "POST", headers, body: bodyStr,
           })
           const body = await mcpRes.text()
-          // Parse SSE and return plain JSON
+
+          // Parse SSE: find last `data: {...}` block
           let result = body
           const match = body.match(/data:\s*(\{[\s\S]*?\})\s*$/m)
           if (match) {
             try {
               const parsed = JSON.parse(match[1])
+              // Unwrap content[0].text JSON if it's a string
               if (parsed.result?.content?.[0]?.text) {
                 try { parsed.result.content[0].text = JSON.parse(parsed.result.content[0].text) } catch {}
               }
