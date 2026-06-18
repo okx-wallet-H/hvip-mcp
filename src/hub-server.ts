@@ -140,6 +140,40 @@ function startHttpServer(): void {
       return
     }
 
+    // GET /v2 → /v2/ redirect (required for correct relative asset resolution)
+    if (_req.method === "GET" && _req.url === "/v2") {
+      res.writeHead(301, { "Location": "/v2/" })
+      res.end()
+      return
+    }
+
+    // GET /v2/ /v2/* — shadcn/ui React Dashboard（新版仪表盘）
+    if (_req.method === "GET" && _req.url?.startsWith("/v2/")) {
+      const v2Dir = join(__dirname, "..", "dashboard-v2", "dist")
+      let filePath: string
+      if (_req.url === "/v2/") {
+        filePath = join(v2Dir, "index.html")
+      } else {
+        filePath = join(v2Dir, _req.url!.replace(/^\/v2\//, ""))
+      }
+
+      // Serve the file if it exists, otherwise fall back to index.html (SPA)
+      if (!existsSync(filePath) || !filePath.includes(".")) {
+        filePath = join(v2Dir, "index.html")
+      }
+
+      if (existsSync(filePath)) {
+        const ext = filePath.split(".").pop() || "html"
+        const mime: Record<string,string> = { html:"text/html; charset=utf-8", js:"application/javascript", css:"text/css", svg:"image/svg+xml", png:"image/png", ico:"image/x-icon" }
+        res.writeHead(200, { "Content-Type": mime[ext] || "application/octet-stream" })
+        res.end(readFileSync(filePath))
+      } else {
+        res.writeHead(404)
+        res.end("dashboard-v2 not found")
+      }
+      return
+    }
+
     // GET /chat — AI 聊天界面（普通用户直接用）
     if (_req.method === "GET" && _req.url === "/chat") {
       const paths = [join(__dirname, "web", "index.html"), join(__dirname, "..", "src", "web", "index.html")]

@@ -64,17 +64,31 @@ class AgentHub {
     this.db = db
     // 从 DB 恢复任务
     const rows = db.loadTasks()
+    let orphanCount = 0
     for (const r of rows) {
-      this.tasks.set(r.taskId, {
-        status: r.status as TaskState["status"],
-        assignedTo: r.assignedTo || undefined,
-        claimedAt: r.claimedAt || undefined,
-        result: r.result || undefined,
-        branch: r.branch || undefined,
-      })
+      // 检查是否为孤儿任务（assigned 但 worker 不在线）
+      if (r.status === "assigned" && r.assignedTo && !this.agents.has(r.assignedTo)) {
+        this.tasks.set(r.taskId, {
+          status: "unassigned",
+          assignedTo: undefined,
+          claimedAt: undefined,
+          result: r.result || undefined,
+          branch: r.branch || undefined,
+        })
+        db.saveTask({ taskId: r.taskId, status: "unassigned" })
+        orphanCount++
+      } else {
+        this.tasks.set(r.taskId, {
+          status: r.status as TaskState["status"],
+          assignedTo: r.assignedTo || undefined,
+          claimedAt: r.claimedAt || undefined,
+          result: r.result || undefined,
+          branch: r.branch || undefined,
+        })
+      }
     }
     if (rows.length > 0) {
-      log.info(`从 DB 恢复 ${rows.length} 个任务`)
+      log.info(`从 DB 恢复 ${rows.length} 个任务` + (orphanCount > 0 ? `，释放 ${orphanCount} 个孤儿任务` : ""))
     }
   }
 
@@ -283,8 +297,14 @@ class AgentHub {
       return
     }
     if (task.status === "assigned" && task.assignedTo !== agentId) {
-      this.sendTo(agentId, { type: "error", message: `任务 ${taskId} 已被 ${task.assignedTo} 认领` })
-      return
+      // 检查原 worker 是否还在线
+      const assignedWorker = task.assignedTo ? this.agents.get(task.assignedTo) : null
+      if (assignedWorker) {
+        this.sendTo(agentId, { type: "error", message: `任务 ${taskId} 已被 ${task.assignedTo} 认领` })
+        return
+      }
+      // 原 worker 已断连 → 允许新 worker 接管
+      log.info(`${agentId} 接管孤儿任务 ${taskId}（原 ${task.assignedTo} 已离线）`)
     }
 
     task.status = "assigned"
