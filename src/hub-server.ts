@@ -25,6 +25,15 @@ import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { TASK_TEMPLATES } from "./adapters/hub-templates.js"
 
+// ── 加载 .env ──
+const envPath = join(process.cwd(), ".env")
+if (existsSync(envPath)) {
+  readFileSync(envPath, "utf-8").split(/\r?\n/).forEach(line => {
+    const m = line.match(/^\s*([^#\s=]+)\s*=\s*(.*)$/)
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim()
+  })
+}
+
 const VERSION = "0.4.3"
 
 // ── 仪表盘 HTML — 从文件读取 ──
@@ -292,7 +301,12 @@ function startHttpServer(): void {
       const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", async () => {
         try {
           const mcpRes = await fetch("http://127.0.0.1:9222/mcp", {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: Buffer.concat(chunks),
+            method: "POST",
+            headers: {
+              "Content-Type": _req.headers["content-type"] || "application/json",
+              Accept: _req.headers["accept"] || "application/json, text/event-stream",
+            },
+            body: Buffer.concat(chunks),
           })
           const body = await mcpRes.text()
           res.writeHead(mcpRes.status, { "Content-Type": "application/json; charset=utf-8" })
@@ -500,6 +514,14 @@ startHttpServer()
 // 启动定时任务
 startScheduler()
 
+// 启动 MCP Server (自动选择空闲端口，Chat UI 工具调用需要)
+let mcpProcess: ReturnType<typeof spawn> | null = null
+try {
+  mcpProcess = spawn("node", ["dist/index.js", "start:http"], { cwd: process.cwd(), stdio: "pipe", detached: true, env: { ...process.env, PORT: "9222" } })
+  mcpProcess.stderr?.on("data", (d: Buffer) => process.stderr.write(d))
+  process.stderr.write("[Hub] 🛠 MCP Server 启动中 → http://127.0.0.1:9222\n")
+} catch { process.stderr.write("[Hub] ⚠️ MCP Server 启动失败\n") }
+
 // 启动 WebSocket Hub
 agentHub.start(wsPort, host, VERSION, token)
 
@@ -508,6 +530,7 @@ agentHub.start(wsPort, host, VERSION, token)
 function shutdown() {
   process.stderr.write("\n[Hub] 正在关闭...\n")
   for (const w of workers) { try { w.kill() } catch {} }
+  if (mcpProcess) { try { process.kill(-mcpProcess.pid!) } catch {} }
   agentHub.close()
   db.close()
   memory.close()
