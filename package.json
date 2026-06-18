@@ -23,7 +23,8 @@
   "author": "okx-wallet-H",
   "license": "MIT",
   "bin": {
-    "hvip-mcp": "dist/index.js"
+    "hvip-mcp": "dist/index.js",
+    "hvip-mcp-server": "dist/hub-server.js"
   },
   "files": [
     "dist/index.js",
