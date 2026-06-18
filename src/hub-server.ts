@@ -21,6 +21,7 @@ import { agentHub } from "./adapters/agent-hub.js"
 import { HubDB } from "./adapters/hub-persistence.js"
 import { HubMemory } from "./adapters/hub-memory.js"
 import { HubRegistry } from "./adapters/hub-registry.js"
+import { logger } from "./utils/logger.js"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { TASK_TEMPLATES } from "./adapters/hub-templates.js"
@@ -62,6 +63,8 @@ const host     = flag("host")              || process.env.HUB_HOST      || "127.
 const webPort  = parseInt(flag("web-port") || process.env.HUB_WEB_PORT  || "3000", 10)
 const dbPath   = flag("db")               || process.env.HUB_DB_PATH   || ".hub/hub.db"
 
+const log = logger("Hub")
+
 const anthropicKey = process.env.ANTHROPIC_API_KEY || ""
 const openaiKey = process.env.OPENAI_API_KEY || ""
 const openaiBase = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"
@@ -93,16 +96,16 @@ function spawnWorker(taskId: string): { ok: boolean; error?: string; workerPid?:
     const worker = spawn("node", workerArgs, { cwd: repoPath, stdio: "pipe", detached: true })
     worker.stdout?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
     worker.stderr?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
-    worker.on("error", (e: Error) => process.stderr.write(`[Hub] Worker 启动失败: ${e.message}\n`))
+    worker.on("error", (e: Error) => log.error(`Worker 启动失败: ${e.message}`))
     worker.on("close", (code: number | null) => {
-      process.stderr.write(`[Hub] Worker-${taskId} 退出 (${code})\n`)
+      log.info(`Worker-${taskId} 退出 (${code})`)
       const idx = workers.indexOf(worker); if (idx >= 0) workers.splice(idx, 1)
     })
     workers.push(worker)
-    process.stderr.write(`[Hub] 活跃 Worker: ${workers.length}\n`)
+    log.info(`活跃 Worker: ${workers.length}`)
     return { ok: true, workerPid: worker.pid }
   } catch (e: any) {
-    process.stderr.write(`[Hub] Worker 启动异常: ${e.message}\n`)
+    log.error(`Worker 启动异常: ${e.message}`)
     return { ok: false, error: e.message }
   }
 }
@@ -169,7 +172,7 @@ function startHttpServer(): void {
           // 有模板 → 自动拉起 Worker
           let spawned = false; let workerPid = 0
           if (template) { const result = spawnWorker(taskId); spawned = result.ok; workerPid = result.workerPid || 0 }
-          process.stderr.write(`[Hub] 新任务: ${taskId} "${title}"${spawned ? ' 🤖 已拉起' : ''}\n`)
+          log.info(`新任务: ${taskId} "${title}"${spawned ? ' 🤖 已拉起' : ''}`)
           res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
           res.end(JSON.stringify({ ok: true, taskId, title, spawned, workerPid }))
         } catch {
@@ -304,8 +307,22 @@ function startHttpServer(): void {
 
     // ── API: 定时任务状态 ──
     if (_req.method === "GET" && _req.url === "/api/schedules") {
+      const hubStatus = agentHub.status()
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
-      res.end(JSON.stringify(schedules.map(s => ({ id: s.id, name: s.name, interval: s.interval, nextRun: s.lastRun + (s.count === 0 ? 30000 : s.interval), count: s.count, failCount: s.failCount }))))
+      res.end(JSON.stringify(schedules.map(s => {
+        const jobTasks = hubStatus.tasks.filter(t => t.taskId.startsWith(s.id + "-"))
+        const latest = jobTasks.sort((a, b) => (b.claimedAt || "").localeCompare(a.claimedAt || ""))[0]
+        return {
+          id: s.id, name: s.name, interval: s.interval,
+          count: s.count, failCount: s.failCount,
+          lastRun: s.lastRun || null,
+          latestTask: latest ? {
+            taskId: latest.taskId,
+            status: latest.status,
+            result: (latest.result || "").slice(0, 200),
+          } : null,
+        }
+      })))
       return
     }
 
@@ -420,7 +437,7 @@ function startHttpServer(): void {
   })
 
   httpServer.listen(webPort, host, () => {
-    process.stderr.write(`[Hub] 🌐 仪表盘 → http://${host}:${webPort}\n`)
+    log.info(`🌐 仪表盘 → http://${host}:${webPort}`)
   })
 }
 
@@ -515,26 +532,35 @@ const schedules: ScheduledJob[] = [
 ]
 
 function runScheduledJob(job: ScheduledJob): void {
-  // 检查上次任务是否还在跑/积压，跳过本轮避免重复
+  // 检查上次任务是否还在跑，跳过本轮避免重复
+  // 仅跳过 "assigned"（有 Worker 正在执行）；"unassigned" 是孤儿任务，不阻塞
   const status = agentHub.status()
   const prevTasks = status.tasks.filter(t =>
-    t.status === "unassigned" || t.status === "assigned"
+    t.status === "assigned"
   ).filter(t => t.taskId.startsWith(job.id + "-"))
   if (prevTasks.length > 0) {
-    process.stderr.write(`[Scheduler] ⏭️  ${job.name} 上次任务未完成 (${prevTasks.map(t=>t.taskId).join(",")})，跳过\n`)
+    log.warn(`Scheduler: ⏭️  ${job.name} 上次任务未完成 (${prevTasks.map(t=>t.taskId).join(",")})，跳过`)
     scheduleNext(job)
     return
+  }
+  // 自动清理匹配的孤儿任务（unassigned 状态残留）
+  const orphans = status.tasks.filter(t =>
+    t.status === "unassigned"
+  ).filter(t => t.taskId.startsWith(job.id + "-"))
+  for (const o of orphans) {
+    db?.saveTask({ taskId: o.taskId, status: "done", result: "[Scheduler] 自动清理孤儿任务" })
+    log.warn(`Scheduler: 🧹 清理孤儿: ${o.taskId}`)
   }
 
   const taskId = `${job.id}-${Date.now().toString(36)}`
   const title = `[定时] ${job.name} #${job.count + 1}`
-  process.stderr.write(`[Scheduler] ⏰ ${job.name} → ${taskId}\n`)
+  log.info(`Scheduler: ⏰ ${job.name} → ${taskId}`)
   agentHub.registerTask(taskId, title)
   db?.saveTask({ taskId, status: "unassigned", title })
   taskMeta.set(taskId, { templateId: job.template, params: job.params })
   const result = spawnWorker(taskId)
   if (result.ok) { job.count++; job.failCount = 0 }
-  else { job.failCount++; process.stderr.write(`[Scheduler] ❌ ${job.name}: ${result.error}\n`) }
+  else { job.failCount++; log.error(`Scheduler: ❌ ${job.name}: ${result.error}`) }
   job.lastRun = Date.now()
   scheduleNext(job)
 }
@@ -546,7 +572,7 @@ function scheduleNext(job: ScheduledJob): void {
 
 function startScheduler(): void {
   for (const job of schedules) scheduleNext(job)
-  process.stderr.write(`[Scheduler] 📅 ${schedules.length} 个定时任务 (首次30s后触发)\n`)
+  log.info(`Scheduler: ${schedules.length} 个定时任务 (首次30s后触发)`)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -569,7 +595,7 @@ const db = new HubDB(dbPath)
 if (db.open()) {
   agentHub.setDB(db)
   const stats = db.stats()
-  process.stderr.write(`[Hub] DB 状态: ${stats.taskCount} tasks, ${stats.messageCount} messages\n`)
+  log.info(`DB 状态: ${stats.taskCount} tasks, ${stats.messageCount} messages`)
 }
 
 // 记忆系统
@@ -578,13 +604,16 @@ const memory = new HubMemory(memoryPath)
 const memOk = memory.open()
 if (memOk) {
   const ms = memory.stats()
-  process.stderr.write(`[Hub] 🧠 记忆: ${ms.total} 条 (doc:${ms.byType.doc||0} directive:${ms.byType.directive||0} memory:${ms.byType.memory||0} skill:${ms.byType.skill||0})\n`)
+  log.info(`🧠 记忆: ${ms.total} 条 (doc:${ms.byType.doc||0} directive:${ms.byType.directive||0} memory:${ms.byType.memory||0} skill:${ms.byType.skill||0})`)
 }
 
 // 插件商店
 const registryPath = flag("registry-db") || process.env.HUB_REGISTRY_DB || ".hub/registry.db"
 const registry = new HubRegistry(registryPath)
-registry.open()
+const regOk = registry.open()
+if (!regOk) {
+  log.warn(`⚠️ Registry 打开失败，商店功能不可用`)
+}
 
 // 启动 HTTP 仪表盘
 startHttpServer()
@@ -597,8 +626,8 @@ let mcpProcess: ReturnType<typeof spawn> | null = null
 try {
   mcpProcess = spawn("node", ["dist/index.js", "start:http"], { cwd: process.cwd(), stdio: "pipe", detached: true, env: { ...process.env, PORT: "9222" } })
   mcpProcess.stderr?.on("data", (d: Buffer) => process.stderr.write(d))
-  process.stderr.write("[Hub] 🛠 MCP Server 启动中 → http://127.0.0.1:9222\n")
-} catch { process.stderr.write("[Hub] ⚠️ MCP Server 启动失败\n") }
+  log.info("🛠 MCP Server 启动中 → http://127.0.0.1:9222")
+} catch { log.warn("⚠️ MCP Server 启动失败") }
 
 // 启动 WebSocket Hub
 agentHub.start(wsPort, host, VERSION, token)
@@ -606,7 +635,7 @@ agentHub.start(wsPort, host, VERSION, token)
 // ── 优雅退出 ──────────────────────────────────────────────────────────────
 
 function shutdown() {
-  process.stderr.write("\n[Hub] 正在关闭...\n")
+  log.info("正在关闭...")
   for (const w of workers) { try { w.kill() } catch {} }
   if (mcpProcess) { try { process.kill(-mcpProcess.pid!) } catch {} }
   agentHub.close()

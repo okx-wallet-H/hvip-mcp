@@ -293,6 +293,17 @@ blockquote{border-left:2px solid var(--border-accent);padding-left:12px;font-sty
 @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:1024px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.charts-row{grid-template-columns:1fr}}
 @media(max-width:768px){body{grid-template-columns:1fr}.sidebar{display:none}.main{padding:14px 10px}.panel-grid,.form-grid{grid-template-columns:1fr}.store-grid{grid-template-columns:1fr}}
+/* ── AI 值守状态 pill ── */
+.ai-guardians{display:flex;gap:5px;align-items:center;flex-shrink:0;margin-left:auto;padding-left:10px}
+.ai-guardian{display:flex;align-items:center;gap:4px;font-size:10px;padding:3px 8px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border);white-space:nowrap;cursor:default;transition:all .2s}
+.ai-guardian:hover{border-color:var(--accent-dim);background:var(--bg-hover)}
+.ai-guardian .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ai-guardian .dot.online{background:var(--success);box-shadow:0 0 4px var(--success)}
+.ai-guardian .dot.working{background:var(--warning);animation:pulse 1.5s infinite}
+.ai-guardian .dot.offline{background:var(--danger)}
+.ai-guardian .dot.unknown{background:var(--text-muted)}
+.ai-guardian .gname{font-weight:600;color:var(--text-primary)}
+.ai-guardian .gtime{color:var(--text-muted);font-size:9px}
 </style>
 </head>
 <body>
@@ -327,7 +338,7 @@ blockquote{border-left:2px solid var(--border-accent);padding-left:12px;font-sty
 
 <!-- ════════════════  DASHBOARD  ════════════════ -->
 <div class="panel-page active" id="page-dashboard">
-<div class="topbar"><h1><svg class="icon-lg icon" style="margin-right:4px;color:var(--accent)"><use href="#ic-grid"/></svg>仪表盘<span style="margin-left:8px;font-size:12px;color:var(--text-muted)"><span class="pulse"></span> 实时</span></h1><span class="ts" id="lastRefresh">--</span></div>
+<div class="topbar"><h1><svg class="icon-lg icon" style="margin-right:4px;color:var(--accent)"><use href="#ic-grid"/></svg>仪表盘<span style="margin-left:8px;font-size:12px;color:var(--text-muted)"><span class="pulse"></span> 实时</span></h1><span class="ai-guardians" id="guard-dash"></span><span class="ts" id="lastRefresh">--</span></div>
 <div class="banner" id="banner"></div>
 <div class="kpi-grid">
 <div class="kpi-card"><div class="kpi-icon blue"><svg class="icon-lg icon"><use href="#ic-users"/></svg></div><div class="kpi-val" id="kpiAgents">0</div><div class="kpi-label">在线 Agent</div></div>
@@ -350,9 +361,25 @@ blockquote{border-left:2px solid var(--border-accent);padding-left:12px;font-sty
 <div class="creator-panel panel" id="creatorPanel"><div class="panel-body"><div class="template-grid" id="templates"></div><div id="templateForm"></div><div id="launchBtns" style="display:none"><button class="btn btn-primary" onclick="createAndSpawn()">创建并拉起 AI Agent</button></div></div></div>
 </div>
 
+<!-- ════════════════  AGENTS  ════════════════ -->
+<div class="panel-page" id="page-agents">
+<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-users"/></svg><h1>AI 值守岗</h1><span class="sub" id="guardianCount">11 岗</span></div><span class="ai-guardians" id="guard-dash"></span><span class="ts" id="agentsRefresh">--</span></div>
+<div class="kpi-grid" id="guardianStats" style="margin-bottom:16px"></div>
+<div id="guardianCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+<div class="section-label" style="margin-top:20px;margin-bottom:10px;font-size:12px;font-weight:600;color:var(--text-muted)">💻 在线 Worker</div>
+<div id="agentsLive"><div class="empty"><p>等待 Agent 连接</p></div></div>
+</div>
+
+<!-- ════════════════  TASKS  ════════════════ -->
+<div class="panel-page" id="page-tasks">
+<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-check"/></svg><h1>任务管道</h1><span class="sub" id="tasksPageCount">0</span></div><span class="ts" id="tasksPageRefresh">--</span></div>
+<div class="filter-tabs" style="margin-bottom:12px"><button class="active" data-tfilter="all" onclick="setTaskPageFilter('all')">全部</button><button data-tfilter="unassigned" onclick="setTaskPageFilter('unassigned')">待分配</button><button data-tfilter="assigned" onclick="setTaskPageFilter('assigned')">进行中</button><button data-tfilter="done" onclick="setTaskPageFilter('done')">已完成</button><button data-tfilter="reviewed" onclick="setTaskPageFilter('reviewed')">已审核</button></div>
+<div id="tasksPageContent"><div class="empty"><p>暂无任务</p></div></div>
+</div>
+
 <!-- ════════════════  DEBATE  ════════════════ -->
 <div class="panel-page" id="page-debate">
-<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-scale"/></svg><h1>多 Agent 辩论</h1><span class="sub" id="debateCount">0 场</span></div><span class="ts" id="debateRefresh">--</span></div>
+<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-scale"/></svg><h1>多 Agent 辩论</h1><span class="sub" id="debateCount">0 场</span></div><span class="ai-guardians" id="guard-debate"></span><span class="ts" id="debateRefresh">--</span></div>
 <!-- Card list -->
 <div class="debate-card-list" id="debateCardList"></div>
 <!-- Chat detail -->
@@ -373,6 +400,7 @@ blockquote{border-left:2px solid var(--border-accent);padding-left:12px;font-sty
     <button class="btn btn-xs btn-ghost" onclick="toggleTermPause()" id="termPauseBtn" style="color:#8b949e;border-color:#30363d">⏸ Pause</button>
     <button class="btn btn-xs btn-ghost" onclick="clearTerminal()" style="color:#8b949e;border-color:#30363d">Clear</button>
   </div>
+  <span class="ai-guardians" id="guard-term"></span>
 </div>
 <div class="term-live" id="terminal">
   <div class="term-line dim">┌──────────────────────────────────────────────────────────────────────────────┐</div>
@@ -388,7 +416,7 @@ blockquote{border-left:2px solid var(--border-accent);padding-left:12px;font-sty
 
 <!-- ════════════════  SIGNALS  ════════════════ -->
 <div class="panel-page" id="page-signals">
-<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-zap"/></svg><h1>交易信号</h1><span class="sub" id="signalCount">0 个活跃信号</span></div><span class="ts" id="signalRefresh">--</span></div>
+<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-zap"/></svg><h1>交易信号</h1><span class="sub" id="signalCount">0 个活跃信号</span></div><span class="ai-guardians" id="guard-signal"></span><span class="ts" id="signalRefresh">--</span></div>
 <div class="kpi-grid" id="signalKpiGrid">
 <div class="kpi-card"><div class="kpi-icon green"><svg class="icon-lg icon"><use href="#ic-zap"/></svg></div><div class="kpi-val" id="kpiLongSignals">0</div><div class="kpi-label">做多信号</div></div>
 <div class="kpi-card"><div class="kpi-icon amber"><svg class="icon-lg icon"><use href="#ic-zap"/></svg></div><div class="kpi-val" id="kpiNeutralSignals">0</div><div class="kpi-label">中性/观望</div></div>
@@ -400,13 +428,13 @@ blockquote{border-left:2px solid var(--border-accent);padding-left:12px;font-sty
 
 <!-- ════════════════  STORE  ════════════════ -->
 <div class="panel-page" id="page-store">
-<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-box"/></svg><h1>MCP 商店</h1></div><div class="search-bar"><input type="text" id="storeSearch" placeholder="搜索插件..." oninput="renderStore()"></div></div>
+<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-box"/></svg><h1>MCP 商店</h1></div><span class="ai-guardians" id="guard-store-panel"></span><div class="search-bar"><input type="text" id="storeSearch" placeholder="搜索插件..." oninput="renderStore()"></div></div>
 <div class="store-grid" id="storeContent"><div class="empty"><p>加载中...</p></div></div>
 </div>
 
 <!-- ════════════════  MEMORY  ════════════════ -->
 <div class="panel-page" id="page-memory">
-<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-chip"/></svg><h1>记忆库</h1><span class="sub" id="memCount">0 条</span></div><div class="search-bar"><input type="text" id="memSearch" placeholder="搜索记忆..." oninput="renderMemory()"></div></div>
+<div class="topbar"><div class="topbar-left"><svg class="icon-lg icon" style="color:var(--accent)"><use href="#ic-chip"/></svg><h1>记忆库</h1><span class="sub" id="memCount">0 条</span></div><span class="ai-guardians" id="guard-mem"></span><div class="search-bar"><input type="text" id="memSearch" placeholder="搜索记忆..." oninput="renderMemory()"></div></div>
 <div class="form-card" id="memFormCard" style="display:none"><h3 style="margin-bottom:10px;font-size:12.5px;color:var(--text-primary)">新建记忆</h3><div class="form-grid"><div class="field"><label>类型</label><select id="memType"><option value="memory">Memory</option><option value="directive">Directive</option><option value="skill">Skill</option><option value="doc">Doc</option></select></div><div class="field"><label>来源 Agent</label><input id="memAgent" placeholder="agentId"></div><div class="field field-full"><label>内容 *</label><textarea id="memText" placeholder="记忆内容..."></textarea></div><div class="field"><label>标签</label><input id="memTags" placeholder="tag1, tag2"></div><div class="field"><label>置信度 <span id="memConfVal">0.8</span></label><div class="slider-row"><input type="range" id="memConf" min="0" max="1" step="0.05" value="0.8" oninput="document.getElementById('memConfVal').textContent=this.value"></div></div></div><div style="margin-top:10px;display:flex;gap:6px"><button class="btn btn-primary" onclick="createMemory()">保存</button><button class="btn btn-ghost" onclick="document.getElementById('memFormCard').style.display='none'">取消</button></div></div>
 <div class="mem-toolbar"><button class="active" data-mfilter="all" onclick="setMemFilter('all')">全部</button><button data-mfilter="memory" onclick="setMemFilter('memory')">Memory</button><button data-mfilter="directive" onclick="setMemFilter('directive')">Directive</button><button data-mfilter="skill" onclick="setMemFilter('skill')">Skill</button><button data-mfilter="doc" onclick="setMemFilter('doc')">Doc</button><span style="flex:1"></span><button onclick="showMemForm()"><svg class="icon-sm icon"><use href="#ic-plus"/></svg>新建</button></div>
 <div id="memoryContent"><div class="empty"><p>加载中...</p></div></div>
@@ -419,7 +447,7 @@ blockquote{border-left:2px solid var(--border-accent);padding-left:12px;font-sty
 <script>
 const HOST='HUB_HOST',WS_PORT=0
 let templates=[],selectedTemplate=null,feed=[],lastCreatedId='',startTime=Date.now()
-let storeData={},memoryEntries=[],memFilter='all',taskFilter='all'
+let storeData={},memoryEntries=[],memFilter='all',taskFilter='all',taskPageFilter='all',taskPagePage=1;const TASK_PAGE_SIZE=15
 let termBuffers={},chartPie=null,chartLine=null,tsHistory=[],taskSeen=new Set()
 let currentTasks=[],debateGroups={}
 
@@ -441,6 +469,7 @@ function switchPanel(name){
   const link=document.querySelector('.sidebar-nav a[data-panel="'+name+'"]');if(link)link.classList.add('active')
   if(name==='store')loadStore();if(name==='memory')loadMemory();if(name==='terminal')renderTerminal()
   if(name==='debate')renderDebates();if(name==='signals')renderSignals();if(name==='dashboard')refreshCharts()
+  if(name==='agents')renderGuardianCards();if(name==='tasks')renderTasksPage()
 }
 document.querySelectorAll('.sidebar-nav a[data-panel]').forEach(a=>{a.addEventListener('click',e=>{e.preventDefault();switchPanel(a.dataset.panel)})})
 
@@ -549,7 +578,7 @@ function openDebateDetail(baseId){
 
   let html='<div class=dd-header>'+
     '<button class=dd-back onclick="closeDebateDetail()"><svg class="icon-sm icon"><use href="#ic-chevron-left"/></svg><span style="font-size:11px;font-weight:500;margin-left:4px">返回卡片列表</span></button>'+
-    '<h2>⚖️ '+(baseId.startsWith('D-')?esc(baseId.replace(/^D-/,'').replace(/-W\d+$/,'').replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())):esc(baseId))+'</h2>'+
+    '<h2 data-baseid="'+esc(baseId)+'">⚖️ '+(baseId.startsWith('D-')?esc(baseId.replace(/^D-/,'').replace(/-W\d+$/,'').replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())):esc(baseId))+'</h2>'+
     '<div class=dd-consensus><div class=dd-val>'+Math.round(agreement)+'%</div><div class=dd-label>共识度</div></div>'+
     '<span class="msg-stance '+stanceCls+'">'+stance+'</span>'+
   '</div>'
@@ -652,7 +681,7 @@ function renderDebates(){
   // If detail open, refresh it
   if(el('debateDetail').classList.contains('open')){
     const h2=el('debateDetail').querySelector('h2')
-    if(h2){const base=h2.textContent.replace('⚖️ ','');if(debateGroups[base])openDebateDetail(base)}
+    if(h2){const base=h2.dataset.baseid;if(base&&debateGroups[base])openDebateDetail(base)}
   }
 
   if(!groups.length){
@@ -708,7 +737,7 @@ function extractSignals(tasks){
     const wr=r.match(/WIN_RATE:\s*([\d.]+)/i);if(wr)sig.winRate=parseFloat(wr[1])
     const cf=r.match(/CONFIDENCE:\s*(\d+)/i);if(cf)sig.confidence=parseInt(cf[1])
     const cl=r.match(/CONCLUSION:\s*(.+)/i);if(cl)sig.conclusion=cl[1].substring(0,200)
-    const ls=r.match(/LAST_5_SIGNALS:\s*\[(.+)\]/i);if(ls)sig.last5=ls[1].split(',').map(s=>s.trim())
+    const ls=r.match(/LAST_5_SIGNALS:\s*\[(.+)\]/i);if(ls)sig.last5=ls[1].split(',').map(s=>s.trim()).filter(Boolean)
     return sig
   }).filter(s=>s.currentSignal!=='NEUTRAL'||s.status==='done'||s.status==='reviewed')
 }
@@ -734,7 +763,7 @@ function renderSignals(){
     const dirColor=isLong?'var(--success)':isShort?'var(--danger)':'var(--text-muted)'
     const dirBg=isLong?'#16a34a10':isShort?'#dc262610':'var(--bg-root)'
     const dirEmoji=isLong?'📈 做多':isShort?'📉 做空':'➖ 观望'
-    const confPct=s.confidence||(s.winRate>0?s.winRate:50)
+    const confPct=s.confidence!=null?s.confidence:(s.winRate>0?s.winRate:50)
     const confColor=confPct>=70?'var(--success)':confPct>=40?'var(--warning)':'var(--danger)'
 
     return '<div class="panel" style="margin-bottom:10px">'+
@@ -852,7 +881,7 @@ function renderTerminal(){
 }
 
 /* ── Store ── */
-async function loadStore(){if(Object.keys(storeData).length){renderStore();return}try{const r=await fetch('/api/store');if(r.ok){storeData=await r.json();renderStore()}}catch{}}
+async function loadStore(){if(Object.keys(storeData).length){renderStore();return}try{const r=await fetch('/api/store');if(r.ok){storeData=await r.json();renderStore()}else{el('storeContent').innerHTML='<div class=empty><p style="color:var(--danger)">服务器错误 (HTTP '+r.status+')</p><button class=btn-outline onclick=loadStore() style="margin-top:8px">重试</button></div>'}}catch{el('storeContent').innerHTML='<div class=empty><p style="color:var(--danger)">加载失败，请确认服务器正在运行</p><button class=btn-outline onclick=loadStore() style="margin-top:8px">重试</button></div>'}}
 function renderStore(){const q=(el('storeSearch')?.value||'').toLowerCase(),cats={};for(const[cat,plugins]of Object.entries(storeData)){const f=plugins.filter(p=>!q||p.name.toLowerCase().includes(q)||(p.description||'').toLowerCase().includes(q)||(p.tags||'').toLowerCase().includes(q));if(f.length)cats[cat]=f};let html='';for(const[cat,plugins]of Object.entries(cats)){html+='<div class=store-cat-title>'+esc(cat)+' · '+plugins.length+'</div>';for(const p of plugins){const tags=(p.tags||'').split(',').filter(Boolean).map(t=>'<span class=ptag>'+esc(t.trim())+'</span>').join('');html+='<div class=plugin-card><div class=row1><span class=pname>'+esc(p.name)+(p.verified?' <span class=verified>✓ 已验证</span>':'')+'</span><span class=pcat>'+esc(p.category||cat)+'</span></div><div class=pdesc>'+esc(p.description||'')+'</div><div class=row2>'+(p.stars?'<span class=pstars>★ '+esc(String(p.stars))+'</span>':'')+(p.repo?'<span class=prepo>'+esc(p.repo)+'</span>':'')+'</div>'+(tags?'<div class=ptags>'+tags+'</div>':'')+'</div>'}}el('storeContent').innerHTML=html||'<div class=empty><p>没有匹配的插件</p></div>'}
 
 /* ── Memory ── */
@@ -943,7 +972,16 @@ function addFeed(m){feed.unshift(m);if(feed.length>50)feed.pop();el('feedCount')
   if(m.type==='task:completed')pushTermOutput(m.taskId,'task','✅ TASK COMPLETE: '+m.taskId,'info')
   el('liveFeed').innerHTML=feed.slice(0,20).map(f=>{const d=types[f.type]||'system';return'<div class=feed-row><span class="feed-dot '+d+'"></span><div class=feed-body><span class=feed-from>'+esc(f.from||'system')+'</span> <span class=feed-text>'+esc((f.text||f.message||'').substring(0,200))+'</span></div><span class=feed-ts>'+timeAgo(f.ts||new Date().toISOString())+'</span></div>'}).join('')}
 function showBanner(msg,type){const b=el('banner');b.textContent=msg;b.className='banner '+type;b.style.display='block';setTimeout(()=>b.style.display='none',5000)}
-async function refresh(){const r=await fetch('/api/status').catch(()=>null);if(!r)return;const s=await r.json();renderAgents(s.agents||[]);renderTasks(s.tasks||[]);syncTaskResults(s.tasks||[]);el('lastRefresh').textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});el('uptime').textContent=timeAgo(new Date(startTime).toISOString())}
+/* ── AI 值守状态渲染 ── */
+const GUARDIAN_MAP={ 'guard-dash':['guard-dashboard','guard-scheduler'],'guard-debate':['guard-debate'],'guard-term':['guard-terminal'],'guard-signal':['guard-signals','sched-analyst','sched-quant'],'guard-store-panel':['guard-store'],'guard-mem':['guard-memory','sched-curator'] }
+const GUARDIAN_NAMES={ 'sched-analyst':'Argo','sched-quant':'Quanta','sched-curator':'Mnemosyne','sched-engineer':'Daedalus','guard-dashboard':'Sentinel-α','guard-debate':'Aletheia','guard-terminal':'Tethys','guard-signals':'Hermes','guard-store':'Atlas','guard-memory':'Hypnos','guard-scheduler':'Chronos' }
+async function renderGuardians(){try{const r=await fetch('/api/schedules');if(!r.ok)return;const schedules=await r.json();const byId={};for(const s of schedules)byId[s.id]=s;for(const[elId,jobIds]of Object.entries(GUARDIAN_MAP)){const container=el(elId);if(!container)continue;let html='';for(const jobId of jobIds){const s=byId[jobId];if(!s)continue;const name=GUARDIAN_NAMES[jobId]||s.name;let dotCls='unknown',timeStr='待首次';const lt=s.latestTask;if(lt&&lt.status==='assigned'){dotCls='working';timeStr='执行中'}else if(lt&&(lt.status==='done'||lt.status==='reviewed')){dotCls='online';timeStr=s.lastRun?timeAgo(new Date(s.lastRun).toISOString()):'--'}else if(s.failCount>0){dotCls='offline';timeStr='失败×'+s.failCount}html+='<span class="ai-guardian" title="'+esc(name)+' · '+esc(s.name)+'"><span class="dot '+dotCls+'"></span><span class="gname">'+esc(name)+'</span><span class="gtime">'+timeStr+'</span></span>'}container.innerHTML=html}}catch{}}
+/* ── Agents 页面渲染 ── */
+const GUARDIAN_PERSONAS={ 'sched-analyst':{emoji:'🔭',name:'Argo',role:'行情分析师',freq:'每4h',desc:'数据不会说谎 — BTC/ETH/SOL 多周期趋势+支撑阻力+资金费率'},'sched-quant':{emoji:'🔬',name:'Quanta',role:'量化研究员',freq:'每8h',desc:'回测是唯一的真理 — RSI/SuperTrend/MACD VBT回测对比'},'sched-curator':{emoji:'📚',name:'Mnemosyne',role:'知识策展人',freq:'每12h',desc:'记忆混乱是幻觉的温床 — 去重合并+低置信度标记+补缺'},'sched-engineer':{emoji:'🛠️',name:'Daedalus',role:'资深工程师',freq:'每24h',desc:'不会炸才是终点 — 全仓错误处理/类型安全/性能审查'},'guard-dashboard':{emoji:'📊',name:'Sentinel-α',role:'仪表盘守护',freq:'每6h',desc:'第一眼就是完美的 — 7面板KPI/图表/Agent/任务/创建器'},'guard-debate':{emoji:'⚖️',name:'Aletheia',role:'辩论守护',freq:'每6h',desc:'反之亦然 — 辩论卡片/聊天流/立场谱/共识环/返回按钮'},'guard-terminal':{emoji:'🖥️',name:'Tethys',role:'终端守护',freq:'每6h',desc:'字符不骗人渲染会 — 流式输出/ANSI着色/Pause/Clear'},'guard-signals':{emoji:'🚦',name:'Hermes',role:'信号守护',freq:'每6h',desc:'一个颜色都不能错 — VBT信号解析/KPI/卡片渲染/创建'},'guard-store':{emoji:'🏪',name:'Atlas',role:'商店守护',freq:'每6h',desc:'24个插件一个不能少 — 分类/搜索/卡片渲染'},'guard-memory':{emoji:'🧠',name:'Hypnos',role:'记忆守护',freq:'每6h',desc:'记忆不可靠系统可以 — CRUD/搜索/类型过滤/知识注入'},'guard-scheduler':{emoji:'⏰',name:'Chronos',role:'调度守护',freq:'每3h',desc:'全天候24×7 — 检查10岗位/补发积压/防重复/孤儿清理'} }
+async function renderGuardianCards(){try{const r=await fetch('/api/schedules');if(!r.ok)return;const schedules=await r.json();const byId={};for(const s of schedules)byId[s.id]=s;const allIds=['sched-analyst','sched-quant','sched-curator','sched-engineer','guard-dashboard','guard-debate','guard-terminal','guard-signals','guard-store','guard-memory','guard-scheduler'];let online=0,total=allIds.length;let html='';for(const id of allIds){const s=byId[id];const p=GUARDIAN_PERSONAS[id]||{};let dotCls='unknown',statusText='待首次',statusColor='var(--text-muted)';if(s&&s.latestTask&&s.latestTask.status==='assigned'){dotCls='working';statusText='执行中';statusColor='var(--warning)';online++}else if(s&&s.latestTask&&(s.latestTask.status==='done'||s.latestTask.status==='reviewed')){dotCls='online';statusText=s.lastRun?timeAgo(new Date(s.lastRun).toISOString()):'已值守';statusColor='var(--success)';online++}else if(s&&s.failCount>0){dotCls='offline';statusText='失败×'+s.failCount;statusColor='var(--danger)'}else if(s&&s.count>0){dotCls='online';statusText='已值守';statusColor='var(--success)';online++}const result=s&&s.latestTask&&s.latestTask.result?s.latestTask.result.slice(0,100):'';html+='<div class="guardian-card" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;flex-direction:column;gap:6px;transition:all .2s"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px">'+p.emoji+'</span><div style="flex:1"><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:13px;color:var(--text-primary)">'+esc(p.name||id)+'</span><span style="font-size:9px;padding:1px 6px;border-radius:8px;background:var(--bg-root);color:var(--text-muted)">'+esc(p.freq||'')+'</span></div><div style="font-size:10px;color:var(--text-muted);margin-top:1px">'+esc(p.role||'')+'</div></div><div style="display:flex;align-items:center;gap:4px"><span class="dot '+dotCls+'" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span><span style="font-size:10px;color:'+statusColor+'">'+statusText+'</span></div></div><div style="font-size:10px;color:var(--text-muted);line-height:1.4">'+esc(p.desc||'')+'</div>'+(result?'<div style="font-size:9.5px;color:var(--text-muted);padding:6px 8px;background:var(--bg-root);border-radius:var(--radius-sm);max-height:40px;overflow:hidden;line-height:1.4;font-family:var(--font-mono)">📝 '+esc(result)+'</div>':'')+'</div>'}el('guardianCards').innerHTML=html;el('guardianCount').textContent=total+' 岗 · '+online+' 在线';const badgeColors='在线:'+online+' 待命:'+(total-online);el('guardianStats').innerHTML='<div class="kpi-card"><div class="kpi-icon green"><svg class="icon-lg icon"><use href="#ic-users"/></svg></div><div class="kpi-val">'+online+'</div><div class="kpi-label">在线值守</div></div><div class="kpi-card"><div class="kpi-icon amber"><svg class="icon-lg icon"><use href="#ic-clock"/></svg></div><div class="kpi-val">'+(total-online)+'</div><div class="kpi-label">待首次运行</div></div><div class="kpi-card"><div class="kpi-icon blue"><svg class="icon-lg icon"><use href="#ic-zap"/></svg></div><div class="kpi-val">'+total+'</div><div class="kpi-label">岗位总数</div></div>';el('agentsRefresh').textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}catch{}}
+function setTaskPageFilter(f){taskPageFilter=f;taskPagePage=1;document.querySelectorAll('#page-tasks .filter-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tfilter===f));renderTasksPage()}
+function renderTasksPage(){const tasks=currentTasks||[];const filtered=taskPageFilter==='all'?tasks:tasks.filter(t=>t.status===taskPageFilter);const total=filtered.length;const pages=Math.ceil(total/TASK_PAGE_SIZE);if(taskPagePage>pages)taskPagePage=Math.max(1,pages);const start=(taskPagePage-1)*TASK_PAGE_SIZE;const page=filtered.slice(start,start+TASK_PAGE_SIZE);el('tasksPageCount').textContent=total+' 个任务';el('tasksPageRefresh').textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});if(!total){el('tasksPageContent').innerHTML='<div class=empty><p>暂无任务</p></div>';return}let html='';for(const t of page){const statusCls=t.status==='done'||t.status==='reviewed'?'done':t.status==='assigned'?'working':'idle';const statusLabel={unassigned:'待分配',assigned:'执行中',done:'已完成',reviewed:'已审核'}[t.status]||t.status;html+='<div class="task-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.title||t.taskId)+'</div><div style="font-size:9.5px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px">'+esc(t.taskId)+'</div>'+(t.result?'<div style="font-size:9.5px;color:var(--text-muted);margin-top:4px;max-height:36px;overflow:hidden;line-height:1.3">'+esc(t.result.slice(0,160))+'</div>':'')+'</div><span class="tag '+statusCls+'" style="flex-shrink:0">'+statusLabel+'</span>'+(t.assignedTo?'<span style="font-size:9px;color:var(--text-muted);flex-shrink:0;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.assignedTo.split('-').slice(-1)[0]||'')+'</span>':'')+((t.status==='unassigned'||t.status==='assigned')?'<button class="btn btn-xs btn-ghost" onclick="spawnWorker(\''+esc(t.taskId)+'\')" style="flex-shrink:0">🚀 拉起</button>':'')+'</div>'}if(pages>1){let pager='<div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:12px;padding:8px 0;border-top:1px solid var(--border-subtle)">';pager+='<button class="btn btn-xs btn-ghost" onclick="taskPagePage=1;renderTasksPage()" '+(taskPagePage===1?'disabled':'')+'>«</button>';pager+='<button class="btn btn-xs btn-ghost" onclick="taskPagePage=Math.max(1,taskPagePage-1);renderTasksPage()" '+(taskPagePage===1?'disabled':'')+'>‹</button>';const s=Math.max(1,taskPagePage-2);const e=Math.min(pages,taskPagePage+2);for(let i=s;i<=e;i++)pager+='<button class="btn btn-xs '+(i===taskPagePage?'btn-primary':'btn-ghost')+'" onclick="taskPagePage='+i+';renderTasksPage()">'+i+'</button>';pager+='<button class="btn btn-xs btn-ghost" onclick="taskPagePage=Math.min(pages,taskPagePage+1);renderTasksPage()" '+(taskPagePage===pages?'disabled':'')+'>›</button>';pager+='<button class="btn btn-xs btn-ghost" onclick="taskPagePage='+pages+';renderTasksPage()" '+(taskPagePage===pages?'disabled':'')+'>»</button>';pager+='<span style="font-size:10px;color:var(--text-muted);margin-left:8px">'+taskPagePage+'/'+pages+' 页</span></div>';html+=pager}el('tasksPageContent').innerHTML=html}
+async function refresh(){const r=await fetch('/api/status').catch(()=>null);if(!r)return;const s=await r.json();renderAgents(s.agents||[]);renderTasks(s.tasks||[]);syncTaskResults(s.tasks||[]);el('lastRefresh').textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});el('uptime').textContent=timeAgo(new Date(startTime).toISOString());renderGuardians();if(el('page-agents').classList.contains('active'))renderGuardianCards();if(el('page-tasks').classList.contains('active'))renderTasksPage()}
 async function spawnWorker(taskId){if(!confirm('启动 AI Agent 处理 '+taskId+'？'))return;const r=await fetch('/api/tasks/'+encodeURIComponent(taskId)+'/spawn',{method:'POST'});if(r.ok)showBanner('AI Agent 已启动','ok');else{const e=await r.json().catch(()=>({}));showBanner(e.error||'启动失败','error')}setTimeout(()=>refresh(),800)}
 async function loadSidebarStats(){try{const h=await fetch('/health').then(r=>r.json()).catch(()=>null);if(h){el('sidebarVer').textContent=h.version||'0.3';el('sidebarPlugins').textContent=(h.registry||'').split(' ')[0]||'24'}const m=await fetch('/api/memory/stats').then(r=>r.json()).catch(()=>null);if(m)el('sidebarMemory').textContent=m.total||0}catch{}}
 

@@ -12,6 +12,7 @@
  */
 
 import { isSqliteAvailable, openDB, ensureDir } from "./shared-sqlite.js"
+import { logger } from "../utils/logger.js"
 
 // ── 类型 ─────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,8 @@ export interface StoreOpts {
 
 // ═══════════════════════════════════════════════════════════════════════════
 
+const log = logger("Memory")
+
 export class HubMemory {
   private db: any = null
   private dbPath: string
@@ -63,17 +66,17 @@ export class HubMemory {
 
   open(): boolean {
     if (!isSqliteAvailable()) {
-      process.stderr.write("[Memory] node:sqlite 不可用\n")
+      log.info("node:sqlite 不可用")
       return false
     }
     try {
       ensureDir(this.dbPath)
       this.db = openDB(this.dbPath, { create: true })
       this.migrate()
-      process.stderr.write(`[Memory] 已打开 ${this.dbPath}\n`)
+      log.info(`已打开 ${this.dbPath}`)
       this.startDecay()
       return true
-    } catch (e) { process.stderr.write(`[Memory] 打开失败: ${String(e)}\n`); return false }
+    } catch (e) { log.error(`打开失败: ${String(e)}`); return false }
   }
 
   close(): void {

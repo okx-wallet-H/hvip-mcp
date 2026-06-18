@@ -1,6 +1,7 @@
 import type { Server as WSServer } from "ws"
 import { WebSocketServer, WebSocket } from "ws"
 import type { HubDB } from "./hub-persistence.js"
+import { logger } from "../utils/logger.js"
 
 // ── 类型 ──────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,8 @@ const MAX_ROOM_MESSAGES = 200
 
 // ── Hub 核心 ──────────────────────────────────────────────────────────────
 
+const log = logger("AgentHub")
+
 class AgentHub {
   private wss: WSServer | null = null
   private agents = new Map<string, AgentConn>()
@@ -71,7 +74,7 @@ class AgentHub {
       })
     }
     if (rows.length > 0) {
-      console.log(`[AgentHub] 从 DB 恢复 ${rows.length} 个任务`)
+      log.info(`从 DB 恢复 ${rows.length} 个任务`)
     }
   }
 
@@ -107,10 +110,10 @@ class AgentHub {
       return ok === true ? true : false
     }).then(ok => {
       if (!ok) {
-        process.stderr.write(`[AgentHub] WS Hub 跳过（端口 ${ports.join("/")} 不可用）\n`)
+        log.warn(`WS Hub 跳过（端口 ${ports.join("/")} 不可用）`)
         return
       }
-      process.stderr.write(`[AgentHub] WS Hub v${version} ws://${host}:${this.port}\n`)
+      log.info(`WS Hub v${version} ws://${host}:${this.port}`)
       this.setupHub()
     })
   }
@@ -144,7 +147,7 @@ class AgentHub {
       ws.on("close", () => {
         if (agentId) this.handleDisconnect(agentId)
       })
-      ws.on("error", (e: Error) => { process.stderr.write(`[AgentHub] WS 错误: ${e.message}\n`) })
+      ws.on("error", (e: Error) => { log.error(`WS 错误: ${e.message}`) })
     })
     this.heartbeatTimer = setInterval(() => {
       const now = Date.now()
@@ -152,7 +155,7 @@ class AgentHub {
         if (now - a.lastSeen > 120_000) {
           a.ws.close()
           this.agents.delete(id)
-          console.log("[AgentHub] Agent 心跳超时: " + id)
+          log.warn("Agent 心跳超时: " + id)
         }
       }
     }, 30_000)
@@ -199,7 +202,7 @@ class AgentHub {
     // 自动推入 #lobby
     this.joinRoom(agentId, "#lobby")
 
-    console.log(`[AgentHub] Agent 注册: ${agentId} (${name}) skills: [${capabilities.join(", ")}]`)
+    log.info(`Agent 注册: ${agentId} (${name}) skills: [${capabilities.join(", ")}]`)
     this.send(ws, {
       type: "agent:registered",
       agentId,
@@ -233,7 +236,7 @@ class AgentHub {
 
   private handleDisconnect(agentId: string): void {
     const info = this.agents.get(agentId)
-    console.log(`[AgentHub] Agent 离线: ${agentId} (${info?.name || "?"})`)
+    log.info(`Agent 离线: ${agentId} (${info?.name || "?"})`)
 
     // 离开所有房间
     for (const [roomId, room] of this.rooms) {
@@ -294,7 +297,7 @@ class AgentHub {
     // 自动推入任务房间
     this.joinRoom(agentId, `#task-${taskId}`)
 
-    console.log(`[AgentHub] ${agentId} 认领 ${taskId}`)
+    log.info(`${agentId} 认领 ${taskId}`)
     this.db?.saveTask({ taskId, status: "assigned", title: this.getTaskTitle(taskId), assignedTo: agentId, claimedAt: task.claimedAt })
     this.sendTo(agentId, {
       type: "task:assigned",
@@ -325,7 +328,7 @@ class AgentHub {
     const a = this.agents.get(agentId)
     if (a) a.status = "idle"
 
-    console.log(`[AgentHub] ${agentId} 完成 ${taskId}: ${result}`)
+    log.info(`${agentId} 完成 ${taskId}: ${result}`)
     this.db?.saveTask({ taskId, status: "done", title: this.getTaskTitle(taskId), assignedTo: agentId, result, branch })
 
     // 发到任务房间
@@ -349,7 +352,7 @@ class AgentHub {
       const t = this.tasks.get(taskId)!
       ;(t as any).title = title
     }
-    console.log(`[AgentHub] 任务注册: ${taskId} "${title || taskId}"`)
+    log.info(`任务注册: ${taskId} "${title || taskId}"`)
 
     // 广播新任务通知
     this.broadcast({ type: "task:announced", taskId, title: title || taskId })
@@ -358,14 +361,14 @@ class AgentHub {
     const idleAgents = [...this.agents.entries()]
       .filter(([,a]) => a.status === "idle" && !a.agentId.startsWith("dashboard"))
     if (idleAgents.length === 0) {
-      console.log(`[AgentHub] 没有空闲 Agent，任务 ${taskId} 等待手动 spawn`)
+      log.warn(`没有空闲 Agent，任务 ${taskId} 等待手动 spawn`)
       return
     }
     // 优先匹配 capability，否则分配给第一个空闲 Agent
     const match = idleAgents.find(([,a]) => a.capabilities.includes(taskId))
       || idleAgents[0]
     if (match) {
-      console.log(`[AgentHub] 自动派发 ${taskId} → ${match[1].name} (${match[0]})`)
+      log.info(`自动派发 ${taskId} → ${match[1].name} (${match[0]})`)
       this.dispatchTaskTo(taskId, match[0])
     }
   }
@@ -442,7 +445,7 @@ class AgentHub {
       })
     }
     this.sendToRoomMembers(room, { type: "room:member_joined", roomId, agentId })
-    console.log(`[AgentHub] ${agentId} → ${roomId}`)
+    log.info(`${agentId} → ${roomId}`)
   }
 
   leaveRoom(agentId: string, roomId: string): void {

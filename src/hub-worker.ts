@@ -10,6 +10,7 @@
 
 import { WebSocket } from "ws"
 import { spawn, execSync } from "node:child_process"
+import { logger } from "./utils/logger.js"
 
 const argv = process.argv.slice(2)
 function flag(name: string): string | undefined {
@@ -28,6 +29,7 @@ const AGENT_ID = `worker-${TASK_ID}-${Date.now()}`
 const AGENT_NAME = `Worker·${TASK_ID}`
 const CLAUDE_CLI = process.env.CLAUDE_CLI || "claude"
 const WORKER_TIMEOUT_MS = parseInt(process.env.HUB_WORKER_TIMEOUT || "600000", 10) // 10 分钟默认
+const log = logger(`Worker-${TASK_ID}`)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // WebSocket 客户端
@@ -117,7 +119,7 @@ function detectTaskType(title: string): TaskMode {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function doTask(taskId: string, title: string, url: string, promptB64?: string): void {
-  process.stderr.write(`[Worker] 🚀 开始执行 ${taskId}: ${title}\n`)
+  log.info(`🚀 开始执行: ${title}`)
 
   // 认领
   ws.send(JSON.stringify({ type: "task:claim", taskId, agentId: AGENT_ID }))
@@ -195,7 +197,7 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
   child.on("close", (code: number | null) => {
     clearInterval(progressTimer); clearTimeout(timeoutTimer)
     if (code === 0) {
-      process.stderr.write(`[Worker] ✅ Claude Code 完成 (exit ${code})\n`)
+      log.info(`✅ Claude Code 完成 (exit ${code})`)
 
       if (mode === "market" || mode === "research" || mode === "template") {
         // 行情类任务: 结果发到 #lobby，任务标记 done，写入记忆
@@ -225,11 +227,18 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
         }))
       }
     } else {
-      process.stderr.write(`[Worker] ❌ Claude Code 失败 (exit ${code})\n`)
+      log.error(`❌ Claude Code 失败 (exit ${code})`)
       ws.send(JSON.stringify({
         type: "room:message",
         roomId: "#review",
         text: `❌ ${taskId} 执行失败 (exit ${code})。输出:\n${output.slice(-1000)}`,
+      }))
+      // 失败也要通知 Hub 任务结束，避免调度器永久阻塞
+      ws.send(JSON.stringify({
+        type: "task:done",
+        taskId,
+        agentId: AGENT_ID,
+        result: `❌ (失败 exit ${code}) ${title}\n${output.slice(-3000)}`,
       }))
     }
 
@@ -243,6 +252,12 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
   child.on("error", (err: Error) => {
     clearInterval(progressTimer); clearTimeout(timeoutTimer)
     process.stderr.write(`[Worker] Claude Code 启动失败: ${err.message}\n`)
+    ws.send(JSON.stringify({
+      type: "task:done",
+      taskId,
+      agentId: AGENT_ID,
+      result: `❌ (启动失败) ${title}: ${err.message}`,
+    }))
     ws.send(JSON.stringify({
       type: "room:message",
       roomId: "#review",

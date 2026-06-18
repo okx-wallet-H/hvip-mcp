@@ -6,6 +6,7 @@
  */
 
 import { isSqliteAvailable, openDB, ensureDir } from "./shared-sqlite.js"
+import { logger } from "../utils/logger.js"
 
 export interface MCPPlugin {
   id: string; name: string; category: string; description: string
@@ -40,6 +41,8 @@ const SEED: Omit<MCPPlugin,"id"|"createdAt">[] = [
   { name:"mcp-server-rag-web-browser", category:"知识库", description:"Agent基于网页文档做RAG问答, 自动抓取+索引+检索", repo:"modelcontextprotocol/servers", install:"npx -y @modelcontextprotocol/server-rag-web-browser", stars:"2k+", tags:"RAG,知识库,网页,问答", verified:true },
 ]
 
+const log = logger("Registry")
+
 export class HubRegistry {
   private db: any = null
 
@@ -53,15 +56,16 @@ export class HubRegistry {
       this.db.exec(`CREATE TABLE IF NOT EXISTS registry (id TEXT PRIMARY KEY, name TEXT NOT NULL, category TEXT, description TEXT, repo TEXT, install TEXT, stars TEXT, tags TEXT, verified INTEGER DEFAULT 0, createdAt TEXT DEFAULT (datetime('now')))`)
       this.db.exec(`CREATE INDEX IF NOT EXISTS idx_registry_name ON registry(name); CREATE INDEX IF NOT EXISTS idx_registry_category ON registry(category); CREATE INDEX IF NOT EXISTS idx_registry_tags ON registry(tags)`)
       const n = (this.db.prepare("SELECT COUNT(*) as n FROM registry").get() as any)?.n || 0
-      if (n === 0) { SEED.forEach(p => this.add(p)); process.stderr.write(`[Registry] 预置 ${SEED.length} 个MCP插件\n`) }
-      else process.stderr.write(`[Registry] 已加载 ${n} 个MCP插件\n`)
+      if (n === 0) { SEED.forEach(p => this.add(p)); log.info(`预置 ${SEED.length} 个MCP插件`) }
+      else log.info(`已加载 ${n} 个MCP插件`)
       return true
-    } catch (e) { process.stderr.write(`[Registry] ${String(e)}\n`); return false }
+    } catch (e) { log.error(`打开失败: ${String(e)}`); return false }
   }
 
   close(): void { if (this.db) { try { this.db.close() } catch {}; this.db = null } }
 
   add(p: Omit<MCPPlugin,"id"|"createdAt">): MCPPlugin {
+    if (!this.db) throw new Error("Registry 未打开")
     const id = "mcp-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,5)
     const now = new Date().toISOString()
     this.db.prepare("INSERT OR REPLACE INTO registry (id,name,category,description,repo,install,stars,tags,verified,createdAt) VALUES(?,?,?,?,?,?,?,?,?,?)").run(id,p.name,p.category,p.description,p.repo,p.install,p.stars,p.tags,p.verified?1:0,now)
@@ -69,6 +73,7 @@ export class HubRegistry {
   }
 
   search(q: string, category?: string, limit=30): MCPPlugin[] {
+    if (!this.db) return []
     let sql = "SELECT * FROM registry WHERE 1=1"; const params: any[] = []
     if (q) { const terms = q.split(/\s+/).filter(Boolean); terms.forEach(t => { sql += " AND (name LIKE ? OR description LIKE ? OR tags LIKE ?)"; params.push("%"+t+"%","%"+t+"%","%"+t+"%") }) }
     if (category) { sql += " AND category = ?"; params.push(category) }
@@ -78,6 +83,7 @@ export class HubRegistry {
   }
 
   byCategory(): Record<string,MCPPlugin[]> {
+    if (!this.db) return {}
     const rows = this.db.prepare("SELECT * FROM registry ORDER BY category, stars DESC").all() as any[]
     const map: Record<string,MCPPlugin[]> = {}
     for (const r of (Array.isArray(rows)?rows:[])) { const c = r.category||"其他"; if(!map[c]) map[c]=[]; map[c].push(this.rowToPlugin(r)) }
@@ -85,10 +91,11 @@ export class HubRegistry {
   }
 
   all(limit=100): MCPPlugin[] {
+    if (!this.db) return []
     return (this.db.prepare("SELECT * FROM registry ORDER BY stars DESC LIMIT ?").all(limit) as any[]).map((r:any)=>this.rowToPlugin(r))
   }
 
-  get(id: string): MCPPlugin|null { const r=this.db.prepare("SELECT * FROM registry WHERE id=?").get(id) as any; return r?this.rowToPlugin(r):null }
+  get(id: string): MCPPlugin|null { if (!this.db) return null; const r=this.db.prepare("SELECT * FROM registry WHERE id=?").get(id) as any; return r?this.rowToPlugin(r):null }
 
   rowToPlugin(r: any): MCPPlugin { return { id:r.id,name:r.name,category:r.category,description:r.description,repo:r.repo,install:r.install,stars:r.stars,tags:r.tags,verified:!!r.verified,createdAt:r.createdAt } }
 }

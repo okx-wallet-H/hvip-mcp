@@ -11,6 +11,7 @@
  */
 
 import { isSqliteAvailable, openDB, ensureDir } from "./shared-sqlite.js"
+import { logger } from "../utils/logger.js"
 
 // ── DB 类型 ─────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,8 @@ interface MessageRow {
 // HubDB
 // ═══════════════════════════════════════════════════════════════════════════
 
+const log = logger("HubDB")
+
 export class HubDB {
   private db: any = null
   private dbPath: string
@@ -49,7 +52,7 @@ export class HubDB {
 
   open(): boolean {
     if (!isSqliteAvailable()) {
-      process.stderr.write("[HubDB] node:sqlite 不可用，跳过持久化\n")
+      log.info("node:sqlite 不可用，跳过持久化")
       return false
     }
     try {
@@ -57,10 +60,10 @@ export class HubDB {
       ensureDir(this.dbPath)
       this.db = openDB(this.dbPath, { create: true })
       this.migrate()
-      process.stderr.write(`[HubDB] 已打开 ${this.dbPath}\n`)
+      log.info(`已打开 ${this.dbPath}`)
       return true
     } catch (e: unknown) {
-      process.stderr.write(`[HubDB] 打开失败: ${String(e)}\n`)
+      log.error(`打开失败: ${String(e)}`)
       return false
     }
   }
@@ -120,7 +123,7 @@ export class HubDB {
         task.assignedTo || null, task.claimedAt || null,
         task.result || null, task.branch || null, task.reviewedAt || null,
       )
-    } catch (e: unknown) { process.stderr.write(`[HubDB] saveTask(${task.taskId}) 失败: ${String(e)}\n`) }
+    } catch (e: unknown) { log.error(`saveTask(${task.taskId}) 失败: ${String(e)}`) }
   }
 
   loadTasks(): TaskRow[] {
@@ -128,7 +131,7 @@ export class HubDB {
     try {
       return this.db.prepare("SELECT * FROM hub_tasks ORDER BY taskId").all() as TaskRow[]
     } catch (e: unknown) {
-      process.stderr.write(`[HubDB] loadTasks 失败: ${String(e)}\n`)
+      log.error(`loadTasks 失败: ${String(e)}`)
       return []
     }
   }
@@ -145,7 +148,7 @@ export class HubDB {
           SELECT id FROM hub_messages WHERE roomId = ? ORDER BY id DESC LIMIT 500
         )
       `).run(roomId, roomId)
-    } catch (e: unknown) { process.stderr.write(`[HubDB] saveMessage(${roomId}) 失败: ${String(e)}\n`) }
+    } catch (e: unknown) { log.error(`saveMessage(${roomId}) 失败: ${String(e)}`) }
   }
 
   loadMessages(roomId: string, limit = 50): MessageRow[] {
@@ -155,7 +158,7 @@ export class HubDB {
         `SELECT * FROM hub_messages WHERE roomId = ? ORDER BY id DESC LIMIT ?`
       ).all(roomId, limit).reverse() as MessageRow[]
     } catch (e: unknown) {
-      process.stderr.write(`[HubDB] loadMessages(${roomId}) 失败: ${String(e)}\n`)
+      log.error(`loadMessages(${roomId}) 失败: ${String(e)}`)
       return []
     }
   }
