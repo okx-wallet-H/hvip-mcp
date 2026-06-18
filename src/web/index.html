@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>hvip AI·聊天</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="light"]{--bg:#f4f5f7;--surface:#fff;--elevated:#f9f9fb;--border:#e7e8ec;--border-focus:#6366f140;--text:#17171f;--text2:#4d4d5c;--muted:#8b8b9a;--accent:#6366f1;--accent-hover:#4f46e5;--success:#16a34a;--danger:#dc2626;--shadow:0 0 0 1px rgba(0,0,0,0.03),0 1px 3px rgba(0,0,0,0.04);--radius:12px;--radius-sm:8px;--font-mono:'JetBrains Mono',Consolas,monospace}
+[data-theme="dark"]{--bg:#131316;--surface:#1c1c22;--elevated:#24242b;--border:#2c2c34;--text:#eaeaef;--text2:#b0b0bc;--muted:#6b6b78;--shadow:0 0 0 1px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.12)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{height:100%;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:13.5px;line-height:1.6;color:var(--text2);background:var(--bg);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow);z-index:2}
+header .brand{display:flex;align-items:center;gap:8px}
+header .brand .logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff}
+header h1{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
+header .dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+header .dot.off{background:var(--muted);animation:none}
+header .actions{display:flex;gap:4px}
+header .actions button{background:none;border:1px solid var(--border);cursor:pointer;padding:5px 9px;border-radius:6px;color:var(--muted);font-size:13px;transition:all .15s}
+header .actions button:hover{background:var(--accent-dim,#6366f10a);border-color:var(--accent);color:var(--accent)}
+main{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth}
+.msg{max-width:88%;padding:10px 14px;border-radius:var(--radius);line-height:1.55;font-size:13px;animation:in .2s ease;word-break:break-word}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,#6366f112,#8b5cf610);border:1px solid #6366f120;border-bottom-right-radius:4px;color:var(--text)}
+.msg.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;box-shadow:var(--shadow)}
+.msg .sender{font-size:10px;font-weight:600;margin-bottom:4px;letter-spacing:0.2px}
+.msg.user .sender{color:var(--accent)}.msg.ai .sender{color:var(--muted)}
+.msg .body{white-space:pre-wrap}
+.msg ai .body p+p{margin-top:8px}
+.msg .tools{margin-top:8px;display:flex;flex-wrap:wrap;gap:4px}
+.msg .tools span{font-size:9.5px;background:var(--elevated);border:1px solid var(--border);padding:2px 8px;border-radius:12px;color:var(--muted);font-weight:500}
+.welcome{text-align:center;color:var(--muted);margin-top:40px}
+.welcome .icon{font-size:44px;margin-bottom:14px;opacity:.8}
+.welcome h2{font-size:17px;margin-bottom:6px;color:var(--text);font-weight:700}
+.welcome p{font-size:12.5px;margin-bottom:4px;line-height:1.6}
+.welcome .hints{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:16px}
+.welcome .hints button{font-size:11.5px;padding:7px 15px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;font-family:inherit;box-shadow:var(--shadow)}
+.welcome .hints button:hover{background:var(--accent-dim,#6366f10a);border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+footer{padding:10px 14px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;box-shadow:0 -1px 3px rgba(0,0,0,0.03);z-index:2}
+footer textarea{flex:1;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;resize:none;outline:none;line-height:1.45;max-height:110px;font-family:inherit;transition:border-color .15s}
+footer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px #6366f110}
+footer button{padding:10px 16px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;letter-spacing:-0.1px}
+footer button:hover{background:var(--accent-hover);transform:translateY(-1px)}
+footer button:disabled{opacity:.4;cursor:default;transform:none}
+.loading{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11.5px;padding:6px 0}
+.loading .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:bounce 1.2s infinite}
+.loading .dot:nth-child(2){animation-delay:.2s}.loading .dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:scale(1)}40%{transform:scale(1.6)}}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:500px){.msg{max-width:95%}header h1{font-size:13px}}
+</style>
+</head>
+<body>
+
+<header>
+<div class="brand"><div class="logo">🤖</div><h1>hvip AI</h1><span class="dot" id="dot" title="连接状态"></span></div>
+<div class="actions">
+<button onclick="clearChat()" title="清空">🗑</button>
+<button onclick="toggleTheme()" title="主题" id="themeBtn">🌙</button>
+</div>
+</header>
+
+<main id="chat">
+<div class="welcome" id="welcome">
+<div class="icon">🤖</div>
+<h2>AI 交易助手</h2>
+<p>365 个 OKX 工具已就绪。<br>无需配置，直接提问。</p>
+<div class="hints">
+<button onclick='quickAsk("BTC 现在什么价格？")'>₿ BTC 价格</button>
+<button onclick='quickAsk("ETH 资金费率多少？")'>Ξ ETH 资金费率</button>
+<button onclick='quickAsk("市场情绪怎么样？")'>📊 市场情绪</button>
+<button onclick='quickAsk("今天有什么交易机会？")'>💡 交易机会</button>
+<button onclick='quickAsk("帮我分析一下RSI")'>📈 RSI 分析</button>
+<button onclick='quickAsk("最近有什么热门币？")'>🔥 热门币种</button>
+</div>
+</div>
+</main>
+
+<footer>
+<textarea id="input" rows="1" placeholder="输入消息...（Enter发送）"></textarea>
+<button id="sendBtn" onclick="send()">发送</button>
+</footer>
+
+<script>
+const $=id=>document.getElementById(id)
+const chat=$('chat'),input=$('input'),sendBtn=$('sendBtn')
+let messages=[],loading=false,hvipOk=false
+
+// ── Theme ──
+function toggleTheme(){const h=document.documentElement;const d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');$('themeBtn').textContent=d?'🌙':'☀️';localStorage.setItem('chat-theme',d?'light':'dark')}
+(function(){const s=localStorage.getItem('chat-theme');if(s){document.documentElement.setAttribute('data-theme',s);$('themeBtn').textContent=s==='dark'?'☀️':'🌙'}})()
+
+// ── Health ──
+async function checkHealth(){try{const r=await fetch('/health');const d=await r.json();hvipOk=d.status==='ok';$('dot').className=hvipOk?'dot':'dot off'}catch{hvipOk=false;$('dot').className='dot off'}}
+
+checkHealth();setInterval(checkHealth,30000)
+
+// ── Chat ──
+function clearChat(){messages=[];chat.innerHTML='';if($('welcome'))chat.appendChild($('welcome'))}
+function quickAsk(text){input.value=text;send()}
+
+async function send(){
+  const text=input.value.trim();if(!text||loading)return
+  input.value='';input.style.height='auto';sendBtn.disabled=true
+  const w=$('welcome');if(w)w.remove()
+  addMsg('user',text);loading=true;showLoading()
+
+  try{
+    const claudeMsgs=[{role:'system',content:'你是 hvip AI，加密货币交易助手。你有365个OKX MCP工具。用户问题→调工具查数据→自然回答。简洁、有数据。中文回复。'}]
+    messages.forEach(m=>claudeMsgs.push({role:m.role,content:m.toolResults?m.toolResults:m.content}))
+
+    let loopMsgs=[...claudeMsgs]
+    for(let turn=0;turn<3;turn++){
+      const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2048,tools:getTools(),messages:loopMsgs})})
+      if(!res.ok){const e=await res.text();hideLoading();addMsg('ai','❌ '+(res.status===503?'服务未配置 API Key':`错误 ${res.status}`));break}
+      const data=await res.json();const blocks=data.content||[];let textReply='';const toolCalls=[]
+
+      for(const b of blocks){if(b.type==='text')textReply+=b.text;else if(b.type==='tool_use'){try{const r=await callMCP(b.name,b.input);toolCalls.push({id:b.id,name:b.name,input:b.input,result:r})}catch(e){toolCalls.push({id:b.id,name:b.name,input:b.input,result:'Error: '+e.message})}}}
+
+      if(toolCalls.length>0){
+        loopMsgs.push({role:'assistant',content:blocks})
+        loopMsgs.push({role:'user',content:toolCalls.map(tc=>({type:'tool_result',tool_use_id:tc.id,content:typeof tc.result==='string'?tc.result:JSON.stringify(tc.result).slice(0,2000)}))})
+        if(textReply){hideLoading();addMsg('ai',textReply,toolCalls);loading=false;sendBtn.disabled=false;return}
+        continue
+      }else{hideLoading();addMsg('ai',textReply,toolCalls);loading=false;sendBtn.disabled=false;return}
+    }
+    hideLoading();addMsg('ai','🔧 工具调用完成');loading=false;sendBtn.disabled=false
+  }catch(e){hideLoading();addMsg('ai','❌ '+e.message);loading=false;sendBtn.disabled=false}
+}
+
+// ── MCP ──
+async function callMCP(name,args){
+  const res=await fetch('/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',method:'tools/call',params:{name,arguments:args},id:Date.now()})})
+  const text=await res.text();const m=text.match(/data: (\{.+)/)
+  if(!m)throw new Error('MCP 解析失败')
+  const j=JSON.parse(m[1]);if(j.error)throw new Error(j.error.message||'MCP error')
+  const c=j.result?.content?.[0]?.text;if(!c)return j.result
+  try{return JSON.parse(c)}catch{return c}
+}
+
+// ── UI ──
+function addMsg(role,content,toolNames){
+  messages.push({role,content,toolNames})
+  const div=document.createElement('div');div.className='msg '+role
+  div.innerHTML='<div class=sender>'+(role==='user'?'👤 你':'🤖 hvip')+'</div><div class=body>'+esc(content)+'</div>'+(toolNames&&toolNames.length?'<div class=tools>'+toolNames.map(t=>'<span>'+esc(t)+'</span>').join('')+'</div>':'')
+  chat.appendChild(div);chat.scrollTop=chat.scrollHeight
+}
+function showLoading(){
+  const div=document.createElement('div');div.id='loadingMsg';div.className='msg ai'
+  div.innerHTML='<div class=sender>🤖 hvip</div><div class=loading><div class=dot></div><div class=dot></div><div class=dot></div> 分析中...</div>'
+  chat.appendChild(div);chat.scrollTop=chat.scrollHeight
+}
+function hideLoading(){const e=document.getElementById('loadingMsg');if(e)e.remove()}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,110)+'px'})
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}})
+chat.addEventListener('scroll',()=>{/* autoscroll always */})
+
+// ── Tools ──
+function getTools(){return[
+{name:'agent_catalog',description:'全局工具导航——Agent第一个应调用的工具。返回按用户意图分组的15域工具地图。',input_schema:{type:'object',properties:{},required:[]}},
+{name:'okx_quick_market',description:'单产品行情+5档深度+资金费率，输入instId(如BTC-USDT-SWAP)',input_schema:{type:'object',properties:{instId:{type:'string'}},required:['instId']}},
+{name:'okx_indicator',description:'技术指标(17种): rsi/macd/bb/atr/stoch/ema/sma/wr/cci/obv/vwap/adx/mfi/cmf/supertrend/keltner/pattern',input_schema:{type:'object',properties:{instId:{type:'string'},indicator:{type:'string'},period:{type:'number'},bar:{type:'string'}},required:['instId','indicator']}},
+{name:'okx_smart_sentiment',description:'市场情绪仪表盘(0-100)，综合多空比/PCR/资金费率',input_schema:{type:'object',properties:{instFamily:{type:'string'}},required:[]}},
+{name:'agent_market_scan',description:'市场异动扫描：涨幅榜/跌幅榜/成交量/资金费率异常',input_schema:{type:'object',properties:{instType:{type:'string'},topN:{type:'number'},sortBy:{type:'string'}},required:[]}},
+{name:'okx_account_overview',description:'账户全景：余额+持仓+配置+估值(需OKX Key)',input_schema:{type:'object',properties:{},required:[]}},
+{name:'agent_risk_overview',description:'全仓风险仪表盘：风险排序+强平预警+保证金率(需OKX Key)',input_schema:{type:'object',properties:{},required:[]}},
+{name:'agent_pnl_report',description:'盈亏报告：浮动盈亏+已实现盈亏(需OKX Key)',input_schema:{type:'object',properties:{days:{type:'number'}},required:[]}},
+]}
+</script>
+</body>
+</html>

@@ -46,6 +46,7 @@ const host     = flag("host")              || process.env.HUB_HOST      || "127.
 const webPort  = parseInt(flag("web-port") || process.env.HUB_WEB_PORT  || "3000", 10)
 const dbPath   = flag("db")               || process.env.HUB_DB_PATH   || ".hub/hub.db"
 
+const anthropicKey = process.env.ANTHROPIC_API_KEY || ""
 const token = process.env.HUB_AUTH_TOKEN || ""  // PSK 鉴权令牌
 const workers: ReturnType<typeof spawn>[] = []
 
@@ -110,7 +111,16 @@ function startHttpServer(): void {
     // GET / — 仪表盘
     if (_req.method === "GET" && (_req.url === "/" || _req.url === "/index.html")) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
-      res.end(getDashboardHtml(host,wsPort))
+      res.end(getDashboardHtml(host, wsPort))
+      return
+    }
+
+    // GET /chat — AI 聊天界面（普通用户直接用）
+    if (_req.method === "GET" && _req.url === "/chat") {
+      const paths = [join(__dirname, "web", "index.html"), join(__dirname, "..", "src", "web", "index.html")]
+      for (const p of paths) { if (existsSync(p)) { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(readFileSync(p, "utf-8")); return } }
+      res.writeHead(404)
+      res.end("chat UI not found")
       return
     }
 
@@ -274,6 +284,41 @@ function startHttpServer(): void {
     if (_req.method === "GET" && _req.url === "/api/schedules") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(schedules.map(s => ({ id: s.id, name: s.name, interval: s.interval, nextRun: s.lastRun + (s.count === 0 ? 30000 : s.interval), count: s.count, failCount: s.failCount }))))
+      return
+    }
+
+    // ── POST /mcp — MCP 代理（转发到本地 MCP Server）──
+    if (_req.method === "POST" && _req.url === "/mcp") {
+      const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", async () => {
+        try {
+          const mcpRes = await fetch("http://127.0.0.1:9222/mcp", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: Buffer.concat(chunks),
+          })
+          const body = await mcpRes.text()
+          res.writeHead(mcpRes.status, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(body)
+        } catch { res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "MCP 服务未启动" })) }
+      })
+      return
+    }
+
+    // ── POST /api/chat — Anthropic 代理（用户不需要 API Key）──
+    if (_req.method === "POST" && _req.url === "/api/chat") {
+      if (!anthropicKey) { res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "未配置 ANTHROPIC_API_KEY" })); return }
+      const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", async () => {
+        try {
+          const body = Buffer.concat(chunks).toString("utf-8")
+          // Forward to Anthropic API with server's key
+          const anthroRes = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
+            body,
+          })
+          const result = await anthroRes.text()
+          res.writeHead(anthroRes.status, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(result)
+        } catch (e: any) { res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: e.message })) }
+      })
       return
     }
 
