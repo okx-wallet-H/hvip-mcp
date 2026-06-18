@@ -710,4 +710,161 @@ NEXT: <后续跟进建议>
 
 输出 TASK_COMPLETE`,
   },
+
+  // ════════════ 24x7 守护岗 ════════════
+  {
+    id: "guard-dashboard",
+    name: "📊 仪表盘守护",
+    description: "7x24监控仪表盘: KPI/图表/Agent面板/任务管道/实时动态/任务创建器",
+    prefix: "G",
+    fields: [
+      { key: "mission", label: "维护任务", placeholder: "全面检查", required: true },
+    ],
+    buildPrompt: (p) => `你是仪表盘守护者。检查 dashboard.html 的仪表盘面板一切正常。
+
+## 检查清单
+| 组件 | 检查项 |
+|------|--------|
+| KPI卡片 | 数值是否更新？4个卡片(Agent/任务/完成/辩论)数据正确？ |
+| Chart.js图表 | 饼图/折线图能渲染？数据点有累积？ |
+| Agent面板 | working/idle 正确分组？卡片并排显示？ |
+| 任务面板 | 5个筛选(全部/待分配/进行中/已完成/已审核)正常？阶段管道显示？ |
+| 实时动态 | WS消息能推送？feed计数正确？ |
+| 任务创建器 | 模板卡片能选？表单能填？创建按钮生效？ |
+| ⚡快捷按钮 | BTC行情弹窗？新建任务？ |
+
+发现问题→直接修代码→build→commit。
+输出 TASK_COMPLETE`,
+  },
+  {
+    id: "guard-debate",
+    name: "⚖️ 辩论守护",
+    description: "7x24维护辩论面板: 卡片列表/聊天流/立场谱/共识环",
+    prefix: "G",
+    fields: [
+      { key: "mission", label: "维护任务", placeholder: "全面检查", required: true },
+    ],
+    buildPrompt: (p) => `你是辩论面板守护者。检查辩论功能一切正常。
+
+## 检查清单
+| 组件 | 检查项 |
+|------|--------|
+| 卡片列表 | D-前缀任务正确分组？共识度计算？多空色谱？ |
+| 聊天流 | 点击卡片进入聊天？Agent1左气泡/Agent2右气泡？ |
+| 论点提取 | parseKeyPoints能提取数据？表格行识别？ |
+| 综合结论 | CONCLUSION提取？综合框显示？ |
+| 返回按钮 | closeDebateDetail正常工作？卡片列表恢复？ |
+
+发现问题→直接修代码→build→commit。
+输出 TASK_COMPLETE`,
+  },
+  {
+    id: "guard-terminal",
+    name: "🖥 终端守护",
+    description: "7x24维护实时终端: 流式输出/Pause/Clear/着色",
+    prefix: "G",
+    fields: [
+      { key: "mission", label: "维护任务", placeholder: "全面检查", required: true },
+    ],
+    buildPrompt: (p) => `你是实时终端守护者。检查终端功能一切正常。
+
+## 检查清单
+| 组件 | 检查项 |
+|------|--------|
+| 流式输出 | WS消息能实时推送到终端？多Worker输出汇聚？ |
+| 着色 | success/warn/err/info/dim 分类正确？ |
+| Pause/Clear | 暂停自动滚动？清空终端？ |
+| Worker计数 | 在线Worker数显示正确？● LIVE/○ idle切换？ |
+| 时间戳 | 每条消息带 HH:MM:SS？标签着色？|
+
+发现问题→直接修代码→build→commit。
+输出 TASK_COMPLETE`,
+  },
+  {
+    id: "guard-signals",
+    name: "🚦 信号守护",
+    description: "7x24维护信号面板: VBT信号解析/方向KPI/置信度条",
+    prefix: "G",
+    fields: [
+      { key: "mission", label: "维护任务", placeholder: "全面检查", required: true },
+    ],
+    buildPrompt: (p) => `你是信号面板守护者。检查信号功能一切正常。
+
+## 检查清单
+| 组件 | 检查项 |
+|------|--------|
+| 信号解析 | V-前缀任务正确提取CURRENT_SIGNAL/SHARPE/WIN_RATE？ |
+| KPI | 做多/中性/做空计数正确？平均胜率计算？ |
+| 信号卡片 | 方向着色(绿多/红空)？Sharpe/MDD/胜率显示？ |
+| 最近信号 | LAST_5_SIGNALS解析？信号历史显示？ |
+| 创建信号任务 | vbt-signal模板可用？能创建新信号？ |
+
+发现问题→直接修代码→build→commit。
+输出 TASK_COMPLETE`,
+  },
+  {
+    id: "guard-store",
+    name: "🏪 商店守护",
+    description: "7x24维护MCP插件商店: 搜索/分类/卡片渲染",
+    prefix: "G",
+    fields: [
+      { key: "mission", label: "维护任务", placeholder: "全面检查", required: true },
+    ],
+    buildPrompt: (p) => `你是MCP商店守护者。检查商店功能一切正常。
+
+## 检查清单
+| 组件 | 检查项 |
+|------|--------|
+| 插件加载 | /api/store 返回24个插件？22个分类？ |
+| 搜索过滤 | 输入关键词实时过滤？空结果提示？ |
+| 卡片渲染 | 名称/描述/仓库/星标/已验证正确显示？ |
+| 分类分组 | 按category分组显示？标题正确？ |
+
+发现问题→直接修代码→build→commit。
+输出 TASK_COMPLETE`,
+  },
+  {
+    id: "guard-memory",
+    name: "🧠 记忆守护",
+    description: "7x24维护记忆库: CRUD/搜索/类型过滤/知识注入",
+    prefix: "G",
+    fields: [
+      { key: "mission", label: "维护任务", placeholder: "全面检查", required: true },
+    ],
+    buildPrompt: (p) => `你是记忆库守护者。检查记忆功能一切正常。
+
+## 检查清单
+| 组件 | 检查项 |
+|------|--------|
+| CRUD | POST创建/GET列表/DELETE删除正常？ |
+| 搜索 | /api/memory/search 关键词搜索？ |
+| 类型过滤 | all/memory/directive/skill/doc/strategy筛选？ |
+| 知识注入 | Worker执行前能自动搜记忆？ |
+| 新建表单 | 类型下拉/文本/标签/置信度滑块？ |
+
+发现问题→直接修代码→build→commit。
+输出 TASK_COMPLETE`,
+  },
+  {
+    id: "guard-scheduler",
+    name: "⏰ 调度守护",
+    description: "7x24守护定时任务: 检查积压/补发Worker/监控4个岗位",
+    prefix: "G",
+    fields: [
+      { key: "mission", label: "维护任务", placeholder: "全面检查", required: true },
+    ],
+    buildPrompt: (p) => `你是调度系统守护者。检查定时任务一切正常。
+
+## 检查清单
+| 组件 | 检查项 |
+|------|--------|
+| 4个岗位 | 分析师/研究员/策展人/工程师都在跑？ |
+| 积压检查 | 有 unassigned 的定时任务？有就补发Worker |
+| 防重复 | scheduler跳过未完成的任务？ |
+| 间隔 | 4h/8h/12h/24h 间隔正确？ |
+| 产出质量 | 最近完成的定时任务结果有意义？ |
+
+发现问题→直接修代码→build→commit。
+输出 TASK_COMPLETE`,
+  },
 ]

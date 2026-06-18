@@ -325,6 +325,56 @@ const schedules: ScheduledJob[] = [
     params: { scope: "全面审查 src/ 错误处理/类型安全/性能", priority: "P0" },
     lastRun: 0, count: 0, failCount: 0, timer: null,
   },
+  // ════════ 24x7 守护岗 ════════
+  {
+    id: "guard-dashboard", name: "📊 仪表盘守护",
+    interval: 6 * 3600_000,
+    template: "guard-dashboard",
+    params: { mission: "全面检查仪表盘KPI/图表/Agent面板/任务/动态/创建器" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "guard-debate", name: "⚖️ 辩论守护",
+    interval: 6 * 3600_000,
+    template: "guard-debate",
+    params: { mission: "检查辩论卡片/聊天流/立场谱/共识环/返回按钮" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "guard-terminal", name: "🖥 终端守护",
+    interval: 6 * 3600_000,
+    template: "guard-terminal",
+    params: { mission: "检查流式输出/着色/Pause/Clear/Worker计数" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "guard-signals", name: "🚦 信号守护",
+    interval: 6 * 3600_000,
+    template: "guard-signals",
+    params: { mission: "检查VBT信号解析/KPI/卡片渲染/信号创建" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "guard-store", name: "🏪 商店守护",
+    interval: 6 * 3600_000,
+    template: "guard-store",
+    params: { mission: "检查24个插件/分类/搜索/卡片渲染" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "guard-memory", name: "🧠 记忆守护",
+    interval: 6 * 3600_000,
+    template: "guard-memory",
+    params: { mission: "检查CRUD/搜索/类型过滤/知识注入/新建表单" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "guard-scheduler", name: "⏰ 调度守护",
+    interval: 3 * 3600_000,
+    template: "guard-scheduler",
+    params: { mission: "检查4岗位+7守护/补发积压/防重复" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
 ]
 
 function runScheduledJob(job: ScheduledJob): void {
