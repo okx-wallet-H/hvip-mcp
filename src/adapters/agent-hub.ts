@@ -340,17 +340,34 @@ class AgentHub {
     })
   }
 
-  // ── 注册任务（不派发，仅登记） ──
+  // ── 注册任务（自动派发给空闲 Agent） ──
   registerTask(taskId: string, title?: string): void {
     if (!this.tasks.has(taskId)) {
       this.tasks.set(taskId, { status: "unassigned" })
     }
-    // 记录到自定义标题
     if (title) {
       const t = this.tasks.get(taskId)!
       ;(t as any).title = title
     }
     console.log(`[AgentHub] 任务注册: ${taskId} "${title || taskId}"`)
+
+    // 广播新任务通知
+    this.broadcast({ type: "task:announced", taskId, title: title || taskId })
+
+    // 自动寻址：找空闲 Agent 派发
+    const idleAgents = [...this.agents.entries()]
+      .filter(([,a]) => a.status === "idle" && !a.agentId.startsWith("dashboard"))
+    if (idleAgents.length === 0) {
+      console.log(`[AgentHub] 没有空闲 Agent，任务 ${taskId} 等待手动 spawn`)
+      return
+    }
+    // 优先匹配 capability，否则分配给第一个空闲 Agent
+    const match = idleAgents.find(([,a]) => a.capabilities.includes(taskId))
+      || idleAgents[0]
+    if (match) {
+      console.log(`[AgentHub] 自动派发 ${taskId} → ${match[1].name} (${match[0]})`)
+      this.dispatchTaskTo(taskId, match[0])
+    }
   }
 
   // ── 派发任务 ──

@@ -9,7 +9,7 @@
  */
 
 import { WebSocket } from "ws"
-import { spawn } from "node:child_process"
+import { spawn, execSync } from "node:child_process"
 
 const argv = process.argv.slice(2)
 function flag(name: string): string | undefined {
@@ -22,6 +22,7 @@ const HUB_URL    = flag("hub")  || process.env.HUB_URL  || "ws://127.0.0.1:9321"
 const TASK_ID    = flag("task") || process.env.TASK_ID   || ""
 const REPO_PATH  = flag("repo") || process.env.REPO_PATH || process.cwd()
 const PROMPT_B64 = flag("prompt-b64") || ""  // Hub v2: pre-built prompt from template
+const WEB_PORT   = flag("web-port") || process.env.HUB_WEB_PORT || "3000"
 
 const AGENT_ID = `worker-${TASK_ID}-${Date.now()}`
 const AGENT_NAME = `Worker·${TASK_ID}`
@@ -136,6 +137,19 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
       : buildCodePrompt(taskId, title, url)
   }
 
+  // 🔍 检索知识库
+  try {
+    const memUrl = `http://127.0.0.1:${WEB_PORT}/api/memory/for-task?q=${encodeURIComponent(title)}`
+    const kbRaw = execSync(`curl -s "${memUrl}"`, { timeout: 5000, stdio: ["ignore", "pipe", "ignore"] })
+    if (kbRaw && kbRaw.length > 0) {
+      const kb = JSON.parse(kbRaw.toString())
+      if (kb.hit > 0) {
+        prompt = prompt + "\n" + kb.context
+        process.stderr.write(`[Worker] 📚 注入 ${kb.hit} 条相关知识\n`)
+      }
+    }
+  } catch {}
+
   // 立刻推送启动状态
   ws.send(JSON.stringify({
     type: "room:message",
@@ -194,7 +208,7 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
           type: "task:done",
           taskId,
           agentId: AGENT_ID,
-          result: `${title} — 行情已查询`,
+          result: output.slice(-5000) || `${title} — 无输出`,
         }))
         // 自动保存到共享记忆（失败不阻断）
         try { tagAndSave(title, output) } catch {}
@@ -207,7 +221,7 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
           taskId,
           agentId: AGENT_ID,
           branch,
-          result: `${title} — Claude Code 自动完成`,
+          result: `${title} —\n\n${output.slice(-5000)}`,
         }))
       }
     } else {

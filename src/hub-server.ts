@@ -25,7 +25,7 @@ import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { TASK_TEMPLATES } from "./adapters/hub-templates.js"
 
-const VERSION = "0.3.2"
+const VERSION = "0.4.0"
 
 // ── 仪表盘 HTML — 从文件读取 ──
 function getDashboardHtml(host, port){const paths=[join(__dirname,"web","dashboard.html"),join(__dirname,"..","src","web","dashboard.html")];for(const p of paths){if(existsSync(p))return readFileSync(p,"utf-8").replace("HUB_HOST",host).replace("WS_PORT = 0","WS_PORT = "+port)}return "<html><body><h2>dashboard.html not found</h2></body></html>"}
@@ -52,6 +52,36 @@ const workers: ReturnType<typeof spawn>[] = []
 // taskId 白名单校验 — 防止路径遍历注入
 function validateTaskId(id: string): boolean {
   return /^[A-Za-z0-9_-]+$/.test(id) && !id.includes("..") && id.length <= 64
+}
+
+// ── Worker 启动器（复用） ──
+function spawnWorker(taskId: string): { ok: boolean; error?: string; workerPid?: number } {
+  const hubUrl = `ws://127.0.0.1:${wsPort}`
+  const repoPath = process.cwd()
+  const meta = taskMeta.get(taskId); let promptB64 = ""
+  if (meta) {
+    const tpl = TASK_TEMPLATES.find(t => t.id === meta.templateId)
+    if (tpl) { const p = tpl.buildPrompt(meta.params); promptB64 = Buffer.from(p, "utf-8").toString("base64") }
+  }
+  const workerArgs = ["dist/hub-worker.js", "--task", taskId, "--hub", hubUrl, "--repo", repoPath, "--web-port", String(webPort)]
+  if (promptB64) workerArgs.push("--prompt-b64", promptB64)
+
+  try {
+    const worker = spawn("node", workerArgs, { cwd: repoPath, stdio: "pipe", detached: true })
+    worker.stdout?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
+    worker.stderr?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
+    worker.on("error", (e: Error) => process.stderr.write(`[Hub] Worker 启动失败: ${e.message}\n`))
+    worker.on("close", (code: number | null) => {
+      process.stderr.write(`[Hub] Worker-${taskId} 退出 (${code})\n`)
+      const idx = workers.indexOf(worker); if (idx >= 0) workers.splice(idx, 1)
+    })
+    workers.push(worker)
+    process.stderr.write(`[Hub] 活跃 Worker: ${workers.length}\n`)
+    return { ok: true, workerPid: worker.pid }
+  } catch (e: any) {
+    process.stderr.write(`[Hub] Worker 启动异常: ${e.message}\n`)
+    return { ok: false, error: e.message }
+  }
 }
 
 function startHttpServer(): void {
@@ -104,9 +134,12 @@ function startHttpServer(): void {
           agentHub.registerTask(taskId, title || taskId)
           db?.saveTask({ taskId, status: "unassigned", title: title || taskId })
           if (template && params) taskMeta.set(taskId, { templateId: template, params })
-          process.stderr.write(`[Hub] 新任务: ${taskId} "${title}"\n`)
+          // 有模板 → 自动拉起 Worker
+          let spawned = false; let workerPid = 0
+          if (template) { const result = spawnWorker(taskId); spawned = result.ok; workerPid = result.workerPid || 0 }
+          process.stderr.write(`[Hub] 新任务: ${taskId} "${title}"${spawned ? ' 🤖 已拉起' : ''}\n`)
           res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
-          res.end(JSON.stringify({ ok: true, taskId, title }))
+          res.end(JSON.stringify({ ok: true, taskId, title, spawned, workerPid }))
         } catch {
           res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
           res.end(JSON.stringify({ error: "JSON 解析失败" }))
@@ -121,27 +154,9 @@ function startHttpServer(): void {
       const taskId = decodeURIComponent(rawId)
       if (!taskId || !validateTaskId(taskId)) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "taskId 缺失或格式无效" })); return }
 
-      const hubUrl = `ws://127.0.0.1:${wsPort}`
-      const repoPath = process.cwd()
-
-      const meta=taskMeta.get(taskId);let promptB64="";if(meta){const tpl=TASK_TEMPLATES.find(t=>t.id===meta.templateId);if(tpl){const p=tpl.buildPrompt(meta.params);promptB64=Buffer.from(p,"utf-8").toString("base64")}}process.stderr.write(`[Hub] 🤖 拉起 Worker: ${taskId}\n`);const workerArgs=["dist/hub-worker.js","--task",taskId,"--hub",hubUrl,"--repo",repoPath];if(promptB64)workerArgs.push("--prompt-b64",promptB64);const worker=spawn("node",workerArgs, {
-        cwd: repoPath,
-        stdio: "pipe",
-        detached: true,
-      })
-      worker.stdout?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
-      worker.stderr?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
-      worker.on("error", (e: Error) => process.stderr.write(`[Hub] Worker 启动失败: ${e.message}\n`))
-      worker.on("close", (code: number | null) => {
-        process.stderr.write(`[Hub] Worker-${taskId} 退出 (${code})\n`)
-        const idx = workers.indexOf(worker); if (idx >= 0) workers.splice(idx, 1)
-      })
-      workers.push(worker)
-      process.stderr.write(`[Hub] 活跃 Worker: ${workers.length}\n`)
-      // 不 await — detached 让 Worker 独立运行
-
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
-      res.end(JSON.stringify({ ok: true, taskId, hubUrl, workerPid: worker.pid }))
+      const result = spawnWorker(taskId)
+      res.writeHead(result.ok ? 200 : 500, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify({ ok: result.ok, taskId, workerPid: result.workerPid }))
       return
     }
 
@@ -188,7 +203,32 @@ function startHttpServer(): void {
       return
     }
 
-    // ── Registry API (MCP商店) ──
+    // DELETE /api/memory/:id — 删除记忆
+    if (_req.method === "DELETE" && _req.url?.startsWith("/api/memory/")) {
+      const id = _req.url.slice("/api/memory/".length)
+      if (!id) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "missing id" })); return }
+      const ok = memory.delete(id)
+      res.writeHead(ok ? 200 : 404, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify({ ok }))
+      return
+    }
+
+    // GET /api/memory/for-task?q= — Agent 执行前检索知识库
+    if (_req.method === "GET" && _req.url?.startsWith("/api/memory/for-task")) {
+      const u = new URL(_req.url, "http://" + host + ":" + String(webPort))
+      const q = u.searchParams.get("q") || ""
+      const entries = memory.search(q, 5)
+      let ctx = ""
+      if (entries.length > 0) {
+        ctx = entries.map(function(e, i) { return "### [" + e.type + "] " + e.text.substring(0, 500) }).join("\n\n---\n\n")
+        ctx = "\n\n## Knowledge Base (from shared memory)\n\n" + ctx
+      }
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify({ entries: entries, context: ctx, hit: entries.length }))
+      return
+    }
+
+        // ── Registry API (MCP商店) ──
     if (_req.method === "GET" && _req.url === "/api/store") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(registry.byCategory()))
@@ -230,6 +270,13 @@ function startHttpServer(): void {
       return
     }
 
+    // ── API: 定时任务状态 ──
+    if (_req.method === "GET" && _req.url === "/api/schedules") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(schedules.map(s => ({ id: s.id, name: s.name, interval: s.interval, nextRun: s.lastRun + (s.count === 0 ? 30000 : s.interval), count: s.count, failCount: s.failCount }))))
+      return
+    }
+
     // 404
     res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" })
     res.end(JSON.stringify({ error: "Not Found" }))
@@ -238,6 +285,70 @@ function startHttpServer(): void {
   httpServer.listen(webPort, host, () => {
     process.stderr.write(`[Hub] 🌐 仪表盘 → http://${host}:${webPort}\n`)
   })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 定时任务调度器
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface ScheduledJob {
+  id: string; name: string; interval: number; template: string; params: Record<string, string>
+  lastRun: number; count: number; failCount: number; timer: ReturnType<typeof setTimeout> | null
+}
+
+const schedules: ScheduledJob[] = [
+  {
+    id: "sched-analyst", name: "行情分析师",
+    interval: 4 * 3600_000,
+    template: "role-analyst",
+    params: { symbols: "BTC/USDT, ETH/USDT, SOL/USDT", timeframes: "4h, 1d", focus: "趋势方向+支撑阻力+资金费率" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "sched-quant", name: "量化研究员",
+    interval: 8 * 3600_000,
+    template: "role-quant",
+    params: { strategy: "RSI(14) vs SuperTrend(10,3) vs MACD — VBT PRO 回测对比优化", symbols: "BTC/USDT, ETH/USDT", timeframe: "4h" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "sched-curator", name: "知识策展人",
+    interval: 12 * 3600_000,
+    template: "role-curator",
+    params: { topic: "全面整理", action: "去重合并+标记低置信度+补充缺失" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+  {
+    id: "sched-engineer", name: "资深工程师",
+    interval: 24 * 3600_000,
+    template: "role-engineer",
+    params: { scope: "全面审查 src/ 错误处理/类型安全/性能", priority: "P0" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
+]
+
+function runScheduledJob(job: ScheduledJob): void {
+  const taskId = `${job.id}-${Date.now().toString(36)}`
+  const title = `[定时] ${job.name} #${job.count + 1}`
+  process.stderr.write(`[Scheduler] ⏰ ${job.name} → ${taskId}\n`)
+  agentHub.registerTask(taskId, title)
+  db?.saveTask({ taskId, status: "unassigned", title })
+  taskMeta.set(taskId, { templateId: job.template, params: job.params })
+  const result = spawnWorker(taskId)
+  if (result.ok) { job.count++; job.failCount = 0 }
+  else { job.failCount++; process.stderr.write(`[Scheduler] ❌ ${job.name}: ${result.error}\n`) }
+  job.lastRun = Date.now()
+  scheduleNext(job)
+}
+
+function scheduleNext(job: ScheduledJob): void {
+  const delay = job.count === 0 ? 30000 : job.interval
+  job.timer = setTimeout(() => runScheduledJob(job), delay)
+}
+
+function startScheduler(): void {
+  for (const job of schedules) scheduleNext(job)
+  process.stderr.write(`[Scheduler] 📅 ${schedules.length} 个定时任务 (首次30s后触发)\n`)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -279,6 +390,9 @@ registry.open()
 
 // 启动 HTTP 仪表盘
 startHttpServer()
+
+// 启动定时任务
+startScheduler()
 
 // 启动 WebSocket Hub
 agentHub.start(wsPort, host, VERSION, token)
