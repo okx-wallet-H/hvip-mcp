@@ -70,6 +70,7 @@ const chatProvider: "anthropic" | "openai" | "none" = openaiKey ? "openai" : ant
 
 const token = process.env.HUB_AUTH_TOKEN || ""  // PSK 鉴权令牌
 const workers: ReturnType<typeof spawn>[] = []
+let mcpSessionId = ""
 
 // taskId 白名单校验 — 防止路径遍历注入
 function validateTaskId(id: string): boolean {
@@ -308,22 +309,57 @@ function startHttpServer(): void {
       return
     }
 
-    // ── POST /mcp — MCP 代理（转发到本地 MCP Server）──
+    // ── POST /mcp — MCP 代理（带 session 管理）──
     if (_req.method === "POST" && _req.url === "/mcp") {
       const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", async () => {
         try {
+          const bodyStr = Buffer.concat(chunks).toString("utf-8")
+          const req = JSON.parse(bodyStr)
+
+          // Auto-initialize MCP session if needed
+          if (!mcpSessionId || req.method === "initialize") {
+            const initRes = await fetch("http://127.0.0.1:9222/mcp", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+              body: JSON.stringify({ jsonrpc: "2.0", method: "initialize", params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "hub-proxy", version: "1.0" } }, id: 0 }),
+            })
+            const sid = initRes.headers.get("mcp-session-id")
+            if (sid) mcpSessionId = sid
+            // Read and discard init response body
+            await initRes.text()
+            // If client sent initialize, return the init response
+            if (req.method === "initialize") {
+              res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Mcp-Session-Id": sid || "" })
+              res.end(JSON.stringify({ jsonrpc: "2.0", id: 0, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "hvip-mcp", version: "1.0" } } }))
+              return
+            }
+          }
+
+          // Forward with session + required headers
+          const headers: Record<string, string> = {
+            "Content-Type": _req.headers["content-type"] || "application/json",
+            Accept: "application/json, text/event-stream",
+          }
+          if (mcpSessionId) headers["Mcp-Session-Id"] = mcpSessionId
           const mcpRes = await fetch("http://127.0.0.1:9222/mcp", {
-            method: "POST",
-            headers: {
-              "Content-Type": _req.headers["content-type"] || "application/json",
-              Accept: _req.headers["accept"] || "application/json, text/event-stream",
-            },
-            body: Buffer.concat(chunks),
+            method: "POST", headers, body: bodyStr,
           })
           const body = await mcpRes.text()
-          res.writeHead(mcpRes.status, { "Content-Type": "application/json; charset=utf-8" })
-          res.end(body)
-        } catch { res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "MCP 服务未启动" })) }
+          // Parse SSE and return plain JSON
+          let result = body
+          const match = body.match(/data:\s*(\{[\s\S]*?\})\s*$/m)
+          if (match) {
+            try {
+              const parsed = JSON.parse(match[1])
+              if (parsed.result?.content?.[0]?.text) {
+                try { parsed.result.content[0].text = JSON.parse(parsed.result.content[0].text) } catch {}
+              }
+              result = JSON.stringify(parsed)
+            } catch {}
+          }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(result)
+        } catch (e: any) { res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: e.message || "MCP 服务未启动" })) }
       })
       return
     }

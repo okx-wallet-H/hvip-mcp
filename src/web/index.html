@@ -88,7 +88,7 @@ async function send(){
   addMsg('user',text);loading=true
 
   const oaiMsgs=[
-    {role:'system',content:'你是 hvip AI，加密货币交易助手。你有365个OKX MCP工具。用户问题→调工具查数据→中文回答。简洁有数据。'},
+    {role:'system',content:'你是 hvip AI，加密货币交易助手。你有OKX MCP工具可以查实时行情。规则：1)查数据必须先调工具 2)工具返回空数据就说"暂无数据"，绝不编造数字 3)回答简洁有据。'},
     ...messages,
   ]
 
@@ -127,14 +127,21 @@ async function send(){
   }catch(e){addMsg('ai','❌ '+e.message);loading=false;sendBtn.disabled=false}
 }
 
-// ── MCP ──
+// ── MCP（Hub 代理已处理 session + SSE → JSON）──
 async function callMCP(name,args){
-  const res=await fetch('/mcp',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',method:'tools/call',params:{name,arguments:args},id:Date.now()})})
-  const t=await res.text();const m=t.match(/data: (\{.+)/)
-  if(!m)return t
-  const j=JSON.parse(m[1]);if(j.error)throw new Error(j.error.message)
-  const c=j.result?.content?.[0]?.text;if(!c)return j.result
-  try{return JSON.parse(c)}catch{return c}
+  const res=await fetch('/mcp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',method:'tools/call',params:{name,arguments:args},id:Date.now()})})
+  const t=await res.text()
+  try{
+    const j=JSON.parse(t)
+    if(j.error)throw new Error(j.error.message||'MCP error')
+    let result=j.result?.content?.[0]?.text
+    if(!result)result=j.result
+    if(typeof result==='string'){try{result=JSON.parse(result)}catch{}}
+    return result
+  }catch(e){
+    if(e.message.includes('MCP'))throw e
+    return t
+  }
 }
 
 // ── UI ──
