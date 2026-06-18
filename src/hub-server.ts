@@ -56,6 +56,11 @@ const webPort  = parseInt(flag("web-port") || process.env.HUB_WEB_PORT  || "3000
 const dbPath   = flag("db")               || process.env.HUB_DB_PATH   || ".hub/hub.db"
 
 const anthropicKey = process.env.ANTHROPIC_API_KEY || ""
+const openaiKey = process.env.OPENAI_API_KEY || ""
+const openaiBase = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"
+const llmModel = process.env.LLM_MODEL || "gpt-4o-mini"
+const chatProvider: "anthropic" | "openai" | "none" = anthropicKey ? "anthropic" : openaiKey ? "openai" : "none"
+
 const token = process.env.HUB_AUTH_TOKEN || ""  // PSK 鉴权令牌
 const workers: ReturnType<typeof spawn>[] = []
 
@@ -316,21 +321,51 @@ function startHttpServer(): void {
       return
     }
 
-    // ── POST /api/chat — Anthropic 代理（用户不需要 API Key）──
+    // ── POST /api/chat — 通用 LLM 代理（用户不需要 Key）──
     if (_req.method === "POST" && _req.url === "/api/chat") {
-      if (!anthropicKey) { res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "未配置 ANTHROPIC_API_KEY" })); return }
+      if (chatProvider === "none") { res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "管理员未配置 LLM Key（ANTHROPIC_API_KEY 或 OPENAI_API_KEY）" })); return }
       const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", async () => {
         try {
           const body = Buffer.concat(chunks).toString("utf-8")
-          // Forward to Anthropic API with server's key
-          const anthroRes = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
-            body,
-          })
-          const result = await anthroRes.text()
-          res.writeHead(anthroRes.status, { "Content-Type": "application/json; charset=utf-8" })
-          res.end(result)
+          const { model, messages, tools } = JSON.parse(body)
+
+          if (chatProvider === "anthropic") {
+            const anthroRes = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
+              body: JSON.stringify({ model: llmModel, max_tokens: 2048, messages, tools }),
+            })
+            res.writeHead(anthroRes.status, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(await anthroRes.text())
+          } else {
+            // OpenAI-compatible (OpenAI / DeepSeek / Groq / Ollama / ...)
+            const oaiTools = tools ? tools.map((t: any) => ({
+              type: "function" as const,
+              function: { name: t.name, description: t.description, parameters: t.input_schema },
+            })) : undefined
+            const oaiRes = await fetch(openaiBase + "/chat/completions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + openaiKey },
+              body: JSON.stringify({ model: llmModel, max_tokens: 2048, messages, tools: oaiTools }),
+            })
+            // Convert OpenAI response → Anthropic format (so client code stays unchanged)
+            const oaiJson = await oaiRes.json()
+            if (oaiJson.error) {
+              res.writeHead(oaiRes.status, { "Content-Type": "application/json; charset=utf-8" })
+              res.end(JSON.stringify({ type: "error", error: oaiJson.error }))
+            } else {
+              const choice = oaiJson.choices?.[0]?.message || {}
+              const content: any[] = []
+              if (choice.content) content.push({ type: "text", text: choice.content })
+              if (choice.tool_calls) {
+                for (const tc of choice.tool_calls) {
+                  content.push({ type: "tool_use", id: tc.id, name: tc.function.name, input: JSON.parse(tc.function.arguments || "{}") })
+                }
+              }
+              res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+              res.end(JSON.stringify({ id: oaiJson.id, model: oaiJson.model, content, stop_reason: choice.tool_calls ? "tool_use" : "end_turn" }))
+            }
+          }
         } catch (e: any) { res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: e.message })) }
       })
       return
