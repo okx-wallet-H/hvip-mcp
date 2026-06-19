@@ -37,21 +37,21 @@ interface ModelTier {
 const MODEL_TIERS: ModelTier[] = [
   {
     provider: "deepseek",
-    model: "claude-sonnet-4-6",
-    apiKey: process.env.DEEPSEEK_API_KEY || "",
+    model: process.env.DEEPSEEK_MODEL || "claude-sonnet-4-6",
+    apiKey: process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_AUTH_TOKEN || "",
     baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/anthropic",
     protocol: "anthropic",
     cooldownUntil: 0,
-    enabled: !!(process.env.DEEPSEEK_API_KEY),
+    enabled: !!(process.env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_AUTH_TOKEN),
   },
   {
     provider: "anthropic",
     model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
-    apiKey: process.env.ANTHROPIC_API_KEY || "",
+    apiKey: process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || "",
     baseURL: process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com",
     protocol: "anthropic",
     cooldownUntil: 0,
-    enabled: !!(process.env.ANTHROPIC_API_KEY),
+    enabled: !!(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN),
   },
   {
     provider: "groq",
