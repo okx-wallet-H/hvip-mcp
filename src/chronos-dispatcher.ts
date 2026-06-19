@@ -691,7 +691,7 @@ async function npmAuditPatrol() {
     let auditResult = ""
     try {
       auditResult = execSync("npm audit --json 2>&1", {
-        encoding: "utf-8", timeout: 60000, cwd: process.cwd(),
+        encoding: "utf-8", timeout: 60000, cwd: process.cwd(), windowsHide: true,
       })
     } catch (e: any) {
       // npm audit exits 1 when vulnerabilities found — that's expected
@@ -767,7 +767,7 @@ async function autoPublishPatrol() {
   try {
     const { execSync } = await import("node:child_process")
     execSync("node scripts/auto-publish.mjs", {
-      encoding: "utf-8", timeout: 180000, cwd: process.cwd(),
+      encoding: "utf-8", timeout: 180000, cwd: process.cwd(), windowsHide: true,
     })
   } catch {}
 }

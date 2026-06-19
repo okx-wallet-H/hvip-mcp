@@ -817,7 +817,7 @@ startScheduler()
 // 启动 MCP Server (自动选择空闲端口，Chat UI 工具调用需要)
 let mcpProcess: ReturnType<typeof spawn> | null = null
 try {
-  mcpProcess = spawn("node", ["dist/index.js", "start:http"], { cwd: process.cwd(), stdio: "pipe", detached: true, env: { ...process.env, PORT: "9222" } })
+  mcpProcess = spawn("node", ["dist/index.js", "start:http"], { cwd: process.cwd(), stdio: "pipe", detached: true, windowsHide: true, env: { ...process.env, PORT: "9222" } })
   mcpProcess.stderr?.on("data", (d: Buffer) => process.stderr.write(d))
   log.info("🛠 MCP Server 启动中 → http://127.0.0.1:9222")
 } catch { log.warn("⚠️ MCP Server 启动失败") }

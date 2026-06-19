@@ -45,11 +45,11 @@ async function reviewTask(taskId: string, result: string, branch?: string): Prom
   // Get the diff
   let diff = ""
   try {
-    diff = execSync("git diff HEAD~1 --stat", { encoding: "utf-8", timeout: 10000 })
+    diff = execSync("git diff HEAD~1 --stat", { encoding: "utf-8", timeout: 10000, windowsHide: true })
   } catch {
     // If no previous commit, check working tree
     try {
-      diff = execSync("git diff --stat", { encoding: "utf-8", timeout: 10000 })
+      diff = execSync("git diff --stat", { encoding: "utf-8", timeout: 10000, windowsHide: true })
     } catch {}
   }
 
@@ -124,7 +124,7 @@ async function createAutoPR(taskId: string, branch: string): Promise<string | nu
     }
 
     // Push branch
-    execSync(`git push origin ${branch}`, { encoding: "utf-8", timeout: 30000 })
+    execSync(`git push origin ${branch}`, { encoding: "utf-8", timeout: 30000, windowsHide: true })
 
     // Create PR via gh CLI
     const prUrl = execSync(
@@ -138,7 +138,7 @@ async function createAutoPR(taskId: string, branch: string): Promise<string | nu
     if (process.env.AUTO_MERGE !== "false") {
       try {
         execSync(`gh pr merge ${prUrl} --squash --subject "Auto-merge: ${taskId}"`, {
-          encoding: "utf-8", timeout: 60000,
+          encoding: "utf-8", timeout: 60000, windowsHide: true,
         })
         log.info(`✅ PR 已自动合并: ${prUrl}`)
       } catch (e: any) {
