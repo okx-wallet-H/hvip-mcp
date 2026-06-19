@@ -57,24 +57,41 @@ class AgentHub {
   private port = 0
   private db: HubDB | null = null
   private token = ""  // PSK 鉴权令牌
+  private costTracker: any = null  // HubCosts 实例
 
   // ── 持久化绑定 ──
+
+  setCostTracker(ct: any): void { this.costTracker = ct }
 
   setDB(db: HubDB): void {
     this.db = db
     // 从 DB 恢复任务
     const rows = db.loadTasks()
+    let orphanCount = 0
     for (const r of rows) {
-      this.tasks.set(r.taskId, {
-        status: r.status as TaskState["status"],
-        assignedTo: r.assignedTo || undefined,
-        claimedAt: r.claimedAt || undefined,
-        result: r.result || undefined,
-        branch: r.branch || undefined,
-      })
+      // 检查是否为孤儿任务（assigned 但 worker 不在线）
+      if (r.status === "assigned" && r.assignedTo && !this.agents.has(r.assignedTo)) {
+        this.tasks.set(r.taskId, {
+          status: "unassigned",
+          assignedTo: undefined,
+          claimedAt: undefined,
+          result: r.result || undefined,
+          branch: r.branch || undefined,
+        })
+        db.saveTask({ taskId: r.taskId, status: "unassigned" })
+        orphanCount++
+      } else {
+        this.tasks.set(r.taskId, {
+          status: r.status as TaskState["status"],
+          assignedTo: r.assignedTo || undefined,
+          claimedAt: r.claimedAt || undefined,
+          result: r.result || undefined,
+          branch: r.branch || undefined,
+        })
+      }
     }
     if (rows.length > 0) {
-      log.info(`从 DB 恢复 ${rows.length} 个任务`)
+      log.info(`从 DB 恢复 ${rows.length} 个任务` + (orphanCount > 0 ? `，释放 ${orphanCount} 个孤儿任务` : ""))
     }
   }
 
@@ -152,6 +169,8 @@ class AgentHub {
     this.heartbeatTimer = setInterval(() => {
       const now = Date.now()
       for (const [id, a] of this.agents) {
+        // 跳过纯 Viewer（终端面板/仪表盘）—— 它们不实现 agent:status 心跳协议
+        if (id.startsWith("term-") || id.startsWith("dashboard")) continue
         if (now - a.lastSeen > 120_000) {
           a.ws.close()
           this.agents.delete(id)
@@ -167,7 +186,12 @@ class AgentHub {
       case "agent:hello":   return this.handleHello(ws, msg);
       case "agent:status":  if (authAgentId) this.handleAgentStatus(authAgentId); break
       case "task:claim":    this.handleClaim(msg); break
+      case "task:progress": this.broadcast(msg); break   // 流式文本转发
+      case "task:tool":     this.broadcast(msg); break   // 工具调用转发
       case "task:done":     this.handleDone(msg); break
+      case "task:assign":   this.handleAssign(msg); break  // Chronos AI 调度指令
+      case "task:unassign": this.handleUnassign(msg); break // Chronos 释放卡住任务
+      case "task:reject":   this.handleReject(msg); break  // Worker 忙时拒绝任务
       // ── Room ──
       case "room:join":     this.handleRoomJoin(authAgentId, msg); break
       case "room:leave":    this.handleRoomLeave(authAgentId, msg); break
@@ -210,6 +234,14 @@ class AgentHub {
       message: `已注册。可用任务: ${this.getUnassignedTasks().join(", ") || "无"}`,
       pendingTasks: this.getUnassignedTasks(),
     })
+    // 广播给其他 Agent（Chronos 需要实时感知 Worker 上线）
+    this.broadcast({
+      type: "agent:update",
+      agentId,
+      name,
+      capabilities,
+      status: "idle",
+    })
 
     // 版本检查：Agent 落后自动提醒升级
     const agentVersion = String(msg.version || "")
@@ -237,6 +269,8 @@ class AgentHub {
   private handleDisconnect(agentId: string): void {
     const info = this.agents.get(agentId)
     log.info(`Agent 离线: ${agentId} (${info?.name || "?"})`)
+    // 广播离线事件（Chronos 需要感知 Worker 下线）
+    this.broadcast({ type: "agent:offline", agentId })
 
     // 离开所有房间
     for (const [roomId, room] of this.rooms) {
@@ -283,8 +317,14 @@ class AgentHub {
       return
     }
     if (task.status === "assigned" && task.assignedTo !== agentId) {
-      this.sendTo(agentId, { type: "error", message: `任务 ${taskId} 已被 ${task.assignedTo} 认领` })
-      return
+      // 检查原 worker 是否还在线
+      const assignedWorker = task.assignedTo ? this.agents.get(task.assignedTo) : null
+      if (assignedWorker) {
+        this.sendTo(agentId, { type: "error", message: `任务 ${taskId} 已被 ${task.assignedTo} 认领` })
+        return
+      }
+      // 原 worker 已断连 → 允许新 worker 接管
+      log.info(`${agentId} 接管孤儿任务 ${taskId}（原 ${task.assignedTo} 已离线）`)
     }
 
     task.status = "assigned"
@@ -314,10 +354,42 @@ class AgentHub {
     const agentId = String(msg.agentId || "")
     const result = String(msg.result || "")
     const branch = String(msg.branch || "")
+    const error = msg.error ? String(msg.error) : ""
+    const usage = msg.usage as { inputTokens?: number; outputTokens?: number; model?: string } | undefined
+    const steps = Number(msg.steps || 0)
+
+    // 记录 LLM 成本
+    if (this.costTracker && usage?.inputTokens) {
+      this.costTracker.record({
+        agentId,
+        taskId,
+        model: usage.model || "claude-sonnet-4-6",
+        inputTokens: usage.inputTokens || 0,
+        outputTokens: usage.outputTokens || 0,
+        purpose: "task",
+      })
+    }
 
     const task = this.tasks.get(taskId)
     if (!task) {
       this.sendTo(agentId, { type: "error", message: `任务 ${taskId} 不存在` })
+      return
+    }
+
+    // 执行失败 → 释放任务让 Chronos 重试，不标记为 done
+    // 注意：[Chronos] 前缀是 Chronos 放弃重试后的最终结果，不释放
+    if (error || /^❌|^执行失败/i.test(result)) {
+      task.status = "unassigned"
+      task.assignedTo = undefined
+      task.claimedAt = undefined
+
+      const a = this.agents.get(agentId)
+      if (a) a.status = "idle"
+
+      this.db?.saveTask({ taskId, status: "unassigned" })
+      log.info(`任务执行失败，释放重试: ${taskId} — ${error || result.slice(0, 80)}`)
+      this.broadcast({ type: "agent:update", agentId, status: "idle" })
+      this.broadcast({ type: "task:released", taskId, reason: `执行失败: ${error || result.slice(0, 60)}` })
       return
     }
 
@@ -331,6 +403,9 @@ class AgentHub {
     log.info(`${agentId} 完成 ${taskId}: ${result}`)
     this.db?.saveTask({ taskId, status: "done", title: this.getTaskTitle(taskId), assignedTo: agentId, result, branch })
 
+    // 广播 Worker 恢复空闲
+    this.broadcast({ type: "agent:update", agentId, status: "idle" })
+
     // 发到任务房间
     this.sendToRoom(`#task-${taskId}`, agentId, `已完成 ${taskId}: ${result} (branch: ${branch})，等待审核。`)
     // 发到审核房间
@@ -343,50 +418,157 @@ class AgentHub {
     })
   }
 
+  // ── Chronos 释放卡住任务 ──
+  private handleUnassign(msg: HubMessage): void {
+    const taskId = String(msg.taskId || "")
+    const reason = String(msg.reason || "Chronos 巡检释放")
+
+    const task = this.tasks.get(taskId)
+    if (!task) {
+      log.warn(`Chronos 释放失败: 任务 ${taskId} 不存在`)
+      return
+    }
+    if (task.status !== "assigned") {
+      // 已经是非 assigned 状态，无需释放
+      return
+    }
+
+    const oldAgentId = task.assignedTo
+    task.status = "unassigned"
+    task.assignedTo = undefined
+    task.claimedAt = undefined
+
+    // 如果原 worker 在线，将其状态恢复为空闲
+    if (oldAgentId) {
+      const oldWorker = this.agents.get(oldAgentId)
+      if (oldWorker && oldWorker.status === "working") {
+        oldWorker.status = "idle"
+      }
+    }
+
+    this.db?.saveTask({ taskId, status: "unassigned" })
+    log.warn(`Chronos 释放卡住任务: ${taskId} (原 ${oldAgentId || "?"}) — ${reason}`)
+    this.broadcast({
+      type: "task:released",
+      taskId,
+      reason: `Chronos 释放: ${reason}`,
+    })
+  }
+
+  // ── Worker 拒绝任务（忙碌）──
+  private handleReject(msg: HubMessage): void {
+    const taskId = String(msg.taskId || "")
+    const agentId = String(msg.agentId || "")
+    const reason = String(msg.reason || "Worker busy")
+
+    const task = this.tasks.get(taskId)
+    if (!task) return
+
+    // 只释放 assigned 状态的任务
+    if (task.status !== "assigned") return
+
+    task.status = "unassigned"
+    task.assignedTo = undefined
+    task.claimedAt = undefined
+
+    // 恢复 Worker 状态
+    const a = this.agents.get(agentId)
+    if (a && a.status === "working") a.status = "idle"
+
+    this.db?.saveTask({ taskId, status: "unassigned" })
+    log.info(`任务被拒绝: ${taskId} by ${agentId} — ${reason}`)
+    this.broadcast({ type: "task:released", taskId, reason: `Worker 拒绝: ${reason}` })
+  }
+
   // ── 注册任务（自动派发给空闲 Agent） ──
-  registerTask(taskId: string, title?: string): void {
+  /** 检查是否有空闲的 WS Worker（非 dashboard、非 CLI spawn） */
+  hasIdleWorker(): boolean {
+    for (const [id, a] of this.agents) {
+      if (a.status === "idle" && !id.startsWith("dashboard") && !id.startsWith("term-")) {
+        return true
+      }
+    }
+    return false
+  }
+
+  registerTask(taskId: string, title?: string, promptB64?: string): void {
     if (!this.tasks.has(taskId)) {
       this.tasks.set(taskId, { status: "unassigned" })
     }
-    if (title) {
-      const t = this.tasks.get(taskId)!
-      ;(t as any).title = title
-    }
+    const task = this.tasks.get(taskId)!
+    if (title) (task as any).title = title
+    if (promptB64) (task as any).promptB64 = promptB64
     log.info(`任务注册: ${taskId} "${title || taskId}"`)
 
     // 广播新任务通知
     this.broadcast({ type: "task:announced", taskId, title: title || taskId })
 
-    // 自动寻址：找空闲 Agent 派发
+    // Chronos AI 调度官在线 → 不自动派发，等 Chronos 决策
+    const hasChronos = [...this.agents.values()].some(
+      a => a.agentId === "chronos-dispatcher" && a.status !== "offline"
+    )
+    if (hasChronos) {
+      log.info(`Chronos 在线，任务 ${taskId} 等待 AI 调度`)
+      return  // Chronos 会从 task:announced 收到通知并决定派发给谁
+    }
+
+    // Fallback: 没有 Chronos → 自动寻址派发
     const idleAgents = [...this.agents.entries()]
-      .filter(([,a]) => a.status === "idle" && !a.agentId.startsWith("dashboard"))
+      .filter(([,a]) => a.status === "idle" && !a.agentId.startsWith("dashboard") && !a.agentId.startsWith("term-"))
     if (idleAgents.length === 0) {
       log.warn(`没有空闲 Agent，任务 ${taskId} 等待手动 spawn`)
       return
     }
-    // 优先匹配 capability，否则分配给第一个空闲 Agent
     const match = idleAgents.find(([,a]) => a.capabilities.includes(taskId))
       || idleAgents[0]
     if (match) {
       log.info(`自动派发 ${taskId} → ${match[1].name} (${match[0]})`)
-      this.dispatchTaskTo(taskId, match[0])
+      this.dispatchTaskTo(taskId, match[0], promptB64)
     }
   }
 
   // ── 派发任务 ──
-  dispatchTaskTo(taskId: string, agentId: string): void {
+  dispatchTaskTo(taskId: string, agentId: string, promptB64?: string): void {
     if (!this.tasks.has(taskId)) {
       this.tasks.set(taskId, { status: "unassigned" })
     }
     const task = this.tasks.get(taskId)!
     if (task.status === "assigned") return
 
-    this.sendTo(agentId, {
+    const msg: Record<string, unknown> = {
       type: "task:dispatch",
       taskId,
       title: this.getTaskTitle(taskId),
-      url: `https://github.com/okx-wallet-H/hvip-mcp/blob/master/tasks/${taskId}.md`,
-    })
+    }
+    if (promptB64) msg.promptB64 = promptB64
+    else if ((task as any).promptB64) msg.promptB64 = (task as any).promptB64
+
+    this.sendTo(agentId, msg)
+  }
+
+  // ── Chronos 调度指令 ──
+  private handleAssign(msg: HubMessage): void {
+    const taskId = String(msg.taskId || "")
+    const targetAgentId = String(msg.agentId || "")
+    const assignedBy = String(msg.assignedBy || "chronos")
+
+    if (!taskId || !targetAgentId) return
+
+    const targetWorker = this.agents.get(targetAgentId)
+    if (!targetWorker) {
+      log.warn(`Chronos 指派失败: Worker ${targetAgentId} 不在线`)
+      return
+    }
+    if (targetWorker.status !== "idle") {
+      log.warn(`Chronos 指派失败: Worker ${targetAgentId} 忙碌中`)
+      return
+    }
+
+    log.info(`Chronos 调度: ${taskId} → ${targetWorker.name}`)
+    // Pass promptB64 from task metadata if available
+    const task = this.tasks.get(taskId)
+    const promptB64 = (task as any)?.promptB64 as string | undefined
+    this.dispatchTaskTo(taskId, targetAgentId, promptB64)
   }
 
   // ── 审核 + 自动通知房间 ──

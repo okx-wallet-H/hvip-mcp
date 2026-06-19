@@ -41,6 +41,45 @@ await build({
 
 console.log("✅ dist/hub-worker.js built")
 
+await build({
+  entryPoints: ["src/hub-worker-v2.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node20",
+  format: "cjs",
+  outfile: "dist/hub-worker-v2.js",
+  external: [],
+  banner: { js: "#!/usr/bin/env node" },
+})
+
+console.log("✅ dist/hub-worker-v2.js built")
+
+await build({
+  entryPoints: ["src/chronos-dispatcher.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node20",
+  format: "cjs",
+  outfile: "dist/chronos-dispatcher.js",
+  external: [],
+  banner: { js: "#!/usr/bin/env node" },
+})
+
+console.log("✅ dist/chronos-dispatcher.js built")
+
+await build({
+  entryPoints: ["src/ai-trader.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node20",
+  format: "cjs",
+  outfile: "dist/ai-trader.js",
+  external: [],
+  banner: { js: "#!/usr/bin/env node" },
+})
+
+console.log("✅ dist/ai-trader.js built")
+
 // ── Copy web assets to dist/ ──
 const webFiles = [
   "dashboard.html",

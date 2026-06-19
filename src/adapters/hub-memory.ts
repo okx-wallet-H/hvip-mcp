@@ -2,7 +2,7 @@
  * Agent Hub 共享记忆系统
  *
  * 灵感来自 Artel (NicolasPrimeau/artel)。
- * 4 层记忆类型 + 置信度衰减 + 语义搜索，SQLite 单文件持久化。
+ * 5 层记忆类型 + 置信度衰减 + 语义搜索，SQLite 单文件持久化。
  *
  * Usage:
  *   const mem = new HubMemory(".hub/memory.db")
@@ -16,7 +16,7 @@ import { logger } from "../utils/logger.js"
 
 // ── 类型 ─────────────────────────────────────────────────────────────────
 
-export type MemoryType = "memory" | "doc" | "directive" | "skill"
+export type MemoryType = "memory" | "doc" | "directive" | "skill" | "strategy"
 
 export interface MemoryEntry {
   id: string
@@ -35,7 +35,7 @@ export interface StoreOpts {
   type?: MemoryType
   agentId: string
   text: string
-  tags?: string[]
+  tags?: string[] | string
   confidence?: number
   parentId?: string | null
 }
@@ -49,12 +49,13 @@ export class HubMemory {
   private dbPath: string
   private decayTimer: ReturnType<typeof setInterval> | null = null
 
-  /** 4 种记忆类型的衰减参数 */
+  /** 5 种记忆类型的衰减参数 */
   static DECAY = {
     memory:    { rate: 0.94, windowDays: 7 },   // 7 天后开始衰减
     doc:       { rate: 1.0,  windowDays: 0 },   // 永不衰减
     directive: { rate: 1.0,  windowDays: 0 },   // 永不衰减
-    skill:     { rate: 0.90,  windowDays: 14 },  // 14 天后开始衰减
+    skill:     { rate: 0.90, windowDays: 14 },   // 14 天后开始衰减
+    strategy:  { rate: 0.95, windowDays: 7 },    // 7 天后开始衰减，速度慢于 memory
   } as const
 
   private static HEAT_THRESHOLD = 3              // 衰减周期内被读 >= 次则跳过衰减
@@ -107,10 +108,20 @@ export class HubMemory {
 
   // ── CRUD ─────────────────────────────────────────────────────────────
 
+  /** 标准化 tags：接受 string[] 或逗号分隔的字符串，统一返回逗号分隔字符串 */
+  private normalizeTags(raw: string[] | string | undefined): string {
+    if (!raw) return ""
+    if (Array.isArray(raw)) {
+      return raw.map(t => t.replace(/,/g, "")).filter(Boolean).join(",")
+    }
+    // 字符串输入：按逗号分割后 trim
+    return raw.split(",").map(t => t.trim()).filter(Boolean).join(",")
+  }
+
   store(opts: StoreOpts): MemoryEntry {
     const id = `mem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
     const type = opts.type || "memory"
-    const tags = (opts.tags || []).map(t => t.replace(/,/g, "")).join(",")
+    const tags = this.normalizeTags(opts.tags)
     const confidence = Math.min(1, Math.max(0, opts.confidence ?? 1.0))
     const now = new Date().toISOString()
 

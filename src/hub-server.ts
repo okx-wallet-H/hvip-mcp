@@ -15,12 +15,14 @@
 
 import { createServer } from "node:http"
 import type { IncomingMessage, ServerResponse } from "node:http"
-import { spawn } from "node:child_process"
+import { spawn, execSync } from "node:child_process"
 import { URL } from "node:url"
 import { agentHub } from "./adapters/agent-hub.js"
 import { HubDB } from "./adapters/hub-persistence.js"
 import { HubMemory } from "./adapters/hub-memory.js"
 import { HubRegistry } from "./adapters/hub-registry.js"
+import { HubCosts } from "./adapters/hub-costs.js"
+import { circuitBreaker } from "./adapters/circuit-breaker.js"
 import { logger } from "./utils/logger.js"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
@@ -81,7 +83,14 @@ function validateTaskId(id: string): boolean {
 }
 
 // ── Worker 启动器（复用） ──
+const MAX_CONCURRENT_WORKERS = 3  // 限制同时运行的 Claude CLI 窗口数
 function spawnWorker(taskId: string): { ok: boolean; error?: string; workerPid?: number } {
+  // 并发上限：超过限制时拒绝，等下次调度重试
+  const activeWorkers = workers.filter(w => w.exitCode === null && !w.killed).length
+  if (activeWorkers >= MAX_CONCURRENT_WORKERS) {
+    log.warn(`Worker 并发上限 (${MAX_CONCURRENT_WORKERS})，${taskId} 等待下次调度`)
+    return { ok: false, error: `并发上限 ${MAX_CONCURRENT_WORKERS}，当前 ${activeWorkers} 活跃` }
+  }
   const hubUrl = `ws://127.0.0.1:${wsPort}`
   const repoPath = process.cwd()
   const meta = taskMeta.get(taskId); let promptB64 = ""
@@ -93,7 +102,7 @@ function spawnWorker(taskId: string): { ok: boolean; error?: string; workerPid?:
   if (promptB64) workerArgs.push("--prompt-b64", promptB64)
 
   try {
-    const worker = spawn("node", workerArgs, { cwd: repoPath, stdio: "pipe", detached: true })
+    const worker = spawn("node", workerArgs, { cwd: repoPath, stdio: "pipe", detached: true, windowsHide: true })
     worker.stdout?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
     worker.stderr?.on("data", (d: Buffer) => process.stderr.write(`[Worker-${taskId}] ${d}`))
     worker.on("error", (e: Error) => log.error(`Worker 启动失败: ${e.message}`))
@@ -140,6 +149,40 @@ function startHttpServer(): void {
       return
     }
 
+    // GET /v2 → /v2/ redirect (required for correct relative asset resolution)
+    if (_req.method === "GET" && _req.url === "/v2") {
+      res.writeHead(301, { "Location": "/v2/" })
+      res.end()
+      return
+    }
+
+    // GET /v2/ /v2/* — shadcn/ui React Dashboard（新版仪表盘）
+    if (_req.method === "GET" && _req.url?.startsWith("/v2/")) {
+      const v2Dir = join(__dirname, "..", "dashboard-v2", "dist")
+      let filePath: string
+      if (_req.url === "/v2/") {
+        filePath = join(v2Dir, "index.html")
+      } else {
+        filePath = join(v2Dir, _req.url!.replace(/^\/v2\//, ""))
+      }
+
+      // Serve the file if it exists, otherwise fall back to index.html (SPA)
+      if (!existsSync(filePath) || !filePath.includes(".")) {
+        filePath = join(v2Dir, "index.html")
+      }
+
+      if (existsSync(filePath)) {
+        const ext = filePath.split(".").pop() || "html"
+        const mime: Record<string,string> = { html:"text/html; charset=utf-8", js:"application/javascript", css:"text/css", svg:"image/svg+xml", png:"image/png", ico:"image/x-icon" }
+        res.writeHead(200, { "Content-Type": mime[ext] || "application/octet-stream" })
+        res.end(readFileSync(filePath))
+      } else {
+        res.writeHead(404)
+        res.end("dashboard-v2 not found")
+      }
+      return
+    }
+
     // GET /chat — AI 聊天界面（普通用户直接用）
     if (_req.method === "GET" && _req.url === "/chat") {
       const paths = [join(__dirname, "web", "index.html"), join(__dirname, "..", "src", "web", "index.html")]
@@ -166,12 +209,20 @@ function startHttpServer(): void {
           if (!taskId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 taskId" })); return }
           if (!validateTaskId(taskId)) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "taskId 格式无效，仅允许字母数字下划线连字符" })); return }
           // 注册到 Hub 内存 + 持久化
-          agentHub.registerTask(taskId, title || taskId)
-          db?.saveTask({ taskId, status: "unassigned", title: title || taskId })
           if (template && params) taskMeta.set(taskId, { templateId: template, params })
-          // 有模板 → 自动拉起 Worker
+          // 构建 prompt（如果有模板）
+          let promptB64 = ""
+          if (template && params) {
+            const tpl = TASK_TEMPLATES.find(t => t.id === template)
+            if (tpl) {
+              try { promptB64 = Buffer.from(tpl.buildPrompt(params), "utf-8").toString("base64") }
+              catch { /* buildPrompt 可能因参数不完整而报错，忽略 */ }
+            }
+          }
+          agentHub.registerTask(taskId, title || taskId, promptB64 || undefined)
+          db?.saveTask({ taskId, status: "unassigned", title: title || taskId })
+          // V2 Worker 体系已就绪，CLI spawn 已退役
           let spawned = false; let workerPid = 0
-          if (template) { const result = spawnWorker(taskId); spawned = result.ok; workerPid = result.workerPid || 0 }
           log.info(`新任务: ${taskId} "${title}"${spawned ? ' 🤖 已拉起' : ''}`)
           res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
           res.end(JSON.stringify({ ok: true, taskId, title, spawned, workerPid }))
@@ -291,6 +342,54 @@ function startHttpServer(): void {
       }); return
     }
 
+    // GET /api/traders — Trader AI Arena 状态
+    if (_req.method === "GET" && _req.url === "/api/traders") {
+      const stateFile = join(process.cwd(), ".hub", "trader-state.json")
+      if (existsSync(stateFile)) {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(readFileSync(stateFile, "utf-8"))
+      } else {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ traders: {}, history: [], round: 0 }))
+      }
+      return
+    }
+
+    // GET /api/traders/leaderboard — 排行榜
+    if (_req.method === "GET" && _req.url === "/api/traders/leaderboard") {
+      const stateFile = join(process.cwd(), ".hub", "trader-state.json")
+      if (existsSync(stateFile)) {
+        const state = JSON.parse(readFileSync(stateFile, "utf-8"))
+        const rankings = Object.values(state.traders || {})
+          .map((t: any) => ({
+            id: t.id, name: t.name, emoji: t.emoji, title: t.title, style: t.style,
+            capital: t.capital, totalPnl: t.totalPnl, totalPnlPct: t.totalPnlPct,
+            tradeCount: t.tradeCount || 0, winCount: t.winCount || 0,
+            openPositions: (t.openPositions || []).filter((p: any) => !p.closed).length,
+          }))
+          .sort((a: any, b: any) => b.totalPnlPct - a.totalPnlPct)
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify(rankings))
+      } else {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify([]))
+      }
+      return
+    }
+
+    // GET /api/signals — 信号广场
+    if (_req.method === "GET" && _req.url === "/api/signals") {
+      const sigFile = join(process.cwd(), ".hub", "signals.json")
+      if (existsSync(sigFile)) {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(readFileSync(sigFile, "utf-8"))
+      } else {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ signals: [], lastRun: null }))
+      }
+      return
+    }
+
     // GET /api/templates
     if (_req.method === "GET" && _req.url === "/api/templates") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
@@ -302,6 +401,51 @@ function startHttpServer(): void {
     if (_req.method === "GET" && _req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify({ status: "ok", name: "hvip-hub", version: VERSION, wsPort, webPort, db: dbPath, registry: registry.all().length + " plugins" }))
+      return
+    }
+
+    // GET /api/costs — LLM 成本汇总
+    if (_req.method === "GET" && _req.url === "/api/costs") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(costTracker.summary()))
+      return
+    }
+
+    // GET /api/costs/recent — 最近 LLM 调用记录
+    if (_req.method === "GET" && _req.url === "/api/costs/recent") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(costTracker.recent(50)))
+      return
+    }
+
+    // GET /api/health/pm2 — 进程健康看门狗
+    if (_req.method === "GET" && _req.url === "/api/health/pm2") {
+      try {
+        const raw = execSync("pm2 jlist", { encoding: "utf-8", timeout: 5000, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] })
+        const processes = JSON.parse(raw)
+        const expected = ["hvip-hub", "hvip-mcp", "ai-trader", "worker-v2-01", "worker-v2-02", "chronos-dispatcher"]
+        const health = processes.map((p: any) => ({
+          name: p.name,
+          status: p.pm2_env?.status || "unknown",
+          pid: p.pid,
+          uptime: p.pm2_env?.pm_uptime ? Math.round((Date.now() - p.pm2_env.pm_uptime) / 1000) : 0,
+          memory: Math.round((p.monit?.memory || 0) / 1024 / 1024),
+          cpu: p.monit?.cpu || 0,
+          restarts: p.pm2_env?.unstable_restarts || 0,
+        }))
+        const missing = expected.filter(name => !processes.some((p: any) => p.name === name && p.pm2_env?.status === "online"))
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({
+          processes: health,
+          missing,
+          totalExpected: expected.length,
+          totalOnline: health.length - missing.length,
+          healthy: missing.length === 0,
+        }))
+      } catch (e: any) {
+        res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "PM2 查询失败", message: e.message }))
+      }
       return
     }
 
@@ -323,6 +467,15 @@ function startHttpServer(): void {
           } : null,
         }
       })))
+      return
+    }
+
+    // GET /api/circuits — 熔断器状态
+    if (_req.method === "GET" && _req.url === "/api/circuits") {
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      const circuits = circuitBreaker.status()
+      const openCount = circuits.filter(c => c.state === "OPEN").length
+      res.end(JSON.stringify({ circuits, openCount, healthy: openCount === 0 }))
       return
     }
 
@@ -555,24 +708,30 @@ function runScheduledJob(job: ScheduledJob): void {
   const taskId = `${job.id}-${Date.now().toString(36)}`
   const title = `[定时] ${job.name} #${job.count + 1}`
   log.info(`Scheduler: ⏰ ${job.name} → ${taskId}`)
-  agentHub.registerTask(taskId, title)
-  db?.saveTask({ taskId, status: "unassigned", title })
+  // 注册任务 + 预构建 prompt → Chronos 自动派发给 V2 Worker（SDK 直调，零弹窗）
+  const tpl = TASK_TEMPLATES.find(t => t.id === job.template)
+  let promptB64 = ""
+  if (tpl) {
+    try { promptB64 = Buffer.from(tpl.buildPrompt(job.params), "utf-8").toString("base64") } catch {}
+  }
   taskMeta.set(taskId, { templateId: job.template, params: job.params })
-  const result = spawnWorker(taskId)
-  if (result.ok) { job.count++; job.failCount = 0 }
-  else { job.failCount++; log.error(`Scheduler: ❌ ${job.name}: ${result.error}`) }
+  agentHub.registerTask(taskId, title, promptB64 || undefined)
+  db?.saveTask({ taskId, status: "unassigned", title })
+  // 不再 spawn CLI Worker — Chronos 会派发给 V2 Worker（Anthropic SDK，无弹窗）
+  job.count++
+  job.failCount = 0
   job.lastRun = Date.now()
   scheduleNext(job)
 }
 
 function scheduleNext(job: ScheduledJob): void {
-  const delay = job.count === 0 ? 30000 : job.interval
+  const delay = job.count === 0 ? 30_000 : job.interval
   job.timer = setTimeout(() => runScheduledJob(job), delay)
 }
 
 function startScheduler(): void {
   for (const job of schedules) scheduleNext(job)
-  log.info(`Scheduler: ${schedules.length} 个定时任务 (首次30s后触发)`)
+  log.info(`Scheduler: ${schedules.length} 个定时任务 (首次30s后触发，Chronos → V2 Worker 零弹窗)`)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -614,6 +773,12 @@ const regOk = registry.open()
 if (!regOk) {
   log.warn(`⚠️ Registry 打开失败，商店功能不可用`)
 }
+
+// 成本追踪
+const costsPath = flag("costs-db") || process.env.HUB_COSTS_DB || ".hub/llm-costs.jsonl"
+const costTracker = new HubCosts(costsPath)
+agentHub.setCostTracker(costTracker)
+log.info(`💰 成本追踪: ${costsPath}`)
 
 // 启动 HTTP 仪表盘
 startHttpServer()

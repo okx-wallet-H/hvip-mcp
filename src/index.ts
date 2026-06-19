@@ -175,9 +175,10 @@ async function startHttp(
   readOnly: boolean,
   skipped: number,
 ) {
-  const port = parseInt(process.env.PORT || "3000", 10)
+  let port = parseInt(process.env.PORT || "3000", 10)
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     process.stderr.write(`[hvip] ❌ 无效端口: ${process.env.PORT}，使用默认 3000\n`)
+    port = 3000
   }
   const host = process.env.HOST || "127.0.0.1"
   const token = process.env.MCP_AUTH_TOKEN || ""  // PSK 鉴权令牌
@@ -328,7 +329,7 @@ async function startStdio(
 
   const wsHost = process.env.WS_BIND_HOST || "127.0.0.1"
   const wsToken = process.env.HUB_AUTH_TOKEN || ""
-  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321"), wsHost, version, wsToken)
+  startAgentHub(parseInt(process.env.WS_AGENT_PORT || "9321", 10), wsHost, version, wsToken)
 
   const transport = new StdioServerTransport()
   await server.connect(transport)
@@ -339,7 +340,7 @@ async function startStdio(
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function main() {
-  const VERSION = "0.3.2"
+  const VERSION = "0.4.3"
 
   // ── CLI 标志（在 MCP 握手之前处理） ──
   const argv = process.argv.slice(2)
