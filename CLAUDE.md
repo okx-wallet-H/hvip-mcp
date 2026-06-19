@@ -7,9 +7,9 @@
 ## 快速索引
 
 ```
-hvip-mcp-server v0.4.3 · 365 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
+hvip-mcp-server v0.4.3 · 373 MCP 工具 · ~99.7% OKX REST 覆盖 · 仓库: https://github.com/okx-wallet-H/hvip-mcp
 
-入口 → src/index.ts → 注册全部 19 个模块
+入口 → src/index.ts → 注册全部 22 个模块
 共享 → src/tools/shared.ts    （INST_TYPE 枚举 / toResult / toError / 错误三统一）
 适配 → src/adapters/okx.ts    （OKX REST 签名 + 请求）
 
@@ -27,11 +27,12 @@ hvip-mcp-server v0.4.3 · 365 MCP 工具 · 97.7% OKX REST 覆盖 · 仓库: htt
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
-│ Skill 组合层 (4 个)                                  │
+│ Skill 组合层 (21 个)                                  │
 │ okx_account_overview — balance+positions+config+val │
 │ okx_quick_market     — ticker+depth+fundingRate     │
 │ okx_preflight_check  — maxSize+limit+convert+price  │
 │ okx_agent_feedback   — 反馈留言板 → GitHub Issues    │
+│ + 17 个 Agent Skill 工具 (agent-utils.ts)           │
 └─────────────────────────────────────────────────────┘
 
 📋 反馈留言板 → SKILL_FEEDBACK.md（遇到繁琐操作在此留言）
@@ -143,4 +144,4 @@ Issue/任务 → 分支(feat/fix/task) → 开发 → build → push → CI → 
 
 ## 当前状态
 
-v0.3.0 · 365 MCP 工具 · 覆盖 97.7% OKX REST API · P0 P1 全部清零 · 自检全绿
+v0.4.3 · 373 MCP 工具 · 覆盖 ~99.7% OKX REST API · P0 P1 已修复 · 自检全绿

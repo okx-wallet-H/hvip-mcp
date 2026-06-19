@@ -37,6 +37,9 @@ const log = logger(`Worker-${TASK_ID}`)
 
 let ws: WebSocket
 let taskReceived = false
+let heartbeatTimer: ReturnType<typeof setInterval>
+let taskDoneSent = false  // 防止重复发送 task:done
+let taskTitle = ""
 
 function connect(): void {
   ws = new WebSocket(HUB_URL)
@@ -50,6 +53,12 @@ function connect(): void {
       version: "0.3.0",
       capabilities: [TASK_ID],
     }))
+    // 发送心跳防止 Hub 超时踢下线（长任务 >120s 需要）
+    heartbeatTimer = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "agent:status" }))
+      }
+    }, 30_000)
   })
 
   ws.on("message", (raw) => {
@@ -60,6 +69,7 @@ function connect(): void {
   })
 
   ws.on("close", () => {
+    clearInterval(heartbeatTimer)
     if (!taskReceived) {
       process.stderr.write("[Worker] 连接断开，5s 后重连...\n")
       setTimeout(connect, 5000)
@@ -67,6 +77,19 @@ function connect(): void {
   })
 
   ws.on("error", (e: Error) => { process.stderr.write(`[Worker] WS 错误: ${e.message}\n`) })
+}
+
+function sendTaskDone(taskId: string, result: string): void {
+  if (taskDoneSent) return
+  taskDoneSent = true
+  try {
+    ws.send(JSON.stringify({
+      type: "task:done",
+      taskId,
+      agentId: AGENT_ID,
+      result,
+    }))
+  } catch {}
 }
 
 function handleMessage(msg: any): void {
@@ -119,6 +142,7 @@ function detectTaskType(title: string): TaskMode {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function doTask(taskId: string, title: string, url: string, promptB64?: string): void {
+  taskTitle = title
   log.info(`🚀 开始执行: ${title}`)
 
   // 认领
@@ -165,6 +189,7 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
     cwd: REPO_PATH,
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env, NO_COLOR: "1" },
+    windowsHide: true,
   })
   child.stdin.end()  // 关键: 关闭 stdin 让 Claude Code 知道没有更多输入
 
@@ -184,6 +209,13 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
   // 超时保护 — 防止 Claude Code 卡死
   const timeoutTimer = setTimeout(() => {
     process.stderr.write(`[Worker] ⏰ 超时 (${WORKER_TIMEOUT_MS/1000}s)，强制终止\n`)
+    // 先发 task:done 确保 Hub 知道任务已结束（即使 child.close 不触发）
+    sendTaskDone(taskId, `❌ (超时 ${WORKER_TIMEOUT_MS/1000}s) ${title}\n${output.slice(-3000)}`)
+    ws.send(JSON.stringify({
+      type: "room:message",
+      roomId: "#review",
+      text: `❌ ${taskId} 超时 ${WORKER_TIMEOUT_MS/1000}s，已终止。输出:\n${output.slice(-1000)}`,
+    }))
     try { child.kill("SIGKILL") } catch {}
   }, WORKER_TIMEOUT_MS)
 
@@ -206,25 +238,14 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
           roomId: "#lobby",
           text: `📊 ${title}\n\n${output.slice(-3000)}`,
         }))
-        ws.send(JSON.stringify({
-          type: "task:done",
-          taskId,
-          agentId: AGENT_ID,
-          result: output.slice(-5000) || `${title} — 无输出`,
-        }))
+        sendTaskDone(taskId, output.slice(-5000) || `${title} — 无输出`)
         // 自动保存到共享记忆（失败不阻断）
         try { tagAndSave(title, output) } catch {}
       } else {
         // 写代码任务: 原有逻辑
         const branchMatch = output.match(/push.*?(task\/\S+|feat\/\S+|fix\/\S+)/i)
         const branch = branchMatch ? branchMatch[1] : `worker/${AGENT_ID}`
-        ws.send(JSON.stringify({
-          type: "task:done",
-          taskId,
-          agentId: AGENT_ID,
-          branch,
-          result: `${title} —\n\n${output.slice(-5000)}`,
-        }))
+        sendTaskDone(taskId, `${title} —\n\n${output.slice(-5000)}`)
       }
     } else {
       log.error(`❌ Claude Code 失败 (exit ${code})`)
@@ -234,30 +255,21 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
         text: `❌ ${taskId} 执行失败 (exit ${code})。输出:\n${output.slice(-1000)}`,
       }))
       // 失败也要通知 Hub 任务结束，避免调度器永久阻塞
-      ws.send(JSON.stringify({
-        type: "task:done",
-        taskId,
-        agentId: AGENT_ID,
-        result: `❌ (失败 exit ${code}) ${title}\n${output.slice(-3000)}`,
-      }))
+      sendTaskDone(taskId, `❌ (失败 exit ${code}) ${title}\n${output.slice(-3000)}`)
     }
 
     // 保活 30 秒等审核反馈
     setTimeout(() => {
+      clearInterval(heartbeatTimer)
       ws.close()
       process.exit(code === 0 ? 0 : 1)
     }, 30000)
   })
 
   child.on("error", (err: Error) => {
-    clearInterval(progressTimer); clearTimeout(timeoutTimer)
+    clearInterval(progressTimer); clearTimeout(timeoutTimer); clearInterval(heartbeatTimer)
     process.stderr.write(`[Worker] Claude Code 启动失败: ${err.message}\n`)
-    ws.send(JSON.stringify({
-      type: "task:done",
-      taskId,
-      agentId: AGENT_ID,
-      result: `❌ (启动失败) ${title}: ${err.message}`,
-    }))
+    sendTaskDone(taskId, `❌ (启动失败) ${title}: ${err.message}`)
     ws.send(JSON.stringify({
       type: "room:message",
       roomId: "#review",
@@ -377,6 +389,7 @@ connect()
 setTimeout(() => {
   if (!taskReceived) {
     process.stderr.write("[Worker] 超时未收到任务，退出\n")
+    clearInterval(heartbeatTimer)
     ws.close()
     process.exit(1)
   }
