@@ -39,6 +39,20 @@ let currentTaskId: string | null = null
 let heartbeatTimer: ReturnType<typeof setInterval>
 
 // ═══════════════════════════════════════════════════════════════
+// Input validation helpers
+// ═══════════════════════════════════════════════════════════════
+
+function str(input: unknown, fallback = ""): string {
+  return typeof input === "string" ? input : fallback
+}
+function num(input: unknown, fallback = 0): number {
+  return typeof input === "number" ? input : (typeof input === "string" ? parseFloat(input) || fallback : fallback)
+}
+function bool(input: unknown, fallback = false): boolean {
+  return typeof input === "boolean" ? input : fallback
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Tool Set — Worker's capabilities exposed to AI
 // ═══════════════════════════════════════════════════════════════
 
@@ -52,8 +66,8 @@ const TOOLS: Record<string, AgentTool> = {
       required: ["path"],
     },
     async execute(input) {
-      const p = (input.path as string || "").replace(/\\/g, "/")
-      if (p.includes("..")) return { error: "路径遍历不允许" }
+      const p = str(input.path).replace(/\\/g, "/")
+      if (!p || p.includes("..")) return { error: "路径无效" }
       const full = join(REPO_PATH, p)
       if (!existsSync(full)) return { error: `文件不存在: ${p}` }
       try {
@@ -95,7 +109,7 @@ const TOOLS: Record<string, AgentTool> = {
       required: ["command"],
     },
     async execute(input) {
-      const cmd = (input.command as string || "").trim()
+      const cmd = str(input.command).trim()
       // Whitelist
       const allowed = [
         /^npm run (build|test|lint)$/,
@@ -131,9 +145,9 @@ const TOOLS: Record<string, AgentTool> = {
       required: ["endpoint", "instId"],
     },
     async execute(input) {
-      const ep = input.endpoint as string
-      const inst = (input.instId as string).replace("/", "-")
-      const bar = (input.bar as string) || "4H"
+      const ep = str(input.endpoint)
+      const inst = str(input.instId).replace("/", "-")
+      const bar = str(input.bar, "4H")
       try {
         let url: string
         if (ep === "ticker") url = `https://www.okx.com/api/v5/market/ticker?instId=${inst}`
@@ -157,7 +171,7 @@ const TOOLS: Record<string, AgentTool> = {
     },
     async execute(input) {
       try {
-        const q = encodeURIComponent(input.query as string)
+        const q = encodeURIComponent(str(input.query))
         const resp = await fetch(`http://127.0.0.1:3000/api/memory/search?q=${q}`).then(r => r.json()).catch(() => [])
         return { results: (Array.isArray(resp) ? resp : []).slice(0, 5).map((e: { id: string; text: string; type: string }) => ({ id: e.id, text: e.text?.slice(0, 300), type: e.type })) }
       } catch { return { results: [] } }
@@ -177,9 +191,9 @@ const TOOLS: Record<string, AgentTool> = {
     },
     async execute(input) {
       try {
-        const type = input.type as string
-        const filter = (input.filter as string) || ""
-        const limit = Math.min(input.limit as number || 20, 100)
+        const type = str(input.type)
+        const filter = str(input.filter)
+        const limit = Math.min(num(input.limit, 20), 100)
         let url = ""
         if (type === "tasks") url = `http://127.0.0.1:3000/api/status`  // 获取全部任务状态
         else if (type === "memory") url = `http://127.0.0.1:3000/api/memory/search?q=${encodeURIComponent(filter)}`
@@ -210,8 +224,8 @@ const TOOLS: Record<string, AgentTool> = {
     },
     async execute(input) {
       try {
-        const file = (input.file as string || "").replace(/[&|;`$]/g, "")
-        const limit = Math.min(input.limit as number || 20, 50)
+        const file = str(input.file).replace(/[&|;`$]/g, "")
+        const limit = Math.min(num(input.limit, 20), 50)
         let cmd = `git log --oneline --no-decorate -${limit}`
         if (file) {
           // Use -- separator to prevent path injection
@@ -238,7 +252,7 @@ const TOOLS: Record<string, AgentTool> = {
       required: ["url"],
     },
     async execute(input) {
-      const url = (input.url as string || "").trim()
+      const url = str(input.url).trim()
       if (!url.startsWith("https://")) return { error: "仅允许 HTTPS URL" }
       if (url.length > 500) return { error: "URL 过长" }
       try {

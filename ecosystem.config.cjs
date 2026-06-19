@@ -12,6 +12,7 @@ module.exports = {
       log_date_format: "HH:mm:ss",
       error_file: ".hub/logs/hub-error.log",
       out_file: ".hub/logs/hub-out.log",
+      max_size: "2M",
       merge_logs: true,
       env: {
         NODE_ENV: "production",
@@ -29,6 +30,7 @@ module.exports = {
       log_date_format: "HH:mm:ss",
       error_file: ".hub/logs/mcp-error.log",
       out_file: ".hub/logs/mcp-out.log",
+      max_size: "1M",
       merge_logs: true,
       env: {
         NODE_ENV: "production",
@@ -46,6 +48,7 @@ module.exports = {
       log_date_format: "HH:mm:ss",
       error_file: ".hub/logs/ai-trader-error.log",
       out_file: ".hub/logs/ai-trader-out.log",
+      max_size: "1M",
       merge_logs: true,
       env: {
         NODE_ENV: "production",
@@ -63,6 +66,7 @@ module.exports = {
       log_date_format: "HH:mm:ss",
       error_file: ".hub/logs/worker2-01-error.log",
       out_file: ".hub/logs/worker2-01-out.log",
+      max_size: "1M",
       merge_logs: true,
       env: {
         NODE_ENV: "production",
@@ -83,6 +87,7 @@ module.exports = {
       log_date_format: "HH:mm:ss",
       error_file: ".hub/logs/worker2-02-error.log",
       out_file: ".hub/logs/worker2-02-out.log",
+      max_size: "1M",
       merge_logs: true,
       env: {
         NODE_ENV: "production",
@@ -103,6 +108,7 @@ module.exports = {
       log_date_format: "HH:mm:ss",
       error_file: ".hub/logs/chronos-error.log",
       out_file: ".hub/logs/chronos-out.log",
+      max_size: "1M",
       merge_logs: true,
       env: {
         NODE_ENV: "production",
