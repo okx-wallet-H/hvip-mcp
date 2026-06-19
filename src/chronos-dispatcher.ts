@@ -762,6 +762,18 @@ setTimeout(activePatrol, 10000)  // First patrol after 10s
 setInterval(npmAuditPatrol, 12 * 3600_000)
 setTimeout(npmAuditPatrol, 60000)
 
+// P3-3: Auto-publish check every 30 minutes
+async function autoPublishPatrol() {
+  try {
+    const { execSync } = await import("node:child_process")
+    execSync("node scripts/auto-publish.mjs", {
+      encoding: "utf-8", timeout: 180000, cwd: process.cwd(),
+    })
+  } catch {}
+}
+setInterval(autoPublishPatrol, 30 * 60_000)
+setTimeout(autoPublishPatrol, 120000)
+
 // P4-1: Market anomaly check every 5 minutes (within patrol)
 // Already covered by activePatrol which checks volatility >3%
 
