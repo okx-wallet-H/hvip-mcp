@@ -987,7 +987,10 @@ async function loadSidebarStats(){try{const h=await fetch('/health').then(r=>r.j
 
 /* ── Init ── */
 loadTSHistory();loadTemplates();refresh();loadSidebarStats()
-function connect(){if(!WS_PORT)return;const ws=new WebSocket('ws://'+HOST+':'+WS_PORT);ws.onopen=()=>{ws.send(JSON.stringify({type:'agent:hello',agentId:'workbench-'+Date.now(),name:'工作台',version:'0.5.0',capabilities:[]}));el('hubDot').classList.add('online');el('hubDot').classList.remove('offline')};ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(m.type==='task:announced'){showBanner('New task: '+esc(m.taskId||''),'ok');refresh()}if(m.type==='agent:registered'||m.type==='agent:update'||m.type==='agent:offline')refresh();if(m.type==='room:message')addFeed(m);if(m.type==='task:completed'||m.type==='task:released'||m.type==='task:dispatch')refresh()}catch(ex){}};ws.onclose=()=>{el('hubDot').classList.remove('online');el('hubDot').classList.add('offline');setTimeout(connect,5000)};ws.onerror=()=>{el('hubDot').classList.remove('online');el('hubDot').classList.add('offline')}}
+function connect(){if(!WS_PORT)return;const ws=new WebSocket('ws://'+HOST+':'+WS_PORT);ws.onopen=()=>{ws.send(JSON.stringify({type:'agent:hello',agentId:'workbench-'+Date.now(),name:'工作台',version:'0.5.0',capabilities:[]}));el('hubDot').classList.add('online');el('hubDot').classList.remove('offline')};ws.onmessage=(e)=>{try{const m=JSON.parse(e.data);if(m.type==='task:announced'){showBanner('New task: '+esc(m.taskId||''),'ok');refresh()}if(m.type==='agent:registered'||m.type==='agent:update'||m.type==='agent:offline')refresh();if(m.type==='room:message')addFeed(m);if(m.type==='task:completed'||m.type==='task:released'||m.type==='task:dispatch')refresh()
+  if(m.type==='task:progress'&&m.delta){const tid=m.taskId||'worker';pushTermOutput(tid,'worker-'+tid.slice(-8),'💬 '+m.delta,'')}
+  if(m.type==='task:tool'&&m.tool){const tid=m.taskId||'worker';pushTermOutput(tid,'tool:'+m.tool,'🔧 '+m.tool+'('+JSON.stringify(m.args||{}).slice(0,200)+')','dim')}
+}catch(ex){}};ws.onclose=()=>{el('hubDot').classList.remove('online');el('hubDot').classList.add('offline');setTimeout(connect,5000)};ws.onerror=()=>{el('hubDot').classList.remove('online');el('hubDot').classList.add('offline')}}
 if(WS_PORT)connect();setInterval(refresh,5000);setInterval(loadSidebarStats,30000)
 </script>
 </body>

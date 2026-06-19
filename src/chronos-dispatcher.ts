@@ -92,10 +92,11 @@ async function analyzeTask(taskId: string, title: string): Promise<QueuedTask | 
     const json = result.text.match(/\{[\s\S]*\}/)?.[0]
     if (!json) return null
     const analysis = JSON.parse(json)
-    // 记录分析成本
+    // Record cost with actual model used (not hardcoded)
     costTracker.record({
       agentId: AGENT_ID, taskId,
-      model: "claude-haiku-4-5",
+      model: result.model || "claude-haiku-4-5",
+      provider: result.provider || "unknown",
       inputTokens: result.inputTokens || 0,
       outputTokens: result.outputTokens || 0,
       purpose: "analysis",
@@ -609,10 +610,11 @@ Worker池: ${idle}空闲 ${busy}忙碌
     const json = result.text.match(/\{[\s\S]*\}/)?.[0]
     if (!json) return
     const report = JSON.parse(json)
-    // 记录巡检成本
+    // Record cost with actual model
     costTracker.record({
       agentId: AGENT_ID,
-      model: "claude-haiku-4-5",
+      model: result.model || "claude-haiku-4-5",
+      provider: result.provider || "unknown",
       inputTokens: result.inputTokens || 0,
       outputTokens: result.outputTokens || 0,
       purpose: "patrol",
