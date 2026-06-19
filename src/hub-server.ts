@@ -60,7 +60,7 @@ function flag(name: string): string | undefined {
   return undefined
 }
 
-const wsPort   = parseInt(flag("port")     || process.env.HUB_PORT      || "9321", 10)
+let wsPort   = parseInt(flag("port")     || process.env.HUB_PORT      || "9321", 10)
 const host     = flag("host")              || process.env.HUB_HOST      || "127.0.0.1"
 const webPort  = parseInt(flag("web-port") || process.env.HUB_WEB_PORT  || "3000", 10)
 const dbPath   = flag("db")               || process.env.HUB_DB_PATH   || ".hub/hub.db"
@@ -786,16 +786,22 @@ startHttpServer()
 // 启动定时任务
 startScheduler()
 
-// 启动 MCP Server (自动选择空闲端口，Chat UI 工具调用需要)
+// 启动 MCP Server (作为子进程，HTTP 工具调用需要)
+// PM2 已独立管理 hvip-mcp (端口 9222)，所以仅在 HUB_SPAWN_MCP=1 时才派生
 let mcpProcess: ReturnType<typeof spawn> | null = null
-try {
-  mcpProcess = spawn("node", ["dist/index.js", "start:http"], { cwd: process.cwd(), stdio: "pipe", detached: true, windowsHide: true, env: { ...process.env, PORT: "9222" } })
-  mcpProcess.stderr?.on("data", (d: Buffer) => process.stderr.write(d))
-  log.info("🛠 MCP Server 启动中 → http://127.0.0.1:9222")
-} catch { log.warn("⚠️ MCP Server 启动失败") }
+if (process.env.HUB_SPAWN_MCP === "1") {
+  try {
+    mcpProcess = spawn("node", ["dist/index.js", "start:http"], { cwd: process.cwd(), stdio: "pipe", detached: true, windowsHide: true, env: { ...process.env, PORT: "9222" } })
+    mcpProcess.stderr?.on("data", (d: Buffer) => process.stderr.write(d))
+    log.info("🛠 MCP Server 启动中 → http://127.0.0.1:9222")
+  } catch { log.warn("⚠️ MCP Server 启动失败") }
+} else {
+  log.info("🛠 MCP Server 由 PM2 独立管理 (hvip-mcp :9222)，跳过子进程派生")
+}
 
 // 启动 WebSocket Hub
 agentHub.start(wsPort, host, VERSION, token)
+setTimeout(() => { wsPort = agentHub.port || wsPort }, 2000)  // 异步端口绑定后同步
 
 // ── 优雅退出 ──────────────────────────────────────────────────────────────
 

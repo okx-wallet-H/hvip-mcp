@@ -110,7 +110,7 @@ const TOOLS: Record<string, AgentTool> = {
         return { error: `命令不在白名单中: ${cmd.slice(0, 60)}` }
       }
       try {
-        const out = execSync(cmd, { cwd: REPO_PATH, encoding: "utf-8", timeout: 60000, maxBuffer: 100_000 })
+        const out = execSync(cmd, { cwd: REPO_PATH, encoding: "utf-8", timeout: 60000, maxBuffer: 100_000, windowsHide: true })
         return { command: cmd, output: out.slice(-5000), exitCode: 0 }
       } catch (e: unknown) {
         const err = e as { stdout?: string; stderr?: string; message?: string }

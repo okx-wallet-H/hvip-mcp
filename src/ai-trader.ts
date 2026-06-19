@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { AgentLoop } from "./adapters/ai-sdk.js"
 import { logger } from "./utils/logger.js"
+import { executeOpen, executeClose, syncPositions, getMode, getRiskStatus, type BridgeMode } from "./ai-trader-bridge.js"
 
 // ═══════════════════════════════════════════════════════════
 // Config
@@ -169,7 +170,19 @@ function saveState(state: any) {
 // ═══════════════════════════════════════════════════════════
 
 async function run() {
-  log.info("AI Trader Engine 启动")
+  const mode = getMode()
+  log.info(`AI Trader Engine 启动 — 模式: ${mode}`)
+
+  // Sync real positions from OKX (demo/live only)
+  if (mode !== "simulate") {
+    const sync = await syncPositions()
+    if (sync.positions.length > 0) {
+      log.info(`OKX 持仓同步: ${sync.positions.length} 个仓位`)
+      for (const p of sync.positions) {
+        log.info(`  ${p.posSide} ${p.instId} ${p.pos}张 @ $${p.avgPx} UPL=${p.upl}`)
+      }
+    }
+  }
 
   // Fetch signals
   let signals: any[] = []
@@ -256,6 +269,15 @@ async function run() {
       trader.openPositions.push(order)
       trader.tradeCount++
       log.info(`  ${t.emoji} 开仓: ${order.direction} ${order.symbol} ${order.leverage}x @ $${entryPrice.toFixed(1)}`)
+
+      // Bridge to OKX (demo/live) or simulate
+      const openResult = await executeOpen(order)
+      if (openResult.ok) {
+        order.okxOrderId = openResult.orderId
+        log.info(`  ${t.emoji} → OKX[${openResult.mode}]: ${openResult.orderId}`)
+      } else {
+        log.warn(`  ${t.emoji} → OKX 开仓被拒: ${openResult.error}`)
+      }
     }
 
     // Process close actions
@@ -285,6 +307,14 @@ async function run() {
         trader.totalPnlPct = (trader.totalPnl / t.initialCapital) * 100
         if (realizedPnl > 0) trader.winCount++
         log.info(`  ${t.emoji} 平仓: ${pos.direction} ${pos.symbol} PnL=${realizedPnl >= 0 ? "+" : ""}$${realizedPnl.toFixed(2)} (${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%)`)
+
+        // Bridge to OKX (demo/live) or simulate
+        const closeResult = await executeClose({ traderId: t.id, symbol: pos.symbol, direction: pos.direction, realizedPnl })
+        if (closeResult.ok) {
+          log.info(`  ${t.emoji} → OKX[${closeResult.mode}] 平仓: ${closeResult.orderId}`)
+        } else {
+          log.warn(`  ${t.emoji} → OKX 平仓被拒: ${closeResult.error}`)
+        }
       }
     }
 
@@ -337,6 +367,11 @@ async function run() {
     const icon = r.totalPnlPct >= 0 ? "📈" : "📉"
     log.info(`  ${icon} ${r.emoji} ${r.name.padEnd(12)} $${r.capital.toFixed(0)} | PnL: ${r.totalPnl >= 0 ? "+" : ""}$${r.totalPnl.toFixed(0)} (${r.totalPnlPct >= 0 ? "+" : ""}${r.totalPnlPct.toFixed(1)}%) | ${r.winCount}/${r.tradeCount}`)
   }
+
+  // Risk status
+  const risk = getRiskStatus()
+  log.info(`\n  🛡️  风控: ${risk.mode} | 单笔≤$${risk.maxOrderUsd} | 日亏损 $${risk.todayLoss.toFixed(0)} / $${risk.dailyLossLimit} | 剩余 $${risk.remainingBudget.toFixed(0)}`)
+
 
 }
 

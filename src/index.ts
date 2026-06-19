@@ -1,4 +1,5 @@
 import "dotenv/config"
+import "./dns-fix.js" // 自愈: DNS fallback (当系统 DNS 127.0.0.1 不可达时回退 8.8.8.8)
 import { createServer } from "node:http"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
@@ -291,7 +292,7 @@ async function startHttp(
         ? `open ${openUrl}`
         : `xdg-open ${openUrl}`
     import("node:child_process").then(cp => {
-      cp.exec(cmd, () => { /* 忽略错误 */ })
+      cp.exec(cmd, { windowsHide: true }, () => { /* 忽略错误 */ })
     })
   })
 }

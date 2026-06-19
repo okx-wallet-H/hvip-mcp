@@ -166,7 +166,7 @@ function doTask(taskId: string, title: string, url: string, promptB64?: string):
   // 🔍 检索知识库
   try {
     const memUrl = `http://127.0.0.1:${WEB_PORT}/api/memory/for-task?q=${encodeURIComponent(title)}`
-    const kbRaw = execSync(`curl -s "${memUrl}"`, { timeout: 5000, stdio: ["ignore", "pipe", "ignore"] })
+    const kbRaw = execSync(`curl -s "${memUrl}"`, { timeout: 5000, stdio: ["ignore", "pipe", "ignore"], windowsHide: true })
     if (kbRaw && kbRaw.length > 0) {
       const kb = JSON.parse(kbRaw.toString())
       if (kb.hit > 0) {
