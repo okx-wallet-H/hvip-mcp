@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  hvip-mcp:
+    build: .
+    container_name: hvip-mcp
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Dashboard
+      - "9321:9321"  # WebSocket Hub
+      - "9222:9222"  # MCP HTTP
+    volumes:
+      - ./.hub:/app/.hub          # 持久化数据 (DB/日志/成本/状态)
+      - ./memory:/app/memory      # 知识记忆
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - HUB_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health',r=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "2m"
+        max-file: "3"

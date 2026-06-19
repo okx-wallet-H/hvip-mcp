@@ -31,7 +31,7 @@ const LEVEL_NAMES: Record<LogLevel, string> = {
 
 const LEVEL_EMOJI: Record<LogLevel, string> = {
   [LogLevel.DEBUG]: "🔍",
-  [LogLevel.INFO]: "",
+  [LogLevel.INFO]: "ℹ️",
   [LogLevel.WARN]: "⚠️",
   [LogLevel.ERROR]: "❌",
   [LogLevel.SILENT]: "",

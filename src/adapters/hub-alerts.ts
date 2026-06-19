@@ -6,7 +6,9 @@
  * 防抖: 同类告警 5 分钟内不重复发送
  */
 
-const logTag = "Alert"
+import { logger } from "../utils/logger.js"
+
+const log = logger("Alert")
 
 // ═══════════════════════════════════════════════════════════
 // 配置
@@ -170,7 +172,7 @@ export async function checkAndAlert(ctx: AlertContext): Promise<string[]> {
   }
 
   if (sent.length > 0) {
-    console.error(`[${logTag}] 已发送 ${sent.length} 条告警: ${sent.join(", ")}`)
+    log.info(`已发送 ${sent.length} 条告警: ${sent.join(", ")}`)
   }
   return sent
 }

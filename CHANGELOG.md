@@ -28,20 +28,19 @@ GitHub Actions → Bump & Publish → 选叠加级别 → 自动：
 
 ## 历史版本
 
-### v0.2.49 (2026-06-15)
-即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.49)。
+### v0.5.0 (2026-06-19) — 当前版本
+373 MCP 工具，~99.7% OKX REST 覆盖，6 进程 AI 集群。
+AI Trader 交易桥接 (simulate/demo/live)，Dashboard v2 React 仪表盘，
+Chronos 调度官 + V2 Worker 执行引擎，自愈闭环，熔断告警，成本追踪。
 
-### v0.2.48 (2026-06-15)
-即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.48)。
+### v0.4.0 (2026-06-16)
+AI 集群架构：Agent Hub + Chronos Dispatcher + Worker 执行引擎。
+PM2 守护，11 岗 AI 值守，VBT 信号引擎 v3。
 
-### v0.2.47 (2026-06-15)
-即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.47)。
-
-### v0.2.46 (2026-06-15)
-即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.46)。
-
-### v0.2.45 (2026-06-15)
-即将发布。查看 [Release Notes](https://github.com/okx-wallet-H/hvip-mcp/releases/tag/v0.2.45)。
+### v0.3.0 (2026-06-14)
+Dashboard v1 HTML 仪表盘，Agent 辩论系统，信号面板。
+MCP 工具扩展至 ~350。
 
 ### v0.2.44 (2026-06-13)
-首次结构化发布。362 工具，14 域导航，技术指标 + Smart Money 模块，只读模式 + 权限感知安全模型。
+首次结构化发布。362 工具，14 域导航，技术指标 + Smart Money 模块，
+只读模式 + 权限感知安全模型。
