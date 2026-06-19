@@ -742,10 +742,35 @@ function extractSignals(tasks){
   }).filter(s=>s.currentSignal!=='NEUTRAL'||s.status==='done'||s.status==='reviewed')
 }
 
-function renderSignals(){
+async function renderSignals(){
   const tasks=currentTasks||[]
-  const signals=extractSignals(tasks)
-  el('signalCount').textContent=signals.filter(s=>s.status==='assigned').length+' 个活跃信号'
+  const taskSignals=extractSignals(tasks)
+
+  // Also fetch VBT signals from API
+  let vbtSignals=[]
+  try{
+    const r=await fetch('/api/signals')
+    const d=await r.json()
+    vbtSignals=(d.signals||[]).filter(s=>s.direction!=='NEUTRAL').map(s=>{
+      const ensemble=s.ensemble||{}
+      const risk=s.risk||{}
+      const mtf=s.multiTf||{}
+      return {
+        taskId:s.id,symbol:s.symbol,indicator:'VBT '+s.timeframe+' · '+s.topStrategy,
+        status:s.results?'verified':'active',
+        currentSignal:s.direction,price:s.price?('$'+s.price.toFixed(1)):'--',
+        sharpe:ensemble.avgSharpe||0,mdd:risk.sl_distance?((risk.sl_distance/(s.price||1))*100):0,
+        winRate:ensemble.avgWinRate||0,confidence:s.confidence||0,
+        conclusion:(s.grade==='A'?'🟢 A级信号 · ':'')+(s.grade==='B'?'🟡 B级信号 · ':'')+(s.grade==='C'?'🔴 C级信号 · ':'')+
+          '策略:'+s.topStrategy+' 通过率:'+s.qualifiedCount+'/'+s.testedCount+' 夏普:'+(ensemble.avgSharpe||0).toFixed(2)+
+          ' 多周期:'+(mtf.agreement||'neutral')+(s.results?' → '+s.results.outcome+' PnL:'+(s.results.pnlPct>=0?'+':'')+s.results.pnlPct+'%':''),
+        last5:[],grade:s.grade
+      }
+    })
+  }catch{}
+
+  const signals=[...vbtSignals,...taskSignals]
+  el('signalCount').textContent=signals.length+' 个信号'
   el('signalRefresh').textContent=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})
   const longs=signals.filter(s=>s.currentSignal==='LONG').length
   const shorts=signals.filter(s=>s.currentSignal==='SHORT').length
@@ -765,11 +790,12 @@ function renderSignals(){
     const dirEmoji=isLong?'📈 做多':isShort?'📉 做空':'➖ 观望'
     const confPct=s.confidence!=null?s.confidence:(s.winRate>0?s.winRate:50)
     const confColor=confPct>=70?'var(--success)':confPct>=40?'var(--warning)':'var(--danger)'
+    const gradeBadge=s.grade?(' <span style="font-size:9px;padding:1px 5px;border-radius:8px;background:'+(s.grade==='A'?'#16a34a20':s.grade==='B'?'#d9770620':'#dc262620')+';color:'+(s.grade==='A'?'var(--success)':s.grade==='B'?'var(--warning)':'var(--danger)')+'">'+s.grade+'级</span>'):''
 
     return '<div class="panel" style="margin-bottom:10px">'+
       '<div class="panel-header">'+
         '<h3><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:100px;background:'+dirBg+';color:'+dirColor+';font-size:11px">'+dirEmoji+'</span> '+
-        esc(s.symbol)+' · '+esc(s.indicator||s.taskId)+'</h3>'+
+        esc(s.symbol)+' · '+esc(s.indicator||s.taskId)+gradeBadge+'</h3>'+
         '<span style="display:flex;align-items:center;gap:8px"><span class="badge">'+esc(s.status)+'</span>'+
         '<span style="font-size:10px;color:'+confColor+';font-weight:600">置信度 '+confPct+'%</span></span>'+
       '</div>'+
@@ -782,7 +808,7 @@ function renderSignals(){
           '<div><span style="color:var(--text-muted)">置信度</span><br><span class="conf-bar"><span class="conf-track" style="max-width:60px"><span class="conf-fill" style="width:'+confPct+'%;background:'+confColor+'"></span></span><span class="conf-num">'+confPct+'%</span></span></div>'+
         '</div>'+
         (s.conclusion?'<div style="font-size:11px;color:var(--text-secondary);padding:8px 10px;background:var(--bg-root);border-radius:var(--radius-sm);border-left:3px solid '+dirColor+'">'+esc(s.conclusion)+'</div>':'')+
-        (s.last5.length?'<div style="margin-top:6px;display:flex;gap:4px;align-items:center;font-size:9.5px;color:var(--text-muted)">最近信号: '+s.last5.map(l=>'<span style="padding:1px 6px;border-radius:100px;background:'+(l.includes('LONG')?'#16a34a10':l.includes('SHORT')?'#dc262610':'var(--bg-root)')+';color:'+(l.includes('LONG')?'var(--success)':l.includes('SHORT')?'var(--danger)':'var(--text-muted)')+'">'+esc(l.trim())+'</span>').join(' ')+'</div>':'')+
+        (s.last5&&s.last5.length?'<div style="margin-top:6px;display:flex;gap:4px;align-items:center;font-size:9.5px;color:var(--text-muted)">最近信号: '+s.last5.map(l=>'<span style="padding:1px 6px;border-radius:100px;background:'+(l.includes('LONG')?'#16a34a10':l.includes('SHORT')?'#dc262610':'var(--bg-root)')+';color:'+(l.includes('LONG')?'var(--success)':l.includes('SHORT')?'var(--danger)':'var(--text-muted)')+'">'+esc(l.trim())+'</span>').join(' ')+'</div>':'')+
         (s.status==='done'||s.status==='reviewed'?'<div class="actions" style="margin-top:8px"><button class="btn btn-xs btn-ghost" onclick="copyText(\''+esc(s.conclusion||s.result||'').replace(/'/g,"\\'")+'\')">复制结论</button><button class="btn btn-xs btn-ghost" onclick="switchPanel(\"debate\")">对比分析</button></div>':'')+
       '</div></div>'
   }).join('')
