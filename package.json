@@ -1,6 +1,6 @@
 {
   "name": "hvip-mcp-server",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "hvip MCP Server — 365 工具覆盖 97.7% OKX REST API，含交易/行情/资金/策略/预测市场/技术指标/Smart Money（非 OKX 官方产品）",
   "homepage": "https://github.com/okx-wallet-H/hvip-mcp",
   "repository": {
