@@ -64,6 +64,7 @@ export function TraderArena() {
   const [lastUpdate, setLastUpdate] = useState("")
   const [selected, setSelected] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [risk, setRisk] = useState<{ mode: string; maxOrderUsd: number; dailyLossLimit: number } | null>(null)
 
   const load = async () => {
     try {
@@ -76,6 +77,9 @@ export function TraderArena() {
 
       const lb = await fetch("/api/traders/leaderboard").then(r => r.json()).catch(() => [])
       setLeaderboard(lb)
+
+      const rk = await fetch("/api/traders/risk").then(r => r.json()).catch(() => null)
+      setRisk(rk)
     } catch {}
   }
 
@@ -133,6 +137,22 @@ export function TraderArena() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Mode + Risk indicator */}
+      {risk && (
+        <div className="flex items-center gap-2 text-[11px]">
+          <Badge variant={risk.mode === "live" ? "destructive" : risk.mode === "demo" ? "default" : "secondary"} className="text-[10px]">
+            {risk.mode === "live" ? "🔴 实盘" : risk.mode === "demo" ? "🟠 模拟交易" : "🟢 模拟"}
+          </Badge>
+          {risk.mode !== "simulate" && (
+            <>
+              <span className="text-muted-foreground">单笔≤${risk.maxOrderUsd}</span>
+              <span className="text-muted-foreground">日亏损≤${risk.dailyLossLimit}</span>
+            </>
+          )}
+          <span className="text-muted-foreground/50">Round {round}</span>
+        </div>
+      )}
 
       {/* Trader cards */}
       {!leaderboard.length ? (

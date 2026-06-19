@@ -45,6 +45,7 @@ export interface CostEntry {
 export interface CostSummary {
   today: { calls: number; inputTokens: number; outputTokens: number; cost: number }
   total: { calls: number; inputTokens: number; outputTokens: number; cost: number }
+  budget: number
   byModel: Record<string, { calls: number; inputTokens: number; outputTokens: number; cost: number }>
   byAgent: Record<string, { calls: number; inputTokens: number; outputTokens: number; cost: number }>
   hourly: Array<{ hour: string; calls: number; cost: number }>
@@ -135,9 +136,12 @@ export class HubCosts {
       hourly.push({ hour: slot, calls: entries.length, cost: entries.reduce((s, e) => s + e.cost, 0) })
     }
 
+    const budget = parseFloat(process.env.HUB_DAILY_BUDGET || "5.00")
+
     return {
       today: sum(todayEntries),
       total: sum(all),
+      budget,
       byModel,
       byAgent,
       hourly,

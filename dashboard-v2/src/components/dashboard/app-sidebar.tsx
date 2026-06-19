@@ -28,7 +28,7 @@ const MAIN_NAV: NavItem[] = [
 ]
 
 const MONITOR_NAV: NavItem[] = [
-  { id: "terminal", label: "终端", icon: Terminal, shortcut: "5" },
+  { id: "terminal", label: "终端", icon: Terminal, shortcut: "0" },
   { id: "debate", label: "辩论厅", icon: Scale, shortcut: "6" },
   { id: "signals", label: "信号中心", icon: BarChart3, shortcut: "7" },
 ]
@@ -43,7 +43,7 @@ export function AppSidebar({ activePanel, onNavigate }: {
   onNavigate: (id: string) => void
 }) {
   const { state, toggleSidebar } = useSidebar()
-  const { agents, tasks } = useApi()
+  const { agents, tasks, version } = useApi()
   const [stats, setStats] = useState({ memory: 0, plugins: 24 })
 
   const collapsed = state === "collapsed"
@@ -108,7 +108,7 @@ export function AppSidebar({ activePanel, onNavigate }: {
         {!collapsed && (
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold text-sidebar-foreground">Agent Hub</h2>
-            <p className="text-[10px] text-sidebar-foreground/50">v0.4.3 · 工作台</p>
+            <p className="text-[10px] text-sidebar-foreground/50">v{version} · 工作台</p>
           </div>
         )}
       </div>

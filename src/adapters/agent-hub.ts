@@ -54,7 +54,9 @@ class AgentHub {
   private rooms = new Map<string, RoomState>()
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private version = "0.0.0"
+  private startTime = 0
   port = 0  // public: updated after WS negotiate, read by hub for dashboard URL
+  registryCount = 0  // set by hub-server after HubRegistry loads
   private db: HubDB | null = null
   private token = ""  // PSK 鉴权令牌
   private costTracker: any = null  // HubCosts 实例
@@ -98,6 +100,7 @@ class AgentHub {
   // ── 启动 ──
   start(port: number, host = "0.0.0.0", version = "0.0.0", token = ""): void {
     this.version = version
+    this.startTime = Date.now()
     this.token = token
     const startWss = (p: number): Promise<boolean> => {
       return new Promise((resolve) => {
@@ -770,7 +773,7 @@ class AgentHub {
 
     const rooms = this.getRooms()
 
-    return { agents, tasks, rooms, agentCount: agents.length, taskCount: tasks.length }
+    return { agents, tasks, rooms, agentCount: agents.length, taskCount: tasks.length, version: this.version, uptime: this.startTime ? Math.floor((Date.now() - this.startTime) / 1000) : 0, registry: `${this.registryCount || 24} plugins` }
   }
 
   // ── 关闭 ──

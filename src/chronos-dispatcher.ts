@@ -494,7 +494,7 @@ async function handleMessage(msg: Record<string, unknown>) {
                 agentId: reviewer.agentId,
                 assignedBy: AGENT_ID,
               })
-            } catch {}
+            } catch { log.warn(`任务分配 ${reviewId} → ${reviewer.agentId} 失败`) }
           }
         }
       }
@@ -572,7 +572,7 @@ async function activePatrol() {
           }),
         })
         log.info(`🚨 已创建高波动分析任务: ${taskId}`)
-      } catch {}
+      } catch { log.warn("高波动分析任务创建失败") }
     }
   }
 
@@ -645,15 +645,15 @@ Worker池: ${idle}空闲 ${busy}忙碌
         const costsResp = await fetch("http://127.0.0.1:3000/api/costs")
         const costsData = await costsResp.json() as any
         alertCtx.costs.todayCost = costsData.today?.cost || 0
-      } catch {}
+      } catch { log.warn("成本数据获取失败") }
       // 尝试获取 PM2 健康
       try {
         const pm2Resp = await fetch("http://127.0.0.1:3000/api/health/pm2")
         const pm2Data = await pm2Resp.json() as any
         if (pm2Data.missing?.length) alertCtx.processHealth.missing = pm2Data.missing
-      } catch {}
+      } catch { log.warn("PM2 健康数据获取失败") }
       await checkAndAlert(alertCtx)
-    } catch {}
+    } catch { log.error("巡检循环异常") }
 
     // 自愈闭环：发现问题 → 自动创建修复任务 → AI修复 → 验证 → 关闭
     for (const issue of report.issues || []) {
@@ -674,7 +674,7 @@ Worker池: ${idle}空闲 ${busy}忙碌
               },
             }),
           })
-        } catch {}
+        } catch { log.warn(`自愈任务创建失败: ${issue.title}`) }
       }
     }
   } catch (e) {

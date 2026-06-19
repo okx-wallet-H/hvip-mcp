@@ -221,11 +221,10 @@ function startHttpServer(): void {
           }
           agentHub.registerTask(taskId, title || taskId, promptB64 || undefined)
           db?.saveTask({ taskId, status: "unassigned", title: title || taskId })
-          // V2 Worker 体系已就绪，CLI spawn 已退役
-          let spawned = false; let workerPid = 0
-          log.info(`新任务: ${taskId} "${title}"${spawned ? ' 🤖 已拉起' : ''}`)
+          // V2 Worker 体系已就绪 — Chronos → Worker 智能调度
+          log.info(`新任务: ${taskId} "${title}"`)
           res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
-          res.end(JSON.stringify({ ok: true, taskId, title, spawned, workerPid }))
+          res.end(JSON.stringify({ ok: true, taskId, title }))
         } catch {
           res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
           res.end(JSON.stringify({ error: "JSON 解析失败" }))
@@ -377,6 +376,16 @@ function startHttpServer(): void {
       return
     }
 
+    // GET /api/traders/risk — 交易模式 + 风控状态
+    if (_req.method === "GET" && _req.url === "/api/traders/risk") {
+      const mode = process.env.AI_TRADER_MODE || "simulate"
+      const maxOrder = parseFloat(process.env.TRADER_MAX_ORDER_USD || "100")
+      const dailyLimit = parseFloat(process.env.TRADER_DAILY_LOSS_LIMIT || "500")
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify({ mode, maxOrderUsd: maxOrder, dailyLossLimit: dailyLimit }))
+      return
+    }
+
     // GET /api/signals — 信号广场
     if (_req.method === "GET" && _req.url === "/api/signals") {
       const sigFile = join(process.cwd(), ".hub", "signals.json")
@@ -503,10 +512,10 @@ function startHttpServer(): void {
               const parsed = JSON.parse(match[1])
               // Unwrap content[0].text JSON if it's a string
               if (parsed.result?.content?.[0]?.text) {
-                try { parsed.result.content[0].text = JSON.parse(parsed.result.content[0].text) } catch {}
+                try { parsed.result.content[0].text = JSON.parse(parsed.result.content[0].text) } catch { /* nested parse failure, keep original text */ }
               }
               result = JSON.stringify(parsed)
-            } catch {}
+            } catch { log.warn("MCP 响应格式解析失败") }
           }
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
           res.end(result)
@@ -533,7 +542,7 @@ function startHttpServer(): void {
                 const c: any[] = []
                 if (m.content) c.push({ type: "text", text: m.content })
                 if (m.tool_calls) for (const tc of m.tool_calls) {
-                  let args = {}; try { args = JSON.parse(tc.function.arguments || "{}") } catch {}
+                  let args = {}; try { args = JSON.parse(tc.function.arguments || "{}") } catch { /* tool call args parse failure */ }
                   c.push({ type: "tool_use", id: tc.id, name: tc.function.name, input: args })
                 }
                 anthroMsgs.push({ role: "assistant", content: c.length ? c : m.content || "" })
@@ -589,6 +598,13 @@ function startHttpServer(): void {
     res.end(JSON.stringify({ error: "Not Found" }))
   })
 
+  httpServer.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      log.error(`端口 ${webPort} 被占用，尝试 ${webPort + 1}`)
+    } else {
+      log.error(`HTTP Server 错误: ${err.message}`)
+    }
+  })
   httpServer.listen(webPort, host, () => {
     log.info(`🌐 仪表盘 → http://${host}:${webPort}`)
   })
@@ -712,7 +728,7 @@ function runScheduledJob(job: ScheduledJob): void {
   const tpl = TASK_TEMPLATES.find(t => t.id === job.template)
   let promptB64 = ""
   if (tpl) {
-    try { promptB64 = Buffer.from(tpl.buildPrompt(job.params), "utf-8").toString("base64") } catch {}
+    try { promptB64 = Buffer.from(tpl.buildPrompt(job.params), "utf-8").toString("base64") } catch { log.warn(`promptB64 构建失败: ${job.taskId}`) }
   }
   taskMeta.set(taskId, { templateId: job.template, params: job.params })
   agentHub.registerTask(taskId, title, promptB64 || undefined)
@@ -770,7 +786,9 @@ if (memOk) {
 const registryPath = flag("registry-db") || process.env.HUB_REGISTRY_DB || ".hub/registry.db"
 const registry = new HubRegistry(registryPath)
 const regOk = registry.open()
-if (!regOk) {
+if (regOk) {
+  agentHub.registryCount = registry.all().length
+} else {
   log.warn(`⚠️ Registry 打开失败，商店功能不可用`)
 }
 
