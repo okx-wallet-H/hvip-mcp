@@ -748,6 +748,18 @@ class AgentHub {
     return titles[taskId] || taskId
   }
 
+  // ── Worker Scaler API (P5-1) ──
+  getAgents(): Map<string, AgentConn> { return this.agents }
+
+  disconnectAgent(agentId: string): boolean {
+    const agent = this.agents.get(agentId)
+    if (!agent) return false
+    agent.ws.close()
+    this.agents.delete(agentId)
+    log.info(`Agent 断开: ${agentId}`)
+    return true
+  }
+
   // ── 状态快照 ──
   status(): HubStatus {
     const agents = [...this.agents.entries()].map(([id, a]) => ({

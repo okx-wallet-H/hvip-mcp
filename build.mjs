@@ -80,6 +80,32 @@ await build({
 
 console.log("✅ dist/ai-trader.js built")
 
+await build({
+  entryPoints: ["src/auto-reviewer.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node20",
+  format: "cjs",
+  outfile: "dist/auto-reviewer.js",
+  external: [],
+  banner: { js: "#!/usr/bin/env node" },
+})
+
+console.log("✅ dist/auto-reviewer.js built")
+
+await build({
+  entryPoints: ["src/worker-scaler.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node20",
+  format: "cjs",
+  outfile: "dist/worker-scaler.js",
+  external: [],
+  banner: { js: "#!/usr/bin/env node" },
+})
+
+console.log("✅ dist/worker-scaler.js built")
+
 // ── Copy web assets to dist/ ──
 const webFiles = [
   "dashboard.html",

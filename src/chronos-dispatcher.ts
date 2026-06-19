@@ -682,6 +682,60 @@ Worker池: ${idle}空闲 ${busy}忙碌
 }
 
 // ═══════════════════════════════════════════════════════════
+// P3-2: npm Audit Patrol
+// ═══════════════════════════════════════════════════════════
+
+async function npmAuditPatrol() {
+  try {
+    const { execSync } = await import("node:child_process")
+    let auditResult = ""
+    try {
+      auditResult = execSync("npm audit --json 2>&1", {
+        encoding: "utf-8", timeout: 60000, cwd: process.cwd(),
+      })
+    } catch (e: any) {
+      // npm audit exits 1 when vulnerabilities found — that's expected
+      auditResult = e.stdout || e.stderr || e.message || ""
+    }
+
+    if (!auditResult.includes("\"vulnerabilities\"")) return
+
+    const auditJson = JSON.parse(auditResult)
+    const vulns = auditJson.vulnerabilities || {}
+    const highOrCritical = Object.values(vulns).filter((v: any) =>
+      v.severity === "high" || v.severity === "critical"
+    )
+
+    if (highOrCritical.length === 0) return
+
+    log.warn(`🔒 npm audit: ${highOrCritical.length} 个高危漏洞`)
+
+    const taskId = `AUDIT-${Date.now().toString(36)}`
+    const vulnDesc = highOrCritical.map((v: any) =>
+      `${v.name}: ${v.severity} — ${v.title || v.overview || ""}`
+    ).join("\n")
+
+    try {
+      await fetch("http://127.0.0.1:3000/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId,
+          title: `[安全] npm audit 发现 ${highOrCritical.length} 个高危漏洞`,
+          template: "fix-bug",
+          params: { errorLog: vulnDesc },
+        }),
+      })
+      log.info(`🔧 已创建安全修复任务: ${taskId}`)
+    } catch {}
+  } catch (e: any) {
+    log.debug(`npm audit 跳过: ${e.message}`)
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// P4-1: Market Anomaly Auto-Response
+// ═══════════════════════════════════════════════════════════
 // Periodic Health Check + Patrol
 // ═══════════════════════════════════════════════════════════
 
@@ -704,11 +758,19 @@ setInterval(async () => {
 setInterval(activePatrol, PATROL_INTERVAL)
 setTimeout(activePatrol, 10000)  // First patrol after 10s
 
+// P3-2: npm audit every 12 hours
+setInterval(npmAuditPatrol, 12 * 3600_000)
+setTimeout(npmAuditPatrol, 60000)
+
+// P4-1: Market anomaly check every 5 minutes (within patrol)
+// Already covered by activePatrol which checks volatility >3%
+
 // ═══════════════════════════════════════════════════════════
 // Startup
 // ═══════════════════════════════════════════════════════════
 
-log.info(`Chronos AI 调度官启动`)
+log.info(`Chronos AI 调度官启动 (巡检${PATROL_INTERVAL/1000}s + npm审计12h + 波动检测5min)`)
+connect()
 connect()
 
 process.on("SIGINT", () => { clearInterval(heartbeatTimer); ws.close(); process.exit(0) })

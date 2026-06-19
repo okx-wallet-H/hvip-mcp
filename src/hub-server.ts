@@ -246,6 +246,34 @@ function startHttpServer(): void {
       return
     }
 
+    // ── Worker Scale API (P5-1) ──
+    if (_req.method === "POST" && _req.url?.startsWith("/api/workers/scale")) {
+      const url = new URL(_req.url, `http://${host}:${webPort}`)
+      const action = url.searchParams.get("action")
+      const workerId = url.searchParams.get("worker") || ""
+
+      if (action === "up") {
+        // Count current workers
+        const activeWorkers = [...agentHub.getAgents()].filter(([id]) =>
+          id.includes("worker") || id.includes("Worker")
+        ).length
+        const newIdx = activeWorkers + 1
+        const taskId = `SCALE-${newIdx}-${Date.now().toString(36)}`
+        const result = spawnWorker(taskId)
+        res.writeHead(result.ok ? 200 : 500, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: result.ok, taskId, workerIdx: newIdx, pid: result.workerPid }))
+      } else if (action === "down" && workerId) {
+        // Kill a worker process by its agentId
+        const killed = agentHub.disconnectAgent(workerId)
+        res.writeHead(killed ? 200 : 404, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: killed, workerId }))
+      } else {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "action=up|down required" }))
+      }
+      return
+    }
+
     // ── Memory API ──
     if (_req.method === "POST" && _req.url === "/api/memory") {
       const chunks: Buffer[] = []
