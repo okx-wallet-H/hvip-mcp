@@ -338,56 +338,6 @@ async function run() {
     log.info(`  ${icon} ${r.emoji} ${r.name.padEnd(12)} $${r.capital.toFixed(0)} | PnL: ${r.totalPnl >= 0 ? "+" : ""}$${r.totalPnl.toFixed(0)} (${r.totalPnlPct >= 0 ? "+" : ""}${r.totalPnlPct.toFixed(1)}%) | ${r.winCount}/${r.tradeCount}`)
   }
 
-  // P4-2: Auto-evaluate trader performance and adjust
-  autoEvaluateTraders(rankings, state)
-}
-
-// ═══════════════════════════════════════════════════════════
-// P4-2: AI Trader Auto-Evaluation
-// ═══════════════════════════════════════════════════════════
-
-const EVAL_INTERVAL_ROUNDS = 6  // Evaluate every 6 rounds
-
-function autoEvaluateTraders(rankings: any[], state: any) {
-  if (state.round % EVAL_INTERVAL_ROUNDS !== 0) return
-
-  const evalReport: string[] = []
-  for (const trader of rankings) {
-    const pnl = trader.totalPnlPct || 0
-    const wr = trader.tradeCount > 0 ? (trader.winCount / trader.tradeCount * 100) : 0
-    const sharpeApprox = trader.tradeCount > 0 ? pnl / Math.max(1, Math.abs(pnl)) * Math.sqrt(trader.tradeCount) : 0
-
-    // Flag underperformers
-    if (trader.tradeCount > 5) {
-      if (pnl < -20) {
-        log.warn(`⚠️ ${trader.emoji} ${trader.name}: 亏损 ${pnl.toFixed(1)}% 超过 20%，建议暂停`)
-        evalReport.push(`${trader.name}: STOP (PnL ${pnl.toFixed(1)}%)`)
-      } else if (wr < 30) {
-        log.warn(`⚠️ ${trader.emoji} ${trader.name}: 胜率 ${wr.toFixed(0)}% 低于 30%，建议减仓`)
-        evalReport.push(`${trader.name}: REDUCE (WR ${wr.toFixed(0)}%)`)
-      } else if (pnl > 10 && wr > 60) {
-        log.info(`⭐ ${trader.emoji} ${trader.name}: 表现优秀 PnL +${pnl.toFixed(1)}% WR ${wr.toFixed(0)}%，建议加仓`)
-        evalReport.push(`${trader.name}: BOOST (PnL +${pnl.toFixed(1)}% WR ${wr.toFixed(0)}%)`)
-      }
-    }
-
-    // Save eval history
-    if (!trader.evalHistory) trader.evalHistory = []
-    trader.evalHistory.push({
-      round: state.round,
-      pnlPct: Math.round(pnl * 10) / 10,
-      winRate: Math.round(wr),
-      sharpe: Math.round(sharpeApprox * 100) / 100,
-      capital: Math.round(trader.capital),
-      timestamp: new Date().toISOString(),
-    })
-    if (trader.evalHistory.length > 50) trader.evalHistory = trader.evalHistory.slice(-50)
-  }
-
-  if (evalReport.length > 0) {
-    state.evalReport = { round: state.round, traders: evalReport, timestamp: new Date().toISOString() }
-    log.info(`📊 绩效评估 (Round ${state.round}): ${evalReport.join(" | ")}`)
-  }
 }
 
 // ═══════════════════════════════════════════════════════════
