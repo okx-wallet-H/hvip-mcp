@@ -54,7 +54,7 @@ class AgentHub {
   private rooms = new Map<string, RoomState>()
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private version = "0.0.0"
-  private port = 0
+  port = 0  // public: updated after WS negotiate, read by hub for dashboard URL
   private db: HubDB | null = null
   private token = ""  // PSK 鉴权令牌
   private costTracker: any = null  // HubCosts 实例

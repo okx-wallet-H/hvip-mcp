@@ -266,7 +266,8 @@ async function cleanupStuckTasks(): Promise<number> {
     // 检查这些任务的 Agent 是否还在线
     const onlineAgents = new Set((data.agents || []).map((a: any) => a.agentId))
 
-    const released: Array<{ taskId: string; elapsed: string; agentOnline: boolean }> = []
+    // 修复：存储完整的释放信息，包括 assignedTo（用于后续 agent:offline 通知）
+    const released: Array<{ taskId: string; elapsed: string; agentOnline: boolean; assignedTo?: string }> = []
 
     for (const task of stuckTasks) {
       const elapsed = task.claimedAt
@@ -282,7 +283,7 @@ async function cleanupStuckTasks(): Promise<number> {
       } else {
         const elapsedMs = now - new Date(task.claimedAt).getTime()
         if (elapsedMs > STUCK_WORKING_TIMEOUT_MS) {
-          released.push({ taskId: task.taskId, elapsed, agentOnline: true })
+          released.push({ taskId: task.taskId, elapsed, agentOnline: true, assignedTo: task.assignedTo })
         }
       }
     }
@@ -300,10 +301,10 @@ async function cleanupStuckTasks(): Promise<number> {
         reason: `卡住超过${r.agentOnline ? '30' : '10'}分钟 (${r.elapsed})`,
       })
       // 如果 Agent 在线但卡住，额外发送一条让 Hub 断开该 Agent 的通知
-      if (r.agentOnline) {
+      if (r.agentOnline && r.assignedTo) {
         send({
           type: "agent:offline",
-          agentId: task.assignedTo,
+          agentId: r.assignedTo,
           reason: "Chronos 强制回收 — Agent 在线但任务卡住超过30分钟",
         })
       }

@@ -119,7 +119,7 @@ function DashboardLayout() {
 
           {activePanel === "signals" && (
             <div className="animate-fade-in">
-              <SignalsPanel tasks={api.tasks} />
+              <SignalsPanel tasks={api.tasks} onCreateTask={api.createTask} onRefresh={api.refresh} />
             </div>
           )}
 
