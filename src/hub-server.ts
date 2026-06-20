@@ -726,6 +726,13 @@ const schedules: ScheduledJob[] = [
     params: { scope: "全面审查 src/ 错误处理/类型安全/性能", priority: "P0" },
     lastRun: 0, count: 0, failCount: 0, timer: null,
   },
+  {
+    id: "sched-signals", name: "🚦 VBT信号刷新",
+    interval: 4 * 3600_000,
+    template: "vbt-signal-refresh",
+    params: { script: "scripts/refresh-signals.mjs" },
+    lastRun: 0, count: 0, failCount: 0, timer: null,
+  },
   // ════════ 24x7 守护岗 ════════
   {
     id: "guard-dashboard", name: "📊 仪表盘守护",
@@ -801,6 +808,24 @@ function runScheduledJob(job: ScheduledJob): void {
 
   const taskId = `${job.id}-${Date.now().toString(36)}`
   const title = `[定时] ${job.name} #${job.count + 1}`
+
+  // 信号刷新：本地脚本直跑，不需要 Worker
+  if (job.template === "vbt-signal-refresh") {
+    log.info(`Scheduler: 🔄 ${job.name}`)
+    try {
+      const { execSync } = require("node:child_process")
+      const out = execSync(`node scripts/refresh-signals.mjs`, { cwd: process.cwd(), encoding: "utf-8", timeout: 60000, windowsHide: true, maxBuffer: 200_000 })
+      log.info(`Scheduler: ${job.name} 完成 — ${out.trim().split("\n").length} 行输出`)
+    } catch (e: any) {
+      log.error(`Scheduler: ${job.name} 失败: ${e.message}`)
+      job.failCount++
+    }
+    job.count++
+    job.lastRun = Date.now()
+    scheduleNext(job)
+    return
+  }
+
   log.info(`Scheduler: ⏰ ${job.name} → ${taskId}`)
   // 注册任务 + 预构建 prompt → Chronos 自动派发给 V2 Worker（SDK 直调，零弹窗）
   const tpl = TASK_TEMPLATES.find(t => t.id === job.template)
