@@ -14,6 +14,7 @@
 
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
+import { DatabaseSync } from "node:sqlite"
 import { AgentLoop } from "./adapters/ai-sdk.js"
 import { logger } from "./utils/logger.js"
 import { executeOpen, executeClose, syncPositions, getMode, getRiskStatus, type BridgeMode } from "./ai-trader-bridge.js"
@@ -199,6 +200,60 @@ function logTradeHistory(state: any) {
       appendFileSync(TRADE_LOG, JSON.stringify(entry) + "\n", "utf-8")
     }
   } catch {}
+}
+
+/**
+ * 将交易摘要写入记忆库，供 Dashboard 记忆面板复盘
+ */
+function saveToMemory(state: any) {
+  try {
+    const memPath = join(process.cwd(), ".hub", "memory.db")
+    if (!existsSync(memPath)) return  // Hub 未启动，跳过
+
+    const db = new DatabaseSync(memPath)
+    const now = new Date().toISOString()
+    const round = state.round
+
+    for (const [id, t] of Object.entries(state.traders as Record<string, any>)) {
+      // Only save if there's activity (positions or PnL changes)
+      const hasActivity = t.tradeCount > 0 || (t.openPositions || []).length > 0
+      if (!hasActivity) continue
+
+      const posSummary = (t.openPositions || []).map((p: any) =>
+        `${p.direction} ${p.symbol} ${p.leverage}x | 入场$${p.entryPrice?.toFixed(1)} | 未实现$${p.unrealizedPnl?.toFixed(1)} (${p.unrealizedPnlPct?.toFixed(1)}%)`
+      ).join("\n")
+
+      const text = [
+        `## ${t.name} · Round ${round}`,
+        ``,
+        `| 指标 | 值 |`,
+        `|------|-----|`,
+        `| 余额 | $${t.capital?.toFixed(0)} |`,
+        `| 权益 | $${(t.equity || t.capital)?.toFixed(0)} |`,
+        `| 总盈亏 | ${t.totalPnl >= 0 ? "+" : ""}$${t.totalPnl?.toFixed(0)} (${t.totalPnlPct >= 0 ? "+" : ""}${t.totalPnlPct?.toFixed(1)}%) |`,
+        `| 未实现 | $${t.unrealizedPnl?.toFixed(1)} |`,
+        `| 保证金 | $${t.usedMargin?.toFixed(0)} |`,
+        `| 交易数 | ${t.tradeCount} | 胜率 ${t.tradeCount > 0 ? Math.round(t.winCount / t.tradeCount * 100) : 0}% |`,
+        ``,
+        posSummary || "无持仓",
+      ].join("\n")
+
+      const memId = `trade-${id}-r${round}`
+
+      // Upsert: replace if exists
+      db.prepare("DELETE FROM memory WHERE id = ?").run(memId)
+      db.prepare(`
+        INSERT INTO memory (id, type, agentId, text, tags, confidence, readCount, parentId, createdAt, updatedAt)
+        VALUES (?, 'strategy', ?, ?, ?, ?, 0, NULL, ?, ?)
+      `).run(memId, `ai-trader-${id}`, text, `trade,round-${round},trader-${id}`, t.totalPnlPct != null ? Math.min(1, Math.abs(t.totalPnlPct) / 100) : 0.5, now, now)
+    }
+
+    // Clean up old trade memories (keep last 100)
+    const oldIds = db.prepare("SELECT id FROM memory WHERE id LIKE 'trade-%' ORDER BY createdAt DESC LIMIT -1 OFFSET 100").all() as Array<{ id: string }>
+    for (const row of oldIds) db.prepare("DELETE FROM memory WHERE id = ?").run(row.id)
+
+    db.close()
+  } catch { /* memory DB not critical */ }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -424,6 +479,9 @@ async function run() {
 
   // Log trade history for optimization
   logTradeHistory(state)
+
+  // Save trade summaries to memory DB for dashboard review
+  saveToMemory(state)
 
   saveState(state)
 
