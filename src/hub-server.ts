@@ -45,7 +45,7 @@ if (existsSync(envPath)) {
   })
 }
 
-const VERSION = "0.6.0"
+const VERSION = "0.6.1"
 
 // ── 仪表盘 HTML — 从文件读取 ──
 function getDashboardHtml(host, port){const paths=[join(__dirname,"web","dashboard.html"),join(__dirname,"..","src","web","dashboard.html")];for(const p of paths){if(existsSync(p))return readFileSync(p,"utf-8").replace("HUB_HOST",host).replace("WS_PORT = 0","WS_PORT = "+port)}return "<html><body><h2>dashboard.html not found</h2></body></html>"}
