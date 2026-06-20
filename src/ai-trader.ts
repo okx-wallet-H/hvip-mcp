@@ -372,7 +372,7 @@ async function run() {
       const symbol = (pos.symbol || sig?.symbol || "BTC/USDT") as string
       const direction = pos.direction as "LONG" | "SHORT"
       const leverage = Math.min(100, Math.max(1, pos.leverage || 5))
-      const capital = Math.min(trader.capital, 5000)  // max 50% per trade
+      const capital = Math.floor(trader.capital * 0.5)  // max 50% of current balance
 
       if (mode === "simulate" && paperEx) {
         // Paper Exchange: full simulation with margin/liquidation/fees
