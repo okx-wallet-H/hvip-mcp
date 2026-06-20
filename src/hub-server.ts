@@ -27,6 +27,7 @@ import { logger } from "./utils/logger.js"
 import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { TASK_TEMPLATES } from "./adapters/hub-templates.js"
+import { getApiCredits } from "./adapters/api-credits.js"
 
 // ── 加载 .env ──
 const envPath = join(process.cwd(), ".env")
@@ -485,6 +486,83 @@ function startHttpServer(): void {
       const circuits = circuitBreaker.status()
       const openCount = circuits.filter(c => c.state === "OPEN").length
       res.end(JSON.stringify({ circuits, openCount, healthy: openCount === 0 }))
+      return
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // API 积分管理 (Admin)
+    // ═══════════════════════════════════════════════════════════
+
+    const apiCredits = getApiCredits()
+
+    // GET /api/credits/balance — 客户端查余额
+    if (_req.method === "GET" && _req.url === "/api/credits/balance") {
+      const key = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const balance = apiCredits.getBalance(key)
+      if (!balance) {
+        res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "无效的 API Key" }))
+      } else {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify(balance))
+      }
+      return
+    }
+
+    // GET /api/admin/keys — 列出所有 Key (需 Admin Token)
+    if (_req.method === "GET" && _req.url === "/api/admin/keys") {
+      if (token && _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") !== token) {
+        res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "需要管理员权限" }))
+        return
+      }
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(apiCredits.listAll()))
+      return
+    }
+
+    // POST /api/admin/keys — 创建新 Key (需 Admin Token)
+    if (_req.method === "POST" && _req.url === "/api/admin/keys") {
+      if (token && _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") !== token) {
+        res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "需要管理员权限" }))
+        return
+      }
+      const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", () => {
+        try {
+          const { clientName, initialCredits } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!clientName) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 clientName" })); return }
+          const record = apiCredits.createKey(clientName, initialCredits || 1000)
+          res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify(record))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // POST /api/admin/keys/topup — 充值 (需 Admin Token)
+    if (_req.method === "POST" && _req.url === "/api/admin/keys/topup") {
+      if (token && _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") !== token) {
+        res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "需要管理员权限" }))
+        return
+      }
+      const chunks: Buffer[] = []; _req.on("data", (c: Buffer) => chunks.push(c)); _req.on("end", () => {
+        try {
+          const { key, amount } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!key || !amount) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: "缺少 key 或 amount" })); return }
+          const result = apiCredits.topUp(key, amount)
+          if (!result.ok) { res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: result.error })); return }
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ ok: true, newBalance: result.newBalance }))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ error: "JSON 解析失败" }))
+        }
+      })
       return
     }
 

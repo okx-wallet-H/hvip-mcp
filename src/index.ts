@@ -32,6 +32,7 @@ import { registerWsTools } from "./tools/ws.js"
 import { registerAgentHubTools } from "./tools/agent-hub.js"
 import { registerCodeGraphTools } from "./tools/codegraph.js"
 import { startAgentHub } from "./adapters/agent-hub.js"
+import { getApiCredits, CREDIT_COST } from "./adapters/api-credits.js"
 import { getAuth, classifyRisk, type RiskLevel } from "./tools/shared.js"
 import { privateApi } from "./adapters/okx.js"
 
@@ -182,7 +183,9 @@ async function startHttp(
     port = 3000
   }
   const host = process.env.HOST || "127.0.0.1"
-  const token = process.env.MCP_AUTH_TOKEN || ""  // PSK 鉴权令牌
+  const adminToken = process.env.MCP_AUTH_TOKEN || ""  // 管理员 PSK，不限流
+  const creditsEnabled = process.env.MCP_CREDITS !== "false" && process.env.MCP_CREDITS !== "0"
+  const credits = creditsEnabled ? getApiCredits() : null
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless
   })
@@ -190,10 +193,37 @@ async function startHttp(
   await server.connect(transport)
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-    // ── Auth guard: PSK token 校验（/health 例外） ──
-    if (token && req.url !== "/health") {
-      const provided = req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
-      if (provided !== token) {
+    // ── Auth guard: 支持管理员 Key + 多租户积分 Key ──
+    const provided = req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+
+    if (req.url !== "/health" && req.url !== "/") {
+      // 管理员 Key 直接放行
+      if (adminToken && provided === adminToken) {
+        // admin — 不扣费
+      } else if (credits && provided) {
+        // 租户 Key — 查余额
+        const record = credits.lookup(provided)
+        if (!record) {
+          res.writeHead(401, { "Content-Type": "application/json" })
+          res.end(JSON.stringify({ error: "Unauthorized — 无效的 API Key" }))
+          return
+        }
+        if (!record.enabled) {
+          res.writeHead(403, { "Content-Type": "application/json" })
+          res.end(JSON.stringify({ error: "Forbidden — API Key 已禁用" }))
+          return
+        }
+        // POST /mcp 调用工具扣 1 积分
+        if (req.method === "POST" && req.url === "/mcp") {
+          const result = credits.deduct(provided, "READ")
+          if (!result.ok) {
+            res.writeHead(402, { "Content-Type": "application/json" })
+            res.end(JSON.stringify({ error: result.error, remaining: credits.lookup(provided)?.credits || 0 }))
+            return
+          }
+        }
+      } else if (adminToken) {
+        // 需要 Token 但未提供
         res.writeHead(401, { "Content-Type": "application/json" })
         res.end(JSON.stringify({ error: "Unauthorized — 请在 Authorization 头携带有效 token" }))
         return
