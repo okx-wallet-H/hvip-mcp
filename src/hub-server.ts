@@ -362,18 +362,32 @@ function startHttpServer(): void {
       return
     }
 
-    // GET /api/traders/leaderboard — 排行榜
+    // GET /api/traders/leaderboard — 排行榜（含完整指标）
     if (_req.method === "GET" && _req.url === "/api/traders/leaderboard") {
       const stateFile = join(process.cwd(), ".hub", "trader-state.json")
       if (existsSync(stateFile)) {
         const state = JSON.parse(readFileSync(stateFile, "utf-8"))
         const rankings = Object.values(state.traders || {})
-          .map((t: any) => ({
-            id: t.id, name: t.name, emoji: t.emoji, title: t.title, style: t.style,
-            capital: t.capital, totalPnl: t.totalPnl, totalPnlPct: t.totalPnlPct,
-            tradeCount: t.tradeCount || 0, winCount: t.winCount || 0,
-            openPositions: (t.openPositions || []).filter((p: any) => !p.closed).length,
-          }))
+          .map((t: any) => {
+            const positions = (t.openPositions || []).filter((p: any) => !p.closed)
+            const initialCapital = 10000
+            return {
+              id: t.id, name: t.name, emoji: t.emoji,
+              capital: t.capital, equity: t.equity || t.capital,
+              totalPnl: t.totalPnl, totalPnlPct: t.totalPnlPct,
+              unrealizedPnl: t.unrealizedPnl || 0,
+              tradeCount: t.tradeCount || 0, winCount: t.winCount || 0,
+              totalFees: t.totalFees || 0, totalFunding: t.totalFunding || 0,
+              openPositions: positions.length,
+              positions: positions.map((p: any) => ({
+                symbol: p.symbol, direction: p.direction,
+                leverage: p.leverage, entryPrice: p.entryPrice,
+                currentPrice: p.currentPrice, margin: p.margin,
+                liquidationPrice: p.liquidationPrice,
+                unrealizedPnl: p.unrealizedPnl, unrealizedPnlPct: p.unrealizedPnlPct,
+              })),
+            }
+          })
           .sort((a: any, b: any) => b.totalPnlPct - a.totalPnlPct)
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
         res.end(JSON.stringify(rankings))

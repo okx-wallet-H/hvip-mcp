@@ -275,12 +275,13 @@ export class PaperExchange {
       }
     }
     const equity = this.balance + usedMargin + unrealizedPnl
+    const truePnl = equity - this.initialBalance  // 含手续费+资金费的真实累计盈亏
     return {
       balance: this.balance,
       equity,
       usedMargin,
       freeMargin: equity - usedMargin,
-      totalPnl: this.totalPnl,
+      totalPnl: truePnl,
       unrealizedPnl,
       totalFees: this.totalFees,
       totalFunding: this.totalFunding,
