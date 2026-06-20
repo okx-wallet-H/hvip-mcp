@@ -81,9 +81,9 @@ function printHelpAndExit(version: string): never {
     `    2. 在 mcpServers 中添加:`,
     ``,
     `       {`,
-    `         "hvip": {`,
-    `           "command": "npx",`,
-    `           "args": ["-y", "hvip-mcp-server"]`,
+    `         \"hvip\": {`,
+    `           \"command\": \"npx\",`,
+    `           \"args\": [\"-y\", \"hvip-mcp-server\"]`,
     `         }`,
     `       }`,
     ``,
@@ -132,7 +132,7 @@ function registerAllTools(
       if (risk !== "READ") {
         skipped++
         skipLog.push(`${name} (${risk})`)
-        return // 跳过
+        return server // 跳过但返回 server 实例，保持链式调用兼容
       }
       return orig(name, ...args)
     }
@@ -367,11 +367,37 @@ async function startStdio(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 版本读取（从 package.json）
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _cachedVersion: string | null = null
+
+function loadVersion(): string {
+  if (_cachedVersion) return _cachedVersion
+  try {
+    const paths = [
+      join(__dirname, "..", "package.json"),
+      join(__dirname, "..", "..", "..", "package.json"),
+    ]
+    for (const p of paths) {
+      if (existsSync(p)) {
+        const pkg = JSON.parse(readFileSync(p, "utf-8"))
+        if (pkg.version) {
+          _cachedVersion = String(pkg.version)
+          return _cachedVersion!
+        }
+      }
+    }
+  } catch { /* 静默失败，使用默认版本 */ }
+  return "0.0.0"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Main
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function main() {
-  const VERSION = "0.4.3"
+  const VERSION = loadVersion()
 
   // ── CLI 标志（在 MCP 握手之前处理） ──
   const argv = process.argv.slice(2)
