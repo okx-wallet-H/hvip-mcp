@@ -274,8 +274,15 @@ function startHttpServer(): void {
       res.end(JSON.stringify(entries))
       return
     }
-    if (_req.method === "GET" && _req.url === "/api/memory") {
-      const entries = memory.recent(30)
+    if (_req.method === "GET" && (_req.url === "/api/memory" || _req.url?.startsWith("/api/memory?"))) {
+      const url = _req.url!.startsWith("/api/memory?") ? new URL(_req.url!, `http://${host}:${webPort}`) : null
+      const type = url?.searchParams.get("type") || ""
+      let entries: any[]
+      if (type && type !== "all" && ["memory","doc","directive","skill","strategy"].includes(type)) {
+        entries = memory.byType(type as any, 30)
+      } else {
+        entries = memory.recent(30)
+      }
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
       res.end(JSON.stringify(entries))
       return
