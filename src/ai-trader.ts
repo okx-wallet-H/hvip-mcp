@@ -17,6 +17,7 @@ import { join } from "node:path"
 import { AgentLoop } from "./adapters/ai-sdk.js"
 import { logger } from "./utils/logger.js"
 import { executeOpen, executeClose, syncPositions, getMode, getRiskStatus, type BridgeMode } from "./ai-trader-bridge.js"
+import { PaperExchange } from "./adapters/paper-exchange.js"
 
 // ═══════════════════════════════════════════════════════════
 // Config
@@ -26,29 +27,6 @@ const STATE_FILE = join(process.cwd(), ".hub", "trader-state.json")
 const INTERVAL_MS = parseInt(process.env.TRADER_INTERVAL || "3600000", 10)
 const log = logger("AI-Trader")
 const agent = new AgentLoop()
-
-// ═══════════════════════════════════════════════════════════
-// Realistic Trading Costs (simulate mode only)
-// ═══════════════════════════════════════════════════════════
-
-const SLIPPAGE = 0.0002         // 0.02% — 入场/出场各扣
-const TAKER_FEE = 0.0005        // 0.05% — taker手续费，每笔
-const FUNDING_RATE = 0.0001     // 0.01% — 每8h资金费率（多头付空头 or 空头付多头）
-const FUNDING_INTERVAL_MS = 8 * 3600_000
-
-function applyCosts(entryPrice: number, exitPrice: number, direction: string, capital: number, leverage: number, heldMs: number) {
-  // Entry: slippage + fee
-  const entrySlip = entryPrice * (direction === "LONG" ? (1 + SLIPPAGE) : (1 - SLIPPAGE))
-  const entryFee = capital * TAKER_FEE
-  // Exit: slippage + fee
-  const exitSlip = exitPrice * (direction === "LONG" ? (1 - SLIPPAGE) : (1 + SLIPPAGE))
-  const exitFee = capital * TAKER_FEE
-  // Funding: every 8h
-  const fundingPeriods = Math.floor(heldMs / FUNDING_INTERVAL_MS)
-  const fundingCost = capital * leverage * FUNDING_RATE * fundingPeriods
-  // Direction-independent: only price diff matters after costs
-  return { entrySlip, exitSlip, entryFee, exitFee, fundingCost, totalCost: entryFee + exitFee + fundingCost }
-}
 
 // ═══════════════════════════════════════════════════════════
 // AI Trader Personalities
@@ -235,7 +213,8 @@ async function run() {
 
   const state = loadState()
 
-  // Initialize traders if needed
+  // Initialize traders & paper exchanges
+  if (!state.exchanges) state.exchanges = {}
   for (const t of TRADERS) {
     if (!state.traders[t.id]) {
       state.traders[t.id] = {
@@ -245,11 +224,43 @@ async function run() {
         tradeCount: 0, winCount: 0,
       }
     }
+    // Restore or init paper exchange from saved state
+    if (mode === "simulate" && !state.exchanges[t.id]) {
+      const saved = state._exchangeData?.[t.id]
+      const exch = new PaperExchange(t.initialCapital)
+      if (saved) {
+        exch.balance = saved.balance
+        exch.totalPnl = saved.totalPnl
+        exch.totalFees = saved.totalFees
+        exch.totalFunding = saved.totalFunding
+        exch.tradeCount = saved.tradeCount
+        exch.winCount = saved.winCount
+      }
+      state.exchanges[t.id] = exch
+    }
   }
 
   // Each trader makes AI decisions
   for (const t of TRADERS) {
     const trader = state.traders[t.id]
+    const paperEx = state.exchanges?.[t.id] as PaperExchange | undefined
+
+    // Update paper exchange with latest prices
+    if (paperEx) {
+      for (const s of signals) paperEx.updatePrice(s.symbol, s.price)
+      // Sync trader state from paper exchange
+      const acc = paperEx.getAccount()
+      trader.capital = acc.balance
+      trader.totalPnl = acc.totalPnl
+      trader.totalPnlPct = acc.totalPnl / t.initialCapital * 100
+      trader.tradeCount = acc.tradeCount
+      trader.winCount = acc.winCount
+      trader.openPositions = paperEx.getPositions().map(p => ({
+        symbol: p.symbol, direction: p.direction, leverage: p.leverage,
+        entryPrice: p.entryPrice, openedAt: new Date(p.openedAt).toISOString(),
+        margin: p.margin, liquidationPrice: p.liquidationPrice,
+      }))
+    }
 
     // Skip if capital too low
     if (trader.capital < 500) continue
@@ -265,161 +276,85 @@ async function run() {
       if (pos.direction === "SKIP") continue
 
       const sig = signals.find((s: any) => s.id === pos.signalId || s.symbol === pos.symbol)
-      const entryPrice = sig?.price || pos.entryPrice || 0
+      const entryPrice = sig?.price || 0
       if (!entryPrice) continue
 
-      const tpPrice = pos.direction === "LONG"
-        ? entryPrice * (1 + (pos.tpPct || 4) / 100)
-        : entryPrice * (1 - (pos.tpPct || 4) / 100)
-      const slPrice = pos.direction === "LONG"
-        ? entryPrice * (1 - (pos.slPct || 2) / 100)
-        : entryPrice * (1 + (pos.slPct || 2) / 100)
+      const symbol = (pos.symbol || sig?.symbol || "BTC/USDT") as string
+      const direction = pos.direction as "LONG" | "SHORT"
+      const leverage = Math.min(100, Math.max(1, pos.leverage || 5))
+      const capital = Math.min(trader.capital, 5000)  // max 50% per trade
 
-      // Realistic entry: apply slippage + deduct fee
-      const slippageEntry = pos.direction === "LONG"
-        ? entryPrice * (1 + SLIPPAGE)
-        : entryPrice * (1 - SLIPPAGE)
-      const entryFee = trader.capital * TAKER_FEE
-
-      const order = {
-        traderId: t.id,
-        signalId: pos.signalId || sig?.id || "",
-        symbol: pos.symbol || sig?.symbol || "BTC/USDT",
-        direction: pos.direction,
-        leverage: Math.min(100, Math.max(1, pos.leverage || 5)),
-        entryPrice: slippageEntry,  // 实际成交价含滑点
-        tpPrice: pos.direction === "LONG" ? slippageEntry * (1 + (pos.tpPct || 4) / 100) : slippageEntry * (1 - (pos.tpPct || 4) / 100),
-        slPrice: pos.direction === "LONG" ? slippageEntry * (1 - (pos.slPct || 2) / 100) : slippageEntry * (1 + (pos.slPct || 2) / 100),
-        tpPct: pos.tpPct || 4,
-        slPct: pos.slPct || 2,
-        capital: trader.capital - entryFee,
-        openedAt: new Date().toISOString(),
-        reasoning: pos.reasoning || "",
-        entryFee,  // 记录实际成本
-      }
-      trader.capital -= entryFee  // 手续费扣本金
-      trader.openPositions.push(order)
-      trader.tradeCount++
-      log.info(`  ${t.emoji} 开仓: ${order.direction} ${order.symbol} ${order.leverage}x @ $${slippageEntry.toFixed(1)} (滑点${(SLIPPAGE*100).toFixed(2)}% + 手续费$${entryFee.toFixed(1)})`)
-
-      // Bridge to OKX (demo/live) or simulate
-      const openResult = await executeOpen(order)
-      if (openResult.ok) {
-        order.okxOrderId = openResult.orderId
-        log.info(`  ${t.emoji} → OKX[${openResult.mode}]: ${openResult.orderId}`)
+      if (mode === "simulate" && paperEx) {
+        // Paper Exchange: full simulation with margin/liquidation/fees
+        paperEx.updatePrice(symbol, entryPrice)
+        const result = paperEx.openPosition(symbol, direction, capital, leverage)
+        if (result.ok) {
+          log.info(`  ${t.emoji} 开仓[Paper]: ${direction} ${symbol} ${leverage}x @ $${entryPrice.toFixed(1)} → ${result.orderId}`)
+        } else {
+          log.warn(`  ${t.emoji} 开仓被拒: ${result.error}`)
+        }
       } else {
-        log.warn(`  ${t.emoji} → OKX 开仓被拒: ${openResult.error}`)
+        // Demo/Live: bridge to OKX
+        const order = {
+          traderId: t.id, signalId: pos.signalId || sig?.id || "",
+          symbol, direction, leverage, entryPrice, capital,
+          reasoning: pos.reasoning || "",
+        }
+        const openResult = await executeOpen(order)
+        if (openResult.ok) {
+          log.info(`  ${t.emoji} → OKX[${openResult.mode}]: ${openResult.orderId}`)
+        } else {
+          log.warn(`  ${t.emoji} → OKX 开仓被拒: ${openResult.error}`)
+        }
+        trader.tradeCount++
       }
     }
 
     // Process close actions
     const closeActions = (decision.actions || []).filter((a: any) => a.type === "close")
     for (const action of closeActions) {
-      const posIdx = trader.openPositions.findIndex((p: any) =>
-        p.symbol === action.symbol || p.signalId === action.signalId
-      )
-      if (posIdx >= 0) {
-        const pos = trader.openPositions[posIdx]
-        const sig = signals.find((s: any) => s.id === pos.signalId || s.symbol === pos.symbol)
-        const rawExitPrice = sig?.price || pos.entryPrice
-        // Realistic exit: slippage + fee + funding
-        const exitSlip = pos.direction === "LONG"
-          ? rawExitPrice * (1 - SLIPPAGE)
-          : rawExitPrice * (1 + SLIPPAGE)
-        const exitFee = pos.capital * TAKER_FEE
-        const heldMs = Date.now() - new Date(pos.openedAt).getTime()
-        const fundingPeriods = Math.floor(heldMs / FUNDING_INTERVAL_MS)
-        const fundingCost = pos.capital * pos.leverage * FUNDING_RATE * fundingPeriods
-        const totalCost = (pos.entryFee || 0) + exitFee + fundingCost
+      const symbol = action.symbol as string
+      if (!symbol) continue
 
-        const dirMult = pos.direction === "LONG" ? 1 : -1
-        const grossPnlPct = (exitSlip - pos.entryPrice) / pos.entryPrice * dirMult * 100 * pos.leverage
-        const grossPnl = pos.capital * grossPnlPct / 100
-        const realizedPnl = grossPnl - exitFee - fundingCost
-        const realizedPnlPct = realizedPnl / (pos.capital + totalCost) * 100
-
-        pos.closed = true
-        pos.closedAt = new Date().toISOString()
-        pos.realizedPnl = realizedPnl
-        pos.realizedPnlPct = realizedPnlPct
-        pos.exitPrice = exitSlip
-        pos.result = realizedPnl > 0 ? "TP" : "SL"
-        pos.totalCost = totalCost
-        pos.heldMs = heldMs
-        pos.fundingCost = fundingCost
-
-        trader.closedPositions.push(pos)
-        trader.openPositions.splice(posIdx, 1)
-        trader.capital += realizedPnl
-        trader.totalPnl += realizedPnl
-        trader.totalPnlPct = (trader.totalPnl / t.initialCapital) * 100
-        if (realizedPnl > 0) trader.winCount++
-        log.info(`  ${t.emoji} 平仓: ${pos.direction} ${pos.symbol} PnL=${realizedPnl >= 0 ? "+" : ""}$${realizedPnl.toFixed(2)} (${realizedPnlPct >= 0 ? "+" : ""}${realizedPnlPct.toFixed(1)}%) 成本$${totalCost.toFixed(1)}`)
-
-        // Bridge to OKX (demo/live) or simulate
-        const closeResult = await executeClose({ traderId: t.id, symbol: pos.symbol, direction: pos.direction, realizedPnl })
-        if (closeResult.ok) {
-          log.info(`  ${t.emoji} → OKX[${closeResult.mode}] 平仓: ${closeResult.orderId}`)
+      if (mode === "simulate" && paperEx) {
+        const result = paperEx.closePosition(symbol)
+        if (result.ok) {
+          log.info(`  ${t.emoji} 平仓[Paper]: ${symbol} PnL=$${result.realizedPnl?.toFixed(2)}`)
         } else {
-          log.warn(`  ${t.emoji} → OKX 平仓被拒: ${closeResult.error}`)
+          log.warn(`  ${t.emoji} 平仓被拒: ${result.error}`)
+        }
+      } else {
+        const pos = trader.openPositions.find((p: any) => p.symbol === symbol && !p.closed)
+        if (pos) {
+          const closeResult = await executeClose({ traderId: t.id, symbol: pos.symbol, direction: pos.direction, realizedPnl: 0 })
+          if (closeResult.ok) log.info(`  ${t.emoji} → OKX[${closeResult.mode}] 平仓: ${closeResult.orderId}`)
         }
       }
-    }
-
-    // Update open positions
-    for (const pos of trader.openPositions) {
-      if (pos.closed) continue
-      const sig = signals.find((s: any) => s.id === pos.signalId || s.symbol === pos.symbol)
-      if (sig?.price) {
-        const dirMult = pos.direction === "LONG" ? 1 : -1
-        pos.currentPrice = sig.price
-        pos.unrealizedPnlPct = (sig.price - pos.entryPrice) / pos.entryPrice * dirMult * 100 * pos.leverage
-        pos.unrealizedPnl = pos.capital * pos.unrealizedPnlPct / 100
-
-        // Check TP/SL
-        const hitTP = pos.direction === "LONG" ? sig.price >= pos.tpPrice : sig.price <= pos.tpPrice
-        const hitSL = pos.direction === "LONG" ? sig.price <= pos.slPrice : sig.price >= pos.slPrice
-        if (hitTP || hitSL) {
-          // Auto-close: same exit costs as manual close
-          const exitSlipPrice = pos.direction === "LONG" ? sig.price * (1 - SLIPPAGE) : sig.price * (1 + SLIPPAGE)
-          const exitFee = pos.capital * TAKER_FEE
-          const heldMs = Date.now() - new Date(pos.openedAt).getTime()
-          const fundingPeriods = Math.floor(heldMs / FUNDING_INTERVAL_MS)
-          const fundingCost = pos.capital * pos.leverage * FUNDING_RATE * fundingPeriods
-          const totalCost = (pos.entryFee || 0) + exitFee + fundingCost
-
-          const grossPnlPct = hitTP ? pos.tpPct * pos.leverage : -pos.slPct * pos.leverage
-          const grossPnl = pos.capital * grossPnlPct / 100
-          const realizedPnl = grossPnl - exitFee - fundingCost
-
-          pos.closed = true
-          pos.closedAt = new Date().toISOString()
-          pos.realizedPnlPct = realizedPnl / (pos.capital + totalCost) * 100
-          pos.realizedPnl = realizedPnl
-          pos.result = hitTP ? "TP" : "SL"
-          pos.exitPrice = exitSlipPrice
-          pos.totalCost = totalCost
-          pos.heldMs = heldMs
-
-          trader.closedPositions.push(pos)
-          trader.openPositions = trader.openPositions.filter((p: any) => p !== pos)
-          trader.capital += realizedPnl
-          trader.totalPnl += realizedPnl
-          trader.totalPnlPct = (trader.totalPnl / t.initialCapital) * 100
-          if (realizedPnl > 0) trader.winCount++
-          log.info(`  ${t.emoji} ${pos.result}! ${pos.symbol} PnL=${realizedPnl >= 0 ? "+" : ""}$${realizedPnl.toFixed(2)} 成本$${totalCost.toFixed(1)} (${heldMs >= 3600000 ? Math.floor(heldMs/3600000)+'h' : Math.floor(heldMs/60000)+'m'})`)
-        }
-      }
-    }
-
-    // Clean up old closed positions
-    if (trader.closedPositions.length > 50) {
-      trader.closedPositions = trader.closedPositions.slice(-50)
     }
   }
 
   state.round++
   state.lastUpdate = new Date().toISOString()
+
+  // Serialize exchange data for persistence (PaperExchange objects can't be JSON'd)
+  if (state.exchanges) {
+    for (const [id, ex] of Object.entries(state.exchanges)) {
+      if (ex instanceof PaperExchange) {
+        const acc = (ex as PaperExchange).getAccount()
+        state.traders[id].capital = acc.balance
+        state.traders[id].totalPnl = acc.totalPnl
+        state.traders[id].totalPnlPct = acc.totalPnl / (ex as PaperExchange).initialBalance * 100
+        state.traders[id].tradeCount = acc.tradeCount
+        state.traders[id].winCount = acc.winCount
+        // Save minimal exchange state for restore
+        state._exchangeData = state._exchangeData || {}
+        state._exchangeData[id] = { balance: acc.balance, totalPnl: acc.totalPnl, totalFees: acc.totalFees, totalFunding: acc.totalFunding, tradeCount: acc.tradeCount, winCount: acc.winCount }
+      }
+    }
+    // Don't persist exchange objects themselves
+    delete state.exchanges
+  }
+
   saveState(state)
 
   // Leaderboard
@@ -428,7 +363,8 @@ async function run() {
   log.info(`\n  ═══ AI Trader Leaderboard (Round ${state.round}) ═══`)
   for (const r of rankings) {
     const icon = r.totalPnlPct >= 0 ? "📈" : "📉"
-    log.info(`  ${icon} ${r.emoji} ${r.name.padEnd(12)} $${r.capital.toFixed(0)} | PnL: ${r.totalPnl >= 0 ? "+" : ""}$${r.totalPnl.toFixed(0)} (${r.totalPnlPct >= 0 ? "+" : ""}${r.totalPnlPct.toFixed(1)}%) | ${r.winCount}/${r.tradeCount}`)
+    const extra = r.openPositions?.length ? ` 持仓${r.openPositions.length}` : ""
+    log.info(`  ${icon} ${r.emoji} ${r.name.padEnd(12)} $${r.capital.toFixed(0)} | PnL: ${r.totalPnl >= 0 ? "+" : ""}$${r.totalPnl.toFixed(0)} (${r.totalPnlPct >= 0 ? "+" : ""}${r.totalPnlPct.toFixed(1)}%) | ${r.winCount}/${r.tradeCount}${extra}`)
   }
 
   // Risk status
