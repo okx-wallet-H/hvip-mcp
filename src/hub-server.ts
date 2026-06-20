@@ -377,6 +377,31 @@ function startHttpServer(): void {
       return
     }
 
+    // GET /api/traders/history — 交易历史 (最近 N 轮)
+    if (_req.method === "GET" && _req.url?.startsWith("/api/traders/history")) {
+      const url = new URL(_req.url, `http://${host}:${webPort}`)
+      const traderId = url.searchParams.get("trader") || ""
+      const limit = parseInt(url.searchParams.get("limit") || "50")
+      const histFile = join(process.cwd(), ".hub", "trade-history.jsonl")
+      if (existsSync(histFile)) {
+        try {
+          const lines = readFileSync(histFile, "utf-8").trim().split("\n")
+          let entries = lines.map(l => { try { return JSON.parse(l) } catch { return null } }).filter(Boolean)
+          if (traderId) entries = entries.filter((e: any) => e.traderId === traderId)
+          entries = entries.slice(-limit)
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify(entries))
+        } catch {
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify([]))
+        }
+      } else {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify([]))
+      }
+      return
+    }
+
     // GET /api/traders/risk — 交易模式 + 风控状态
     if (_req.method === "GET" && _req.url === "/api/traders/risk") {
       const mode = process.env.AI_TRADER_MODE || "simulate"

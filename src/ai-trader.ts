@@ -12,7 +12,7 @@
  *   4. 执行模拟交易 → 更新绩效
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs"
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { AgentLoop } from "./adapters/ai-sdk.js"
 import { logger } from "./utils/logger.js"
@@ -24,6 +24,7 @@ import { PaperExchange } from "./adapters/paper-exchange.js"
 // ═══════════════════════════════════════════════════════════
 
 const STATE_FILE = join(process.cwd(), ".hub", "trader-state.json")
+const TRADE_LOG = join(process.cwd(), ".hub", "trade-history.jsonl")
 const INTERVAL_MS = parseInt(process.env.TRADER_INTERVAL || "3600000", 10)
 const log = logger("AI-Trader")
 const agent = new AgentLoop()
@@ -164,6 +165,40 @@ function loadState(): any {
 function saveState(state: any) {
   if (!existsSync(".hub")) mkdirSync(".hub", { recursive: true })
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
+}
+
+function logTradeHistory(state: any) {
+  try {
+    if (!existsSync(".hub")) mkdirSync(".hub", { recursive: true })
+    const now = new Date().toISOString()
+    for (const [id, t] of Object.entries(state.traders as Record<string, any>)) {
+      const entry = {
+        ts: now,
+        traderId: id,
+        name: t.name,
+        round: state.round,
+        capital: t.capital,
+        equity: t.equity || t.capital,
+        totalPnl: t.totalPnl,
+        totalPnlPct: t.totalPnlPct,
+        unrealizedPnl: t.unrealizedPnl || 0,
+        usedMargin: t.usedMargin || 0,
+        tradeCount: t.tradeCount,
+        winCount: t.winCount,
+        positions: (t.openPositions || []).map((p: any) => ({
+          symbol: p.symbol,
+          direction: p.direction,
+          leverage: p.leverage,
+          entry: p.entryPrice,
+          mark: p.currentPrice,
+          margin: p.margin,
+          upnl: p.unrealizedPnl,
+          upnlPct: p.unrealizedPnlPct,
+        })),
+      }
+      appendFileSync(TRADE_LOG, JSON.stringify(entry) + "\n", "utf-8")
+    }
+  } catch {}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -340,20 +375,55 @@ async function run() {
   if (state.exchanges) {
     for (const [id, ex] of Object.entries(state.exchanges)) {
       if (ex instanceof PaperExchange) {
-        const acc = (ex as PaperExchange).getAccount()
+        const exch = ex as PaperExchange
+        const acc = exch.getAccount()
         state.traders[id].capital = acc.balance
         state.traders[id].totalPnl = acc.totalPnl
-        state.traders[id].totalPnlPct = acc.totalPnl / (ex as PaperExchange).initialBalance * 100
+        state.traders[id].totalPnlPct = acc.totalPnl / exch.initialBalance * 100
         state.traders[id].tradeCount = acc.tradeCount
         state.traders[id].winCount = acc.winCount
+        state.traders[id].equity = acc.equity
+        state.traders[id].usedMargin = acc.usedMargin
+        state.traders[id].unrealizedPnl = acc.unrealizedPnl
+        state.traders[id].totalFees = acc.totalFees
+        state.traders[id].totalFunding = acc.totalFunding
+
+        // Full position details for dashboard
+        state.traders[id].openPositions = exch.getPositions().map(p => {
+          const price = exch.getPrice(p.symbol)
+          const dirMult = p.direction === "LONG" ? 1 : -1
+          const unrealizedPnlPct = price > 0 ? (price - p.entryPrice) / p.entryPrice * dirMult * 100 * p.leverage : 0
+          const unrealizedPnl = price > 0 ? p.margin * unrealizedPnlPct / 100 : 0
+          return {
+            symbol: p.symbol,
+            direction: p.direction,
+            leverage: p.leverage,
+            entryPrice: p.entryPrice,
+            currentPrice: price || undefined,
+            margin: p.margin,
+            liquidationPrice: p.liquidationPrice,
+            unrealizedPnl,
+            unrealizedPnlPct,
+            fundingPaid: p.fundingPaid,
+            fees: p.fees,
+            openedAt: new Date(p.openedAt).toISOString(),
+          }
+        })
+
         // Save minimal exchange state for restore
         state._exchangeData = state._exchangeData || {}
-        state._exchangeData[id] = { balance: acc.balance, totalPnl: acc.totalPnl, totalFees: acc.totalFees, totalFunding: acc.totalFunding, tradeCount: acc.tradeCount, winCount: acc.winCount }
+        state._exchangeData[id] = {
+          balance: acc.balance, totalPnl: acc.totalPnl,
+          totalFees: acc.totalFees, totalFunding: acc.totalFunding,
+          tradeCount: acc.tradeCount, winCount: acc.winCount,
+        }
       }
     }
-    // Don't persist exchange objects themselves
     delete state.exchanges
   }
+
+  // Log trade history for optimization
+  logTradeHistory(state)
 
   saveState(state)
 
