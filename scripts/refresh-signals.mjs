@@ -66,11 +66,13 @@ function main() {
         const winRate = parseFloat(parsed.WIN_RATE) || 0
         const maxDD = parseFloat(parsed.MAX_DD) || 0
 
-        // Calculate quality grade
-        let grade = "C"
-        if (sharpe > 1.0 && confidence > 60) grade = "B"
-        if (sharpe > 1.5 && confidence > 70) grade = "A"
-        if (sharpe > 2.0 && confidence > 80) grade = "S"
+        // Use GRADE from generator if available, otherwise calculate
+        let grade = parsed.GRADE || "C"
+        if (!parsed.GRADE) {
+          if (sharpe > 2.0 && confidence > 80) grade = "S"
+          else if (sharpe > 1.5 && confidence > 70) grade = "A"
+          else if (sharpe > 1.0 && confidence > 60) grade = "B"
+        }
 
         const signal = {
           id: generateSignalId(symbol, tf),
