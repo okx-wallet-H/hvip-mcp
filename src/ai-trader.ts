@@ -417,7 +417,7 @@ async function run() {
       const saved = state._exchangeData?.[t.id]
       const exch = new PaperExchange(t.initialCapital)
       if (saved) {
-        exch.balance = saved.balance
+        exch.balance = (saved.equity || saved.balance)  // equity preserves total capital
         exch.totalPnl = saved.totalPnl
         exch.totalFees = saved.totalFees
         exch.totalFunding = saved.totalFunding
@@ -572,10 +572,10 @@ async function run() {
           }
         })
 
-        // Save minimal exchange state for restore
+        // Save exchange state (equity preserves total capital even when positions lost)
         state._exchangeData = state._exchangeData || {}
         state._exchangeData[id] = {
-          balance: acc.balance, totalPnl: acc.totalPnl,
+          equity: acc.equity, totalPnl: acc.totalPnl,
           totalFees: acc.totalFees, totalFunding: acc.totalFunding,
           tradeCount: acc.tradeCount, winCount: acc.winCount,
         }
