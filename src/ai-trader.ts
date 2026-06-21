@@ -73,9 +73,14 @@ function buildDecisionPrompt(
   signals: Array<{ id: string; symbol: string; direction: string; confidence: number; price: number; grade: string; risk: { sl_price: number; tp_price: number } | null; ensemble: { avgSharpe: number; avgWinRate: number; avgTrades: number } }>,
   traderState: { capital: number; totalPnl: number; totalPnlPct: number; tradeCount: number; winCount: number; openPositions: Array<{ symbol: string; direction: string; entryPrice: number }> }
 ) {
-  const sigList = signals.map(s =>
-    `  ${s.id}: ${s.symbol} ${s.direction} conf=${s.confidence}% grade=${s.grade} price=$${s.price} Sharpe=${s.ensemble.avgSharpe.toFixed(2)} WinRate=${s.ensemble.avgWinRate.toFixed(0)}% SL=$${s.risk?.sl_price.toFixed(1)} TP=$${s.risk?.tp_price.toFixed(1)}`
-  ).join("\n")
+  const sigList = signals.map(s => {
+    const extra = []
+    if (s.changePct != null) extra.push(`${s.changePct >= 0 ? "+" : ""}${s.changePct}%`)
+    if (s.fundingRate) extra.push(`费率${s.fundingRate}%`)
+    if (s.vol24h) extra.push(`量${(s.vol24h/1e6).toFixed(0)}M`)
+    const market = extra.length > 0 ? ` | ${extra.join(" ")}` : ""
+    return `  ${s.id}: ${s.symbol} ${s.direction} conf=${s.confidence}% grade=${s.grade} price=$${s.price}${market} | Sharpe=${s.ensemble?.avgSharpe?.toFixed(2) || '?'} SL=$${s.risk?.sl_price?.toFixed(1) || '?'} TP=$${s.risk?.tp_price?.toFixed(1) || '?'}`
+  }).join("\n")
 
   const posList = traderState.openPositions.length > 0
     ? traderState.openPositions.map(p => `  ${p.direction} ${p.symbol} @ $${p.entryPrice}`).join("\n")
@@ -366,15 +371,29 @@ async function run() {
 
   if (!signals.length) return
 
-  // Update prices from real-time data (optional: fetch from OKX)
+  // Enrich signals with real OKX market data
   for (const s of signals) {
     try {
       const instId = (s.symbol || "BTC/USDT").replace("/", "-")
-      const resp = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${instId}`)
-      const data = await resp.json() as any
-      if (data.data?.[0]) {
-        s.price = parseFloat(data.data[0].last)
+      // Ticker: price, 24h change, high, low, volume
+      const tickerResp = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${instId}`)
+      const tickerData = await tickerResp.json() as any
+      if (tickerData.data?.[0]) {
+        const t = tickerData.data[0]
+        s.price = parseFloat(t.last)
+        s.high24h = parseFloat(t.high24h)
+        s.low24h = parseFloat(t.low24h)
+        s.vol24h = parseFloat(t.vol24h)
+        s.changePct = Math.round((parseFloat(t.last) - parseFloat(t.open24h)) / parseFloat(t.open24h) * 10000) / 100
       }
+      // Funding rate
+      try {
+        const frResp = await fetch(`https://www.okx.com/api/v5/public/funding-rate?instId=${instId}`)
+        const frData = await frResp.json() as any
+        if (frData.data?.[0]) {
+          s.fundingRate = (parseFloat(frData.data[0].fundingRate) * 100).toFixed(4)
+        }
+      } catch {}
     } catch {}
   }
 
