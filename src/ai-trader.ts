@@ -38,49 +38,29 @@ interface TraderProfile {
   id: string; name: string; emoji: string
   systemPrompt: string
   initialCapital: number
+  maxLeverage: number
 }
 
 const TRADERS: TraderProfile[] = [
   {
     id: "ares", name: "Ares", emoji: "⚔️",
-    systemPrompt: `你是 Ares (战神)，激进的合约交易员。
-性格: 追涨杀跌，高杠杆猛攻，不怕亏损。
-杠杆偏好: 10x-50x。止盈: 8-12%。止损: 3-5%。
-策略: 趋势跟随。信号确认就重仓，错了快速止损。
-决策风格: 果断，不犹豫。看好就满仓干。
-返回格式: JSON`,
-    initialCapital: 10000,
+    systemPrompt: `你是 Ares (战神)，激进的合约交易员。性格:追涨杀跌高杠杆。杠杆偏好:10x-50x。止盈:8-12%。止损:3-5%。策略:趋势跟随。返回格式:JSON`,
+    initialCapital: 10000, maxLeverage: 20,
   },
   {
     id: "athena", name: "Athena", emoji: "🦉",
-    systemPrompt: `你是 Athena (智慧女神)，策略均衡的交易员。
-性格: 多指标确认后才出手，中等杠杆，严格风控。
-杠杆偏好: 3x-10x。止盈: 3-5%。止损: 1.5-2.5%。
-策略: 动量策略。等回调入场，不追高。
-决策风格: 谨慎理性，需要多维度确认。
-返回格式: JSON`,
-    initialCapital: 10000,
+    systemPrompt: `你是 Athena (智慧女神)，策略均衡。杠杆偏好:3x-10x。止盈:3-5%。止损:1.5-2.5%。策略:动量+回调入场。返回格式:JSON`,
+    initialCapital: 10000, maxLeverage: 10,
   },
   {
     id: "hades", name: "Hades", emoji: "💀",
-    systemPrompt: `你是 Hades (冥王)，逆向收割者。
-性格: 众人恐惧时贪婪。市场情绪极端时反向操作。
-杠杆偏好: 5x-20x。止盈: 8-15%。止损: 4-6%。
-策略: 逆向交易。信号是LONG你偏要做空，信号是SHORT你偏要做多。
-但要真有依据——不是乱反，是觉得市场过度反应了才反。
-决策风格: 冷静，独立思考，不从众。
-返回格式: JSON`,
-    initialCapital: 10000,
+    systemPrompt: `你是 Hades (冥王)，逆向收割者。众人恐惧时贪婪。杠杆偏好:5x-20x。止盈:8-15%。止损:4-6%。策略:市场过度反应时反向操作。返回格式:JSON`,
+    initialCapital: 10000, maxLeverage: 15,
   },
   {
     id: "apollo", name: "Apollo", emoji: "☀️",
-    systemPrompt: `你是 Apollo (太阳神)，趋势确认交易员。
-性格: 等待回调入场，严格止损。不做第一个吃螃蟹的人。
-杠杆偏好: 3x-8x。止盈: 4-6%。止损: 2-3%。
-策略: 趋势确认+回调入场。信号出来不急着跟，等价格回调到支撑/阻力附近再进。
-决策风格: 耐心，纪律严明。宁可不做，不可做错。
-返回格式: JSON`,
-    initialCapital: 10000,
+    systemPrompt: `你是 Apollo (太阳神)，保守确认型。杠杆偏好:3x-8x。止盈:4-6%。止损:2-3%。策略:回调至支撑/阻力入场。宁可不做不可做错。返回格式:JSON`,
+    initialCapital: 10000, maxLeverage: 8,
   },
 ]
 
@@ -149,6 +129,103 @@ async function traderDecide(trader: TraderProfile, signals: any[], state: any): 
   } catch (e) {
     log.warn(`${trader.emoji} ${trader.name} 决策失败: ${e instanceof Error ? e.message : String(e)}`)
     return null
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Smart Trade Guard — 23轮实战经验总结
+// ═══════════════════════════════════════════════════════════
+
+const COOLING_ROUNDS = 3       // 亏损后冷却轮数
+const MIN_CONFIDENCE = 60      // 最低信号置信度
+const MIN_GRADE = "B"          // 最低信号评级 (S > A > B > C)
+const GRADE_ORDER: Record<string, number> = { S: 4, A: 3, B: 2, C: 1 }
+const RISK_PER_TRADE = 0.02    // 每笔风险 ≤2% 权益 (凯利公式保守版)
+
+// 冷却追踪: 记录每个交易员上次亏损的轮次
+const cooldownUntil = new Map<string, number>()
+
+/** 市场状态检测 — 识别横盘/趋势/高波动 */
+function analyzeMarket(signals: any[]) {
+  const prices = signals.map(s => s.price).filter(Boolean)
+  if (prices.length < 2) return { regime: "unknown" as const, volatility: 0, advice: "" }
+
+  // 用多币种平均价变化率估算波动
+  const changes = prices.map((p, i) => i === 0 ? 0 : Math.abs(p - prices[i - 1]) / prices[i - 1])
+  const avgChange = changes.reduce((s, c) => s + c, 0) / Math.max(1, changes.length - 1)
+
+  // 低波动 = 横盘 (< 0.5%)，正常 = 0.5-2%，高 > 2%
+  let regime: "sideways" | "normal" | "volatile" = "normal"
+  if (avgChange < 0.005) regime = "sideways"
+  else if (avgChange > 0.02) regime = "volatile"
+
+  const bestSig = signals.reduce((best, s) =>
+    (s.confidence || 0) > (best.confidence || 0) ? s : best, signals[0])
+
+  let advice = ""
+  if (regime === "sideways") advice = "横盘市: 建议降低杠杆、减少交易频率"
+  else if (regime === "volatile") advice = "高波动: 趋势交易机会"
+  else advice = `最佳信号: ${bestSig?.symbol} ${bestSig?.direction} conf=${bestSig?.confidence}% grade=${bestSig?.grade}`
+
+  return { regime, volatility: avgChange, bestSignal: bestSig, advice }
+}
+
+/** 动态杠杆 — 信号越强杠杆越高，横盘压降 */
+function smartLeverage(traderLeverage: number, signalConfidence: number, signalGrade: string, regime: string): number {
+  let lever = traderLeverage
+  // 信号质量折扣
+  if (signalConfidence < 60) lever *= 0.5
+  if (GRADE_ORDER[signalGrade] < GRADE_ORDER["B"]) lever *= 0.5  // C-grade → halve
+  // 横盘压降
+  if (regime === "sideways") lever *= 0.3
+  // 保底
+  return Math.max(1, Math.min(traderLeverage, Math.round(lever)))
+}
+
+/** 开仓前全量检查 — 信号质量 + 市场状态 + 冷却期 + 风控 */
+function preTradeCheck(
+  trader: any, signal: any, market: ReturnType<typeof analyzeMarket>
+): { ok: true; leverage: number; maxCapital: number } | { ok: false; reason: string } {
+
+  // 1. 冷却期
+  const cooldownEnd = cooldownUntil.get(trader.id) || 0
+  if (Date.now() < cooldownEnd) {
+    return { ok: false, reason: `冷却中 (${Math.ceil((cooldownEnd - Date.now()) / 60000)}min后恢复)` }
+  }
+
+  // 2. 余额检查
+  if (trader.capital < 500) {
+    return { ok: false, reason: `余额不足 $500` }
+  }
+
+  // 3. 信号质量
+  if (!signal || (signal.confidence || 0) < MIN_CONFIDENCE) {
+    return { ok: false, reason: `信号置信度 ${signal?.confidence || 0}% < ${MIN_CONFIDENCE}%` }
+  }
+  if (GRADE_ORDER[signal.grade] < GRADE_ORDER[MIN_GRADE]) {
+    return { ok: false, reason: `信号评级 ${signal.grade} < ${MIN_GRADE}` }
+  }
+
+  // 4. 横盘警告 (不阻止，但限制杠杆)
+  if (market.regime === "sideways") {
+    log.info(`  ${trader.emoji || ''} ⚠️ 横盘市 — 降杠杆交易`)
+  }
+
+  const baseLeverage = Math.min(20, Math.max(1, trader.maxLeverage || 10))
+  const leverage = smartLeverage(baseLeverage, signal.confidence, signal.grade, market.regime)
+
+  // 5. 仓位大小 = 权益 × 风险比例 (凯利保守)
+  const equity = trader.equity || trader.capital
+  const maxCapital = Math.floor(equity * RISK_PER_TRADE * leverage)
+
+  return { ok: true, leverage, maxCapital }
+}
+
+/** 记录冷却期 */
+function setCooldown(traderId: string, lossAmount: number) {
+  if (lossAmount < -50) {
+    cooldownUntil.set(traderId, Date.now() + COOLING_ROUNDS * INTERVAL_MS)
+    log.info(`  🧊 ${traderId} 冷却 ${COOLING_ROUNDS} 轮 (亏损 $${Math.abs(lossAmount).toFixed(0)})`)
   }
 }
 
@@ -302,6 +379,8 @@ async function run() {
   }
 
   const state = loadState()
+  const market = analyzeMarket(signals)
+  log.info(`市场状态: ${market.regime} | ${market.advice}`)
 
   // Initialize traders & paper exchanges
   if (!state.exchanges) state.exchanges = {}
@@ -371,8 +450,16 @@ async function run() {
 
       const symbol = (pos.symbol || sig?.symbol || "BTC/USDT") as string
       const direction = pos.direction as "LONG" | "SHORT"
-      const leverage = Math.min(100, Math.max(1, pos.leverage || 5))
-      const capital = Math.floor(trader.capital * 0.5)  // max 50% of current balance
+
+      // Smart guard: signal quality + market regime + cooldown
+      const check = preTradeCheck(trader, sig, market)
+      if (!check.ok) {
+        log.info(`  ${t.emoji} ${t.name} 跳过: ${check.reason}`)
+        continue
+      }
+
+      const leverage = Math.min(check.leverage, pos.leverage || 5)
+      const capital = Math.min(check.maxCapital, Math.floor(trader.capital * 0.45))
 
       if (mode === "simulate" && paperEx) {
         // Paper Exchange: full simulation with margin/liquidation/fees
@@ -410,6 +497,7 @@ async function run() {
         const result = paperEx.closePosition(symbol)
         if (result.ok) {
           log.info(`  ${t.emoji} 平仓[Paper]: ${symbol} PnL=$${result.realizedPnl?.toFixed(2)}`)
+          if (result.realizedPnl && result.realizedPnl < 0) setCooldown(t.id, result.realizedPnl)
         } else {
           log.warn(`  ${t.emoji} 平仓被拒: ${result.error}`)
         }
