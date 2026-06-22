@@ -8,7 +8,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_get_subaccount_list",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       enable: z.boolean().optional().describe("筛选启用状态，不填则返回全部"),
     },
@@ -25,7 +25,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_list_subaccounts",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       enable: z.boolean().optional().describe("筛选启用状态，不填则返回全部"),
     },
@@ -42,7 +42,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_get_subaccount_balance",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct: z.string().describe("子账户名称"),
     },
@@ -59,7 +59,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_transfer_subaccount",
     "WRITE",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       ccy:            z.string().describe("划转币种"),
       amt:            z.string().describe("划转数量"),
@@ -84,7 +84,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_subaccount_set_transfer_out",
     "WRITE",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct:        z.string().describe("子账户名称。必填"),
       canTransferOut: z.boolean().describe("是否允许转出。true=允许, false=禁止"),
@@ -102,7 +102,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_get_subaccount_api_key",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct: z.string().describe("子账户名称。必填"),
     },
@@ -119,7 +119,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_create_subaccount_api_key",
     "WRITE",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct:    z.string().describe("子账户名称。必填"),
       label:      z.string().describe("API Key备注名称。必填"),
@@ -142,7 +142,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_reset_subaccount_api_key",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       apiKey:  z.string().describe("需要修改的API Key。必填"),
@@ -167,7 +167,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_delete_subaccount_api_key",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       apiKey:  z.string().describe("需要删除的API Key。必填"),
@@ -185,7 +185,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_get_subaccount_bills",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       after:   z.string().optional().describe("查询此时间戳之后的记录（毫秒Unix时间戳）"),
@@ -205,7 +205,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_get_subaccount_assets",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct: z.string().describe("子账户名称。必填"),
     },
@@ -222,7 +222,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_create_subaccount",
     "WRITE",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       label:   z.string().optional().describe("子账户备注"),
@@ -242,7 +242,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_get_entrust_subaccount_list",
     "READ",
-    "CAT:[账户-子账户] | → 请先调用 agent_catalog",
+    "[D:Account] get subaccount list",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

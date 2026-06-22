@@ -8,7 +8,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_instruments",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型"),
       instId: z.string().optional().describe("指定产品ID，不填则返回全量"),
@@ -27,7 +27,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_funding_rate",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     { instId: z.string().describe("永续合约产品ID，如 BTC-USDT-SWAP") },
     async ({ instId }) => {
       try {
@@ -47,7 +47,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_mark_price",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType: z.enum(INST_TYPE_PUBLIC).describe("产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       instId: z.string().optional().describe("产品ID，不填则返回该类型全量"),
@@ -69,7 +69,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_index_price",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     { instId: z.string().describe("指数产品ID，如 BTC-USDT") },
     async ({ instId }) => {
       try {
@@ -87,7 +87,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_open_interest",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType: z.enum(INST_TYPE_CONTRACTS).describe("产品类型。SWAP=永续, FUTURES=交割, OPTION=期权"),
       instId: z.string().optional().describe("产品ID，不填则返回全量"),
@@ -109,7 +109,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_system_time",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {},
     async () => {
       try {
@@ -123,7 +123,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_opt_summary",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       uly:     z.string().describe("标的指数，如 BTC-USD、ETH-USD"),
       expTime: z.string().optional().describe("到期日筛选，格式 YYYYMMDD，如 20250101"),
@@ -144,7 +144,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_insurance_fund",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType: z.enum(INST_TYPE_MARGIN_PUB).describe("产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
       uly:      z.string().optional().describe("标的指数，如 BTC-USD（SWAP/FUTURES/OPTION必填）"),
@@ -165,7 +165,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_convert_contract_coin",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP"),
       sz:      z.string().describe("数量（张数或币数，取决于unit）"),
@@ -184,7 +184,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_announcements",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       annType: z.string().optional().describe("公告类型ID，不填返回全部。可先调用 okx_get_announcement_types 查询可用类型"),
       lang:    z.enum(["zh-Hans","en-US"]).optional().describe("语言，默认中文"),
@@ -201,7 +201,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_announcement_types",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {},
     async () => {
       try {
@@ -215,7 +215,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_price_limit",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填，不支持全量查询"),
     },
@@ -235,7 +235,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_position_tiers",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType:   z.enum(INST_TYPE_SWAP_FUT).describe("产品类型。SWAP=永续合约, FUTURES=交割合约"),
       tdMode:     z.enum(["cross","isolated"]).describe("保证金模式。cross=全仓, isolated=逐仓"),
@@ -254,7 +254,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_open_interest_history",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       period: z.enum(["5m","15m","30m","1H","2H","4H","6H","12H","1D","1W"]).optional().describe("时间粒度，默认5m"),
@@ -279,7 +279,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_underlying",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType: z.enum(INST_TYPE_CONTRACTS).optional().describe("产品类型。SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部"),
     },
@@ -295,7 +295,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_taker_flow",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       ccy:      z.string().describe("币种，如 BTC。必填"),
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型。SWAP=永续, FUTURES=交割"),
@@ -318,7 +318,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_platform_24_volume",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {},
     async () => {
       try {
@@ -336,7 +336,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_call_auction_details",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT。必填"),
     },
@@ -357,7 +357,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_option_instrument_family_trades",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instFamily: z.string().describe("产品族，如 BTC-USD。必填"),
       limit:      z.number().int().min(1).max(100).optional().describe("返回条数"),
@@ -374,7 +374,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_option_trades",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instFamily: z.string().optional().describe("产品族，如 BTC-USD。与instId二选一"),
       instId:     z.string().optional().describe("期权产品ID，如 BTC-USD-260612-64000-C。与instFamily二选一"),
@@ -396,7 +396,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_exchange_rate",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {},
     async () => {
       try {
@@ -410,7 +410,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_search_instruments",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       keyword:  z.string().min(2).describe("搜索关键词，如 BTC、ETH、SOL。最少2个字符"),
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型筛选，不填搜索全部"),
@@ -440,7 +440,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_economic_calendar",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
       end:   z.string().optional().describe("结束时间戳（毫秒）"),
@@ -465,7 +465,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_index_components",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       index: z.string().describe("指数名称，如 BTC-USD。必填"),
     },
@@ -485,7 +485,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_index_components_market",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       index: z.string().describe("指数名称，如 BTC-USD。必填"),
     },
@@ -505,7 +505,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_discount_info",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {},
     async () => {
       try {
@@ -519,7 +519,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_estimated_price",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId: z.string().describe("期权产品ID，如 BTC-USD-260612-64000-C。必填"),
     },
@@ -541,7 +541,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_funding_rate_history",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       before: z.string().optional().describe("查询此时间戳之后的数据（毫秒）"),
@@ -564,7 +564,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_interest_rate_loan_quota",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {},
     async () => {
       try {
@@ -578,7 +578,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_premium_history",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       period: z.string().optional().describe("时间粒度，如 1D"),
@@ -599,7 +599,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_delivery_exercise_history",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType:   z.enum(INST_TYPE_CONTRACTS).describe("产品类型。SWAP/FUTURES/OPTION。必填"),
       uly:        z.string().optional().describe("标的指数"),
@@ -617,7 +617,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_settlement_history",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType:   z.enum(INST_TYPE_CONTRACTS).describe("产品类型。SWAP/FUTURES/OPTION。必填"),
       instFamily: z.string().optional().describe("产品族"),
@@ -635,7 +635,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_public_block_trades",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instId: z.string().describe("产品ID。必填"),
     },
@@ -655,7 +655,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_instrument_tick_bands",
     "READ",
-    "CAT:[公共] | → 请先调用 agent_catalog",
+    "[D:Market] get instruments",
     {
       instType: z.enum(["OPTION"]).describe("产品类型。仅 OPTION 支持此查询"),
     },

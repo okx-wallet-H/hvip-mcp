@@ -10,7 +10,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "xlayer_subscribe",
     "READ",
-    "CAT:[链上] | → 请先调用 agent_catalog",
+    "[D:WebSocket] X Layer链上",
     {
       type:    z.enum(["newHeads","logs"]).describe("订阅类型。newHeads=新区块头, logs=合约日志"),
       address: z.string().optional().describe("合约地址，logs类型可用（多个地址用逗号分隔）"),
@@ -42,7 +42,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "xlayer_get_events",
     "READ",
-    "CAT:[链上] | → 请先调用 agent_catalog",
+    "[D:WebSocket] X Layer链上",
     {
       subscriptionId: z.string().describe("订阅ID，由 xlayer_subscribe 返回"),
     },
@@ -76,7 +76,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "xlayer_unsubscribe",
     "READ",
-    "CAT:[链上] | → 请先调用 agent_catalog",
+    "[D:WebSocket] X Layer链上",
     {
       subscriptionId: z.string().describe("要取消的订阅ID"),
     },
@@ -93,7 +93,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "xlayer_call",
     "WRITE",
-    "CAT:[链上] | → 请先调用 agent_catalog",
+    "[D:WebSocket] X Layer链上",
     {
       method: z.string().describe("JSON-RPC 方法名。常用: eth_blockNumber, eth_getBlockByNumber, eth_getBalance, eth_getTransactionReceipt, eth_call, eth_getLogs"),
       params: z.string().optional().describe("JSON-RPC 参数数组，JSON 字符串。如 '[\\\"0xabc123\\\", false]'。留空表示传空数组"),
@@ -120,7 +120,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "xlayer_list_subscriptions",
     "READ",
-    "CAT:[链上] | → 请先调用 agent_catalog",
+    "[D:WebSocket] X Layer链上",
     {},
     async () => {
       try {

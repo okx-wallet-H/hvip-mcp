@@ -10,7 +10,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "agent_hub_status",
     "READ",
-    "CAT:[系统] | → 请先调用 agent_catalog",
+    "[D:System] Agent集群管理",
     {},
     async () => {
       try {
@@ -24,7 +24,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "agent_hub_dispatch",
     "READ",
-    "CAT:[系统] | → 请先调用 agent_catalog",
+    "[D:System] Agent集群管理",
     {
       taskId:  z.enum(["T-001","T-002","T-003","T-004","T-005","T-006"]).describe("任务编号"),
       agentId: z.string().optional().describe("目标 Agent ID。不填则自动匹配有对应技能的 Agent"),
@@ -80,7 +80,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "agent_hub_review",
     "READ",
-    "CAT:[系统] | → 请先调用 agent_catalog",
+    "[D:System] Agent集群管理",
     {
       taskId:   z.enum(["T-001","T-002","T-003","T-004","T-005","T-006"]).describe("任务编号"),
       verdict:  z.enum(["approved","rejected"]).describe("审核结果"),
@@ -119,7 +119,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "agent_room_send",
     "READ",
-    "CAT:[系统] | → 请先调用 agent_catalog",
+    "[D:System] Agent集群管理",
     {
       roomId: z.string().describe("房间ID。#lobby / #review / #task-T-003"),
       text:   z.string().describe("消息内容"),
@@ -142,7 +142,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "agent_room_view",
     "READ",
-    "CAT:[系统] | → 请先调用 agent_catalog",
+    "[D:System] Agent集群管理",
     {
       roomId: z.string().optional().describe("房间ID，不填列出所有"),
       limit:  z.number().int().min(1).max(200).optional().describe("消息条数，默认30"),

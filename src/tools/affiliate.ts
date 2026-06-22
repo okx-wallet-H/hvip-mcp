@@ -8,7 +8,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "okx_get_affiliate_invitee_list",
     "READ",
-    "CAT:[推广] | → 请先调用 agent_catalog",
+    "[D:System] get affiliate invitee list",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -23,7 +23,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "okx_get_affiliate_invitee_detail",
     "READ",
-    "CAT:[推广] | → 请先调用 agent_catalog",
+    "[D:System] get affiliate invitee list",
     {
       uid: z.string().optional().describe("用户ID"),
     },
@@ -40,7 +40,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "okx_get_affiliate_link_list",
     "READ",
-    "CAT:[推广] | → 请先调用 agent_catalog",
+    "[D:System] get affiliate invitee list",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -55,7 +55,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "okx_get_affiliate_performance",
     "READ",
-    "CAT:[推广] | → 请先调用 agent_catalog",
+    "[D:System] get affiliate invitee list",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -70,7 +70,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "okx_get_co_inviter_list",
     "READ",
-    "CAT:[推广] | → 请先调用 agent_catalog",
+    "[D:System] get affiliate invitee list",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -85,7 +85,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "okx_get_sub_affiliate_list",
     "READ",
-    "CAT:[推广] | → 请先调用 agent_catalog",
+    "[D:System] get affiliate invitee list",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

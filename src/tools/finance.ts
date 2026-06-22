@@ -8,7 +8,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_savings_balance",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       ccy: z.string().optional().describe("币种，如 USDT，不填则返回全部"),
     },
@@ -25,7 +25,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_savings_history",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       ccy: z.string().optional().describe("币种，如 USDT"),
     },
@@ -42,7 +42,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_staking_offers",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       productId: z.string().optional().describe("指定产品ID，不填则返回全部"),
     },
@@ -59,7 +59,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_eth_staking_balance",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -74,7 +74,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_eth_staking_history",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
     },
@@ -91,7 +91,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_sol_staking_balance",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -106,7 +106,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_staking_orders",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       productId: z.string().optional().describe("产品ID，如 ETH。可选"),
       state:     z.string().optional().describe("订单状态。1=等待申购, 2=申购中, 3=申购成功, 4=赎回中, 5=赎回成功, 6=已取消"),
@@ -125,7 +125,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_stake_eth",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       amt:  z.string().describe("质押数量（ETH）。必填"),
       rate: z.string().optional().describe("收益率类型。0.5=活期, 0.01=定期。不填默认活期"),
@@ -145,7 +145,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_unstake_eth",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       amt: z.string().describe("赎回数量（ETH）。必填"),
     },
@@ -162,7 +162,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_sol_staking_history",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
     },
@@ -180,7 +180,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_purchase_savings",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       ccy:  z.string().describe("币种。必填"),
       amt:  z.string().describe("申购数量。必填"),
@@ -202,7 +202,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_sfp_products",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -217,7 +217,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_redeem_sfp",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       productId: z.string().describe("产品ID。必填"),
       amt:       z.string().describe("赎回数量。必填"),
@@ -235,7 +235,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_staking_active_orders",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -250,7 +250,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_cancel_redeem_eth",
     "WRITE",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       amt: z.string().describe("取消赎回数量。必填"),
     },
@@ -267,7 +267,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_purchase_sol_staking",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       amt: z.string().describe("质押数量（SOL）。必填"),
     },
@@ -284,7 +284,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_redeem_sol_staking",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       amt: z.string().describe("赎回数量（SOL）。必填"),
     },
@@ -301,7 +301,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_adjust_collateral",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       ccy:  z.string().describe("抵押币种。必填"),
       amt:  z.string().describe("调整数量。必填"),
@@ -320,7 +320,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_flexible_loan_collateral",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -335,7 +335,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_flexible_loan_info",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -350,7 +350,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_flexible_loan_history",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -365,7 +365,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_stable_rewards_product",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -380,7 +380,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_lending_rate_history",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       try {
@@ -398,7 +398,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_set_lending_rate",
     "WRITE",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {
       ccy:  z.string().describe("币种。必填"),
       rate: z.string().describe("出借利率。必填"),
@@ -416,7 +416,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_stable_rewards_apy",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -431,7 +431,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_stable_rewards_history",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -446,7 +446,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
     server,
     "okx_get_sfp_order_history",
     "READ",
-    "CAT:[金融] | → 请先调用 agent_catalog",
+    "[D:Funds] get savings balance",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

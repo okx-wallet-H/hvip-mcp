@@ -8,7 +8,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_long_short_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().describe("币种，如 BTC、ETH"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -30,7 +30,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_taker_volume",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:      z.string().describe("币种，如 BTC"),
       instType: z.enum(INST_TYPE_RUBIK).describe("产品类型"),
@@ -53,7 +53,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_open_interest_volume",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().describe("币种，如 BTC"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -75,7 +75,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_margin_lending_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、USDT") },
     async ({ ccy }) => {
       try {
@@ -93,7 +93,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_stats_support_coin",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {},
     async () => {
       try {
@@ -107,7 +107,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_top_trader_long_short_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       instId: z.string().describe("合约产品ID，如 BTC-USDT-SWAP、ETH-USDT-SWAP"),
       begin:  z.string().optional().describe("开始时间戳（毫秒）"),
@@ -129,7 +129,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_put_call_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().describe("币种，如 BTC、ETH"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -151,7 +151,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_lending_rate_summary",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     { ccy: z.string().optional().describe("币种，如 BTC、USDT，不填返回全部") },
     async ({ ccy }) => {
       try {
@@ -165,7 +165,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_top_traders_contract_ls_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().optional().describe("币种，如 BTC、ETH。不填返回全部"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -187,7 +187,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_contracts_taker_volume",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().optional().describe("币种，如 BTC、ETH。不填返回全部"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -209,7 +209,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_contracts_long_short_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().optional().describe("币种，如 BTC、ETH。不填返回全部"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -231,7 +231,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_long_short_ratio_all",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().optional().describe("币种，如 BTC、ETH。不填返回全部"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -253,7 +253,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_taker_flow_contract",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:      z.string().describe("币种，如 BTC。必填"),
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型。SWAP=永续, FUTURES=交割"),
@@ -276,7 +276,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_open_interest_history_rubik",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       period: z.enum(["5m","15m","30m","1H","2H","4H","6H","12H","1D","1W"]).optional().describe("时间粒度，默认5m"),
@@ -301,7 +301,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_savings_lending_rate",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     { ccy: z.string().optional().describe("币种，如 BTC、USDT，不填返回全部") },
     async ({ ccy }) => {
       try {
@@ -315,7 +315,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_margin_lending_ratio_history",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、USDT") },
     async ({ ccy }) => {
       try {
@@ -333,7 +333,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_option_open_interest",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、ETH。必填") },
     async ({ ccy }) => {
       try {
@@ -347,7 +347,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_option_oi_expiry",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、ETH。必填") },
     async ({ ccy }) => {
       try {
@@ -370,7 +370,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_option_oi_strike",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy: z.string().describe("币种，如 BTC、ETH。必填"),
       expTime: z.string().describe("到期日，格式 YYYYMMDD。必填"),
@@ -396,7 +396,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_long_short_account_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().describe("币种，如 BTC、ETH"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -418,7 +418,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_contract_trader_ls_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       instId: z.string().describe("合约产品ID，如 BTC-USDT-SWAP"),
       begin:  z.string().optional().describe("开始时间戳（毫秒）"),
@@ -440,7 +440,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_contract_position_trader_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       instId: z.string().describe("合约产品ID，如 BTC-USDT-SWAP。必填"),
     },
@@ -460,7 +460,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_option_oi_ratio",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:   z.string().describe("币种，如 BTC、ETH"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),
@@ -482,7 +482,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_option_taker_block_volume",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、ETH。必填") },
     async ({ ccy }) => {
       try {
@@ -496,7 +496,7 @@ export function registerStatsTools(server: McpServer): void {
     server,
     "okx_get_taker_volume_contract",
     "READ",
-    "CAT:[统计] | → 请先调用 agent_catalog",
+    "[D:Market] get long short ratio",
     {
       ccy:    z.string().describe("币种，如 BTC。必填"),
       instId: z.string().describe("合约产品ID，如 BTC-USDT-SWAP。必填"),

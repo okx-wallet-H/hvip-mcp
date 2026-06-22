@@ -8,7 +8,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_algo_orders",
     "READ",
-    "CAT:[交易-委托] | → 请先调用 agent_catalog",
+    "[D:Strategy] get algo orders",
     {
       ordType:  z.enum(["conditional","oco","trigger","move_order_stop","iceberg","twap"]).describe("策略类型"),
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT=现货, MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权"),
@@ -26,7 +26,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_algo_orders_history",
     "READ",
-    "CAT:[交易-委托] | → 请先调用 agent_catalog",
+    "[D:Strategy] get algo orders",
     {
       ordType:  z.enum(["conditional","oco","trigger","move_order_stop","iceberg","twap"]).describe("策略类型"),
       state:    z.enum(["effective","canceled","order_failed"]).describe("订单状态"),
@@ -45,7 +45,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_place_algo_order",
     "WRITE",
-    "CAT:[交易-委托] | → 请先调用 agent_catalog",
+    "[D:Strategy] get algo orders",
     { params: z.record(z.unknown()).describe("订单参数，参考OKX文档") },
     async ({ params }) => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -60,7 +60,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_cancel_algo_order",
     "WRITE",
-    "CAT:[交易-委托] | → 请先调用 agent_catalog",
+    "[D:Strategy] get algo orders",
     {
       instId: z.string().describe("产品ID"),
       algoId: z.string().describe("策略订单ID"),
@@ -78,7 +78,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_orders_algo_pending",
     "READ",
-    "CAT:[交易-委托] | → 请先调用 agent_catalog",
+    "[D:Strategy] get algo orders",
     {
       algoId:   z.string().optional().describe("策略订单ID，精确查询"),
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型"),
@@ -99,7 +99,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_amend_algo_order",
     "WRITE",
-    "CAT:[交易-委托] | → 请先调用 agent_catalog",
+    "[D:Strategy] get algo orders",
     {
       orders: z.string().describe("修改策略订单数组JSON字符串，如 '[{\"algoId\":\"123\",\"instId\":\"BTC-USDT\",\"newTpTriggerPx\":\"65000\"}]'"),
     },

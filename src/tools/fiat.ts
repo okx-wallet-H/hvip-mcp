@@ -8,7 +8,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_fiat_buy_sell_pair",
     "READ",
-    "CAT:[资金-法币] | → 请先调用 agent_catalog",
+    "[D:Funds] get fiat buy sell pair",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -23,7 +23,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_fiat_deposit",
     "READ",
-    "CAT:[资金-法币] | → 请先调用 agent_catalog",
+    "[D:Funds] get fiat buy sell pair",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -38,7 +38,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_fiat_deposit_orders",
     "READ",
-    "CAT:[资金-法币] | → 请先调用 agent_catalog",
+    "[D:Funds] get fiat buy sell pair",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -53,7 +53,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_fiat_deposit_methods",
     "READ",
-    "CAT:[资金-法币] | → 请先调用 agent_catalog",
+    "[D:Funds] get fiat buy sell pair",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

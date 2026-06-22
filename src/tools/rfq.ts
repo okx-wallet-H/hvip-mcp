@@ -8,7 +8,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_create_rfq",
     "WRITE",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       instId: z.string().describe("产品ID。必填"),
       side:   z.enum(["buy","sell"]).describe("买卖方向。buy=买入, sell=卖出"),
@@ -30,7 +30,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_execute_quote",
     "READ",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       instId:  z.string().describe("产品ID。必填"),
       quoteId: z.string().describe("报价ID。必填"),
@@ -50,7 +50,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_rfqs",
     "READ",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       state: z.enum(["active","executed","canceled"]).optional().describe("状态筛选。active=进行中, executed=已成交, canceled=已取消"),
     },
@@ -67,7 +67,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_quotes",
     "READ",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       rfqId: z.string().describe("RFQ ID。必填"),
     },
@@ -86,7 +86,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_rfq_counterparties",
     "READ",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -101,7 +101,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_cancel_rfq",
     "WRITE",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       rfqId: z.string().describe("RFQ ID。必填"),
     },
@@ -118,7 +118,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_cancel_batch_rfqs",
     "WRITE",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       rfqIds: z.string().describe("RFQ ID数组JSON字符串，如 '[\"123\",\"456\"]'"),
     },
@@ -136,7 +136,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_cancel_all_rfqs",
     "WRITE",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -151,7 +151,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_create_quote",
     "WRITE",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
       quotePx: z.string().describe("报价价格。必填"),
@@ -170,7 +170,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_cancel_quote",
     "WRITE",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
       quoteId: z.string().describe("报价ID。必填"),
@@ -188,7 +188,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_rfq_trades",
     "READ",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -202,7 +202,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_reset_rfq_mmp",
     "READ",
-    "CAT:[策略-RFQ] | → 请先调用 agent_catalog",
+    "[D:Strategy] create rfq",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

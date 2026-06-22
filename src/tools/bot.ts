@@ -11,7 +11,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_grid_ai_param",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       instId:      z.string().describe("产品ID，如 BTC-USDT、BTC-USDT-SWAP"),
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型：grid=现货网格，contract_grid=合约网格，moon_grid=天地网格"),
@@ -29,7 +29,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_grid_orders_pending",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型"),
       instId:      z.string().optional().describe("产品ID，不填返回全部"),
@@ -48,7 +48,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_grid_orders_history",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型"),
       instId:      z.string().optional().describe("产品ID，不填返回全部"),
@@ -67,7 +67,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_grid_sub_orders",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoId:      z.string().describe("网格策略ID"),
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型"),
@@ -88,7 +88,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_recurring_orders_pending",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -103,7 +103,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_recurring_orders_history",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -120,7 +120,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_create_recurring_plan",
     "WRITE",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       instId:   z.string().describe("定投产品ID。必填"),
       currency: z.string().describe("定投资金币种。必填"),
@@ -140,7 +140,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_stop_recurring_plan",
     "WRITE",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoId: z.string().describe("定投计划ID。必填"),
     },
@@ -157,7 +157,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_recurring_sub_orders",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoId: z.string().describe("定投计划ID。必填"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -177,7 +177,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_create_grid_order",
     "WRITE",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       instId:      z.string().describe("产品ID。必填"),
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型。grid=现货网格, contract_grid=合约网格, moon_grid=天地网格"),
@@ -201,7 +201,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_stop_grid_order",
     "WRITE",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoId:      z.string().describe("网格策略ID。必填"),
       instId:      z.string().describe("产品ID。必填"),
@@ -220,7 +220,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_close_grid_position",
     "WRITE",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoId:      z.string().describe("网格策略ID。必填"),
       algoOrdType: z.enum(["grid","contract_grid","moon_grid"]).describe("网格类型"),
@@ -238,7 +238,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_get_grid_positions",
     "READ",
-    "CAT:[策略-网格] | → 请先调用 agent_catalog",
+    "[D:Strategy] get grid ai param",
     {
       algoId: z.string().describe("网格策略ID。必填"),
     },

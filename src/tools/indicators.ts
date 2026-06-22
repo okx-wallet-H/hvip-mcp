@@ -368,7 +368,7 @@ export function registerIndicatorTools(server: McpServer): void {
     server,
     "okx_indicator",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Indicators] indicator",
     {
       instId:    z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP"),
       indicator: z.enum(["sma","ema","rsi","macd","bb","atr","stoch","wr","cci","obv","vwap","adx","mfi","cmf","supertrend","keltner","pattern"]).describe("指标名"),
@@ -581,7 +581,7 @@ export function registerIndicatorTools(server: McpServer): void {
     server,
     "okx_indicator_batch",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Indicators] indicator",
     {
       instId:     z.string().describe("产品ID，如 BTC-USDT"),
       indicators: z.string().describe("指标名列表，逗号分隔。可选: sma,ema,rsi,macd,bb,atr,stoch,wr,cci,obv,vwap,adx,mfi,cmf,supertrend,keltner,pattern"),

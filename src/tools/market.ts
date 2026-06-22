@@ -8,7 +8,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_ticker",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     { instId: z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。支持逗号分隔批量查询，如 BTC-USDT,ETH-USDT,SOL-USDT") },
     async ({ instId }) => {
       try {
@@ -31,7 +31,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_tickers",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     { instType: z.enum(INST_TYPE_MARKET).describe("产品类型") },
     async ({ instType }) => {
       try {
@@ -51,7 +51,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_orderbook",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID"),
       depth: z.number().int().min(1).max(400).optional().describe("深度档位，默认20，最大400"),
@@ -82,7 +82,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_candles",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID"),
       bar: z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -111,7 +111,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_trades",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID"),
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -132,7 +132,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_history_candles",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT"),
       bar:     z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -163,7 +163,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_history_trades",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -184,7 +184,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_system_status",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {},
     async () => {
       try {
@@ -198,7 +198,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_block_tickers",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instType: z.enum(INST_TYPE_MARKET).describe("产品类型"),
     },
@@ -220,7 +220,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_books_full",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT"),
       depth:  z.number().int().min(1).max(400).optional().describe("深度档位，默认全量，可选限制"),
@@ -251,7 +251,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_index_tickers",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       quoteCcy: z.string().optional().describe("计价币种，如 USDT、USD、BTC"),
       instId:   z.string().optional().describe("产品ID，如 BTC-USDT"),
@@ -272,7 +272,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_index_candles",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("指数产品ID，如 BTC-USDT"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -305,7 +305,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_block_ticker",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT。必填"),
     },
@@ -325,7 +325,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_history_index_candles",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("指数产品ID，如 BTC-USDT。必填"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -354,7 +354,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_history_mark_price_candles",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -383,7 +383,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_mark_price_candles",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -412,7 +412,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "okx_get_sprd_history_candles",
     "READ",
-    "CAT:[行情] | → 请先调用 agent_catalog",
+    "[D:Market] 行情数据：",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
       bar:    z.enum(["1m","5m","15m","30m","1H","4H","1D"]).optional().describe("K线周期，默认1H"),

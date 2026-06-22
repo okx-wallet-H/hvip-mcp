@@ -9,7 +9,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_bots_pending",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId:   z.string().optional().describe("指定机器人ID，不填返回全部"),
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型"),
@@ -27,7 +27,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_bots_history",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId:   z.string().optional().describe("指定机器人ID"),
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型"),
@@ -46,7 +46,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_positions",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId: z.string().describe("信号机器人ID（从 okx_get_signal_bots_pending 获取）"),
     },
@@ -63,7 +63,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_positions_history",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId: z.string().describe("信号机器人ID（从 okx_get_signal_bots_history 获取）"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -81,7 +81,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_sub_orders",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId: z.string().describe("信号机器人ID"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -99,7 +99,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_event_history",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId: z.string().describe("信号机器人ID"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -119,7 +119,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_create_signal_bot",
     "WRITE",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       channel:    z.string().describe("信号渠道。必填"),
       signalName: z.string().describe("信号名称。必填"),
@@ -137,7 +137,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_stop_signal_bot",
     "WRITE",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId: z.string().describe("信号机器人ID。必填"),
     },
@@ -154,7 +154,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_orders",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {
       algoId: z.string().describe("信号机器人ID。必填"),
     },
@@ -171,7 +171,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     server,
     "okx_get_signal_subscriptions",
     "READ",
-    "CAT:[策略-信号] | → 请先调用 agent_catalog",
+    "[D:Strategy] get signal bots pending",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
