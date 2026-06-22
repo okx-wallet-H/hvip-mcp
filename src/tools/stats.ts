@@ -105,7 +105,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "market_top_trader_ratio",
+    "market_top_trader_long_short_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -163,7 +163,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "market_top_trader_ls_ratio",
+    "market_top_trader_long_short_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -207,7 +207,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "market_contract_ls_ratio",
+    "market_contract_long_short_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -394,7 +394,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "market_account_ls_ratio",
+    "market_account_long_short_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -416,7 +416,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "market_contract_trader_ls_ratio",
+    "market_contract_trader_long_short_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
