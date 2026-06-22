@@ -68,7 +68,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_ws_subscribe",
     "READ",
-    "[D:WebSocket] ws subscribe",
+    "[D:WebSocket] WebSocket实时数据",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。纯全局频道（status/instruments/economic-calendar）可传空字符串"),
       channel: z.string().describe("频道名。公开频道共 33 个，支持 tickers/trades/candle1m~1D/books5/books/funding-rate/open-interest/price-limit/instruments/mark-price/mark-price-candles/index-tickers/index-candles/option-summary/estimated-price/liquidation-orders/adl-warning/event-contract-markets/economic-calendar/status/sprd系列/public-block-trades系列/block-tickers"),
@@ -101,7 +101,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_ws_subscribe_private",
     "READ",
-    "[D:WebSocket] ws subscribe",
+    "[D:WebSocket] WebSocket实时数据",
     {
       instId:  z.string().optional().describe("产品ID。账户级频道可不传（如 account/positions/balances）"),
       channel: z.string().describe("私有频道名。共 22 个: account / positions / balance_and_position / position-risk-warning / account-greeks / orders / fills / algo-orders / advance-algo-orders / spot-grid-algo-orders / contract-grid-algo-orders / grid-positions / grid-sub-orders / recurring-buy-orders / lead-trading-notification / deposit-info / withdrawal-info / rfqs / quotes / structure-block-trades / sprd/orders / sprd/trades"),
@@ -139,7 +139,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_ws_events",
     "READ",
-    "[D:WebSocket] ws subscribe",
+    "[D:WebSocket] WebSocket实时数据",
     {
       subscriptionId: z.string().optional().describe("订阅ID"),
       limit: z.number().int().min(1).max(50).default(20).describe("最大返回条数"),
@@ -168,7 +168,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_ws_status",
     "READ",
-    "[D:WebSocket] ws subscribe",
+    "[D:WebSocket] WebSocket实时数据",
     {},
     async () => {
       try {
@@ -186,7 +186,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "okx_ws_close",
     "READ",
-    "[D:WebSocket] ws subscribe",
+    "[D:WebSocket] WebSocket实时数据",
     {
       subscriptionId: z.string().optional().describe("订阅ID，不传关闭所有"),
     },

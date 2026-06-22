@@ -307,6 +307,26 @@ export type RiskLevel = "READ" | "WRITE" | "FUND_TRANSFER" | "ADMIN"
  * 结构化注册工具 — 描述前注入 [L:READ] 标记，classifyRisk 可直接解析。
  * Agent 调用 server.tool() 的地方全部替换为本函数。
  */
+// ── 工具调用统计埋点 ──────────────────────────────────────────────────
+
+export interface ToolStat {
+  count: number
+  lastCalled: number
+  errors: number
+  totalMs: number
+}
+
+export const toolStats = new Map<string, ToolStat>()
+
+function recordToolCall(name: string, ms: number, success: boolean): void {
+  const s = toolStats.get(name) ?? { count: 0, lastCalled: 0, errors: 0, totalMs: 0 }
+  s.count++
+  s.lastCalled = Date.now()
+  s.totalMs += ms
+  if (!success) s.errors++
+  toolStats.set(name, s)
+}
+
 export function registerTool(
   server: McpServer,
   name: string,
@@ -316,7 +336,18 @@ export function registerTool(
   callback: (...args: any[]) => any,
 ): void {
   const taggedDesc = `[L:${accessLevel}] ${description}`
-  server.tool(name, taggedDesc, paramsSchema, callback)
+  const wrappedCallback = async (...args: any[]) => {
+    const start = Date.now()
+    try {
+      const result = await callback(...args)
+      recordToolCall(name, Date.now() - start, true)
+      return result
+    } catch (e) {
+      recordToolCall(name, Date.now() - start, false)
+      throw e
+    }
+  }
+  server.tool(name, taggedDesc, paramsSchema, wrappedCallback)
 }
 
 /** 从描述中提取 [L:READ] 标记，有则直接返回，无则回退到名称推断 */

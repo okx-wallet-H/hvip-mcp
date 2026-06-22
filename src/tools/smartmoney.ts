@@ -18,7 +18,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_smart_leaderboard",
     "READ",
-    "[D:SmartMoney] smart leaderboard",
+    "[D:SmartMoney] 聪明钱",
     {
       instType: z.enum(["SPOT","SWAP"]).optional().describe("产品类型，默认SPOT"),
       sortBy:   z.enum(["pnl","totalPnl","followers"]).optional().describe("排序。pnl=收益率, totalPnl=总收益, followers=跟单人数"),
@@ -74,7 +74,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_smart_trader_detail",
     "READ",
-    "[D:SmartMoney] smart leaderboard",
+    "[D:SmartMoney] 聪明钱",
     {
       uniqueCode: z.string().describe("交易员唯一码（如 A12345678）"),
       instType:   z.enum(["SPOT","SWAP"]).optional().describe("产品类型，默认SPOT"),
@@ -143,7 +143,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
     server,
     "okx_smart_sentiment",
     "READ",
-    "[D:SmartMoney] smart leaderboard",
+    "[D:SmartMoney] 聪明钱",
     {
       instFamily: z.string().optional().describe("产品族，如 BTC-USD、ETH-USD。默认 BTC-USD"),
     },

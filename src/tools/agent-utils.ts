@@ -4,7 +4,7 @@ import * as os from "node:os"
 import { z } from "zod"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { publicApi, privateApi, type Auth } from "../adapters/okx.js"
-import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
+import { toResult, toError, AUTH_REQUIRED, registerTool, toolStats } from "./shared.js"
 import { CATALOG as CATALOG_DATA } from "./agent-catalog-data.js"
 import { DOMAIN_DETAILS as DOMAIN_DATA } from "./agent-domain-details.js"
 
@@ -1729,6 +1729,46 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
           _authWarning: needsKey ? "⚠️ 此域需要 API Key，当前未配置。告诉用户去 OKX 官网创建 Key 后重连。" : null,
           ...detail,
           tsIso: new Date().toISOString(),
+        })
+      } catch (e) { return toError(e) }
+    }
+  )
+
+  // ══════════════════════════════════════════════════════════════════════
+  // sys_usage_stats — 工具调用统计排名
+  // ══════════════════════════════════════════════════════════════════════
+  registerTool(
+    server,
+    "sys_usage_stats",
+    "READ",
+    "[D:System] 工具调用统计排名 | topN?默认20 | 返回调用次数/错误率/平均耗时 → 帮助发现高频工具和慢工具",
+    {
+      topN: z.number().int().min(1).max(100).optional().describe("返回前N条，默认20"),
+    },
+    async ({ topN }) => {
+      try {
+        const n = topN ?? 20
+        const entries = [...toolStats.entries()].map(([name, stat]) => ({
+          name,
+          count: stat.count,
+          errors: stat.errors,
+          errorRate: stat.count > 0 ? (stat.errors / stat.count).toFixed(4) : "0",
+          avgMs: stat.count > 0 ? (stat.totalMs / stat.count).toFixed(1) : "0",
+          totalMs: stat.totalMs,
+          lastCalled: new Date(stat.lastCalled).toISOString(),
+        }))
+        // 按调用次数降序
+        entries.sort((a, b) => b.count - a.count)
+        const top = entries.slice(0, n)
+        const totalCalls = entries.reduce((s, e) => s + e.count, 0)
+        const totalErrors = entries.reduce((s, e) => s + e.errors, 0)
+        return toResult({
+          tsIso: new Date().toISOString(),
+          totalTools: toolStats.size,
+          totalCalls,
+          totalErrors,
+          top,
+          _summary: `工具调用统计：${toolStats.size} 个工具被调用，累计 ${totalCalls} 次（错误 ${totalErrors} 次）。Top3: ${top.slice(0, 3).map(t => `${t.name}(${t.count}次)`).join(", ")}。`,
         })
       } catch (e) { return toError(e) }
     }

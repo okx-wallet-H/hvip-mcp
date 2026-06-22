@@ -33,7 +33,7 @@ import { registerAgentHubTools } from "./tools/agent-hub.js"
 import { registerCodeGraphTools } from "./tools/codegraph.js"
 import { startAgentHub } from "./adapters/agent-hub.js"
 import { getApiCredits, CREDIT_COST } from "./adapters/api-credits.js"
-import { getAuth, classifyRisk, type RiskLevel, authStore } from "./tools/shared.js"
+import { getAuth, classifyRisk, type RiskLevel, authStore, toolStats } from "./tools/shared.js"
 import { privateApi } from "./adapters/okx.js"
 
 type TransportMode = "stdio" | "http"
@@ -260,6 +260,8 @@ async function startHttp(
 
     // ── GET /health ──
     if (req.method === "GET" && req.url === "/health") {
+      let totalToolCalls = 0
+      for (const stat of toolStats.values()) totalToolCalls += stat.count
       res.writeHead(200, { "Content-Type": "application/json" })
       res.end(JSON.stringify({
         status: "ok",
@@ -269,6 +271,8 @@ async function startHttp(
         auth: !!auth,
         skippedTools: skipped,
         uptime: process.uptime(),
+        totalToolCalls,
+        distinctToolsCalled: toolStats.size,
         tsIso: new Date().toISOString(),
       }))
       return
