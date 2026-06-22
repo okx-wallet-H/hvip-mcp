@@ -70,7 +70,7 @@ module.exports = {
       merge_logs: true,
       env: {
         NODE_ENV: "production",
-        HUB_URL: "wss://mcp.hvip.one/ws",
+        HUB_URL: "ws://127.0.0.1:9321",
         WORKER_NAME: "Worker·Atlas",
         WORKER_PROFILE: "code",
         WORKER_MAX_TOKENS: "8000",
@@ -92,7 +92,7 @@ module.exports = {
       merge_logs: true,
       env: {
         NODE_ENV: "production",
-        HUB_URL: "wss://mcp.hvip.one/ws",
+        HUB_URL: "ws://127.0.0.1:9321",
         WORKER_NAME: "Worker·Hermes",
         WORKER_PROFILE: "quant",
         WORKER_MAX_TOKENS: "8000",
@@ -114,8 +114,8 @@ module.exports = {
       merge_logs: true,
       env: {
         NODE_ENV: "production",
-        HUB_URL: "wss://mcp.hvip.one/ws",
-        HUB_API_URL: "https://mcp.hvip.one",
+        HUB_URL: "ws://127.0.0.1:9321",
+        HUB_API_URL: "http://127.0.0.1:3000",
         CHRONOS_INTERVAL: "60000",
         CHRONOS_PATROL_INTERVAL: "300000",
       },

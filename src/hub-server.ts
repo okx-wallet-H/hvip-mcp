@@ -213,6 +213,17 @@ function startHttpServer(): void {
       return
     }
 
+    // ── GET /api/tasks — 查询任务列表 ──
+    if (_req.method === "GET" && _req.url?.startsWith("/api/tasks")) {
+      const urlObj = new URL(_req.url, `http://${host}:${webPort}`)
+      const statusFilter = urlObj.searchParams.get("status") || ""
+      const tasks = agentHub.getTasks()
+      const filtered = statusFilter ? tasks.filter(t => t.status === statusFilter) : tasks
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(filtered))
+      return
+    }
+
     // ── POST /api/tasks — 创建任务 ──
     if (_req.method === "POST" && _req.url === "/api/tasks") {
       const chunks: Buffer[] = []

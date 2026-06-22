@@ -266,6 +266,58 @@ async function syncWorkerPool() {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Task Queue Sync — 启动时从 Hub 拉取未分配任务
+// ═══════════════════════════════════════════════════════════
+
+async function syncTaskQueue() {
+  try {
+    const resp = await fetch(HUB_API + "/api/status")
+    const data = await resp.json() as { tasks: Array<{ taskId: string; status: string; title: string }> }
+    const tasks = data.tasks || []
+    const unassigned = tasks.filter(t => t.status === "unassigned")
+
+    if (unassigned.length === 0) return
+
+    log.info(`🔍 发现 ${unassigned.length} 个未分配任务，同步到本地队列...`)
+
+    let synced = 0
+    for (const t of unassigned) {
+      // 跳过已存在的
+      if (taskQueue.some(qt => qt.taskId === t.taskId)) continue
+
+      // 快速分析任务类型（不阻塞，用启发式规则）
+      const title = t.title || t.taskId
+      let type: QueuedTask["type"] = "general"
+      let priority: QueuedTask["priority"] = "normal"
+      if (/修复|fix|bug|自愈|HEAL|卡住|异常|crash/i.test(title)) { type = "guard"; priority = "high" }
+      else if (/信号|signal|VBT|量化|quant|行情|market|分析|analyst/i.test(title)) { type = "quant"; priority = "normal" }
+      else if (/代码|code|重构|refactor|审计|audit|review/i.test(title)) { type = "code"; priority = "normal" }
+      else if (/研究|research|搜索|search|整理|curation/i.test(title)) { type = "research"; priority = "low" }
+      else if (/守护|guard|面板|dashboard|检查|巡检|patrol/i.test(title)) { type = "guard"; priority = "normal" }
+
+      taskQueue.push({
+        taskId: t.taskId,
+        title,
+        type,
+        priority,
+        requiredCaps: [],
+        createdAt: Date.now(),
+        retryCount: 0,
+        maxRetries: MAX_RETRIES,
+      })
+      synced++
+    }
+
+    if (synced > 0) {
+      log.info(`📋 同步 ${synced} 个任务到本地队列，开始派发...`)
+      processQueue()
+    }
+  } catch (e) {
+    log.warn(`同步任务队列失败: ${e instanceof Error ? e.message : String(e)}`)
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // Stuck Tasks Cleanup — 主动释放卡住超过10分钟的任务
 // ═══════════════════════════════════════════════════════════
 
@@ -373,6 +425,8 @@ function connect() {
     })
     // Sync existing agents: fetch from Hub API
     setTimeout(syncWorkerPool, 2000)
+    // Sync existing tasks: fetch unassigned tasks from Hub
+    setTimeout(syncTaskQueue, 3000)
   })
 
   ws.on("message", async (raw) => {

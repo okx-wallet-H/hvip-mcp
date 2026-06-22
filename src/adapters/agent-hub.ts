@@ -752,6 +752,18 @@ class AgentHub {
   }
 
   // ── 状态快照 ──
+  getTasks(): Array<{ taskId: string; title: string; status: string; assignedTo?: string; claimedAt?: string; result?: string; branch?: string }> {
+    return [...this.tasks.entries()].map(([id, t]) => ({
+      taskId: id,
+      title: this.getTaskTitle(id),
+      status: t.status,
+      assignedTo: t.assignedTo,
+      claimedAt: t.claimedAt ? new Date(t.claimedAt).toISOString() : undefined,
+      result: t.result,
+      branch: t.branch,
+    }))
+  }
+
   status(): HubStatus {
     const agents = [...this.agents.entries()].map(([id, a]) => ({
       agentId: id,
