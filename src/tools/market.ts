@@ -6,7 +6,7 @@ import { toResult, toError, INST_TYPE_MARKET , registerTool} from "./shared.js"
 export function registerMarketTools(server: McpServer): void {
   registerTool(
     server,
-    "okx_get_ticker",
+    "market_ticker",
     "READ",
     "[D:Market] 行情数据：",
     { instId: z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。支持逗号分隔批量查询，如 BTC-USDT,ETH-USDT,SOL-USDT") },
@@ -29,7 +29,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_tickers",
+    "market_tickers",
     "READ",
     "[D:Market] 行情数据：",
     { instType: z.enum(INST_TYPE_MARKET).describe("产品类型") },
@@ -49,7 +49,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_orderbook",
+    "market_orderbook",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -80,7 +80,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_candles",
+    "market_candles",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -109,7 +109,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_trades",
+    "market_trades",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -130,7 +130,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_history_candles",
+    "market_candles_history",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -161,7 +161,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_history_trades",
+    "market_trades_history",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -182,7 +182,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_system_status",
+    "sys_status",
     "READ",
     "[D:Market] 行情数据：",
     {},
@@ -196,7 +196,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_block_tickers",
+    "market_block_tickers",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -218,7 +218,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_books_full",
+    "market_orderbook_full",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -249,7 +249,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_index_tickers",
+    "market_index_tickers",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -270,7 +270,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_index_candles",
+    "market_index_candles",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -303,7 +303,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_block_ticker",
+    "market_block_ticker",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -323,7 +323,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_history_index_candles",
+    "market_index_candles_history",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -352,7 +352,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_history_mark_price_candles",
+    "market_mark_candles_history",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -381,7 +381,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_mark_price_candles",
+    "market_mark_candles",
     "READ",
     "[D:Market] 行情数据：",
     {
@@ -410,7 +410,7 @@ export function registerMarketTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_sprd_history_candles",
+    "market_spread_candles_history",
     "READ",
     "[D:Market] 行情数据：",
     {

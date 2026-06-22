@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 export function registerFundingTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_funding_balance",
+    "fund_balance",
     "READ",
     "[D:Funds] get funding balance",
     { ccy: z.string().optional().describe("指定币种，不填则返回全部") },
@@ -21,7 +21,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_transfer",
+    "fund_transfer",
     "WRITE",
     "[D:Funds] get funding balance",
     {
@@ -41,7 +41,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_currencies",
+    "fund_currencies",
     "READ",
     "[D:Funds] get funding balance",
     { ccy: z.string().optional().describe("指定币种，如 BTC，不填返回全部") },
@@ -56,7 +56,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_deposit_address",
+    "fund_deposit_address",
     "READ",
     "[D:Funds] get funding balance",
     { ccy: z.string().describe("币种，如 USDT、BTC、ETH") },
@@ -71,7 +71,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_deposit_history",
+    "fund_deposit_history",
     "READ",
     "[D:Funds] get funding balance",
     {
@@ -89,7 +89,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_withdrawal_history",
+    "fund_withdrawal_history",
     "READ",
     "[D:Funds] get funding balance",
     {
@@ -107,7 +107,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_withdrawal",
+    "fund_withdraw",
     "FUND_TRANSFER",
     "[D:Funds] get funding balance",
     {
@@ -137,7 +137,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_deposit_lightning",
+    "fund_deposit_lightning",
     "READ",
     "[D:Funds] get funding balance",
     {
@@ -154,7 +154,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_withdrawal_lightning",
+    "fund_withdraw_lightning",
     "FUND_TRANSFER",
     "[D:Funds] get funding balance",
     {
@@ -173,7 +173,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_transfer_state",
+    "fund_transfer_state",
     "READ",
     "[D:Funds] get funding balance",
     {
@@ -192,7 +192,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_non_tradable_assets",
+    "fund_non_tradable_assets",
     "READ",
     "[D:Funds] get funding balance",
     {},
@@ -207,7 +207,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_exchange_list",
+    "fund_exchange_list",
     "READ",
     "[D:Funds] get funding balance",
     {},
@@ -221,7 +221,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_deposit_withdraw_status",
+    "fund_deposit_withdraw_status",
     "READ",
     "[D:Funds] get funding balance",
     {},
@@ -236,7 +236,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_asset_bills_history",
+    "fund_bills_history",
     "READ",
     "[D:Funds] get funding balance",
     {
@@ -253,7 +253,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_convert_currency_pair",
+    "fund_convert_pair",
     "READ",
     "[D:Funds] get funding balance",
     {},
@@ -268,7 +268,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_convert_estimate_quote",
+    "fund_convert_quote",
     "READ",
     "[D:Funds] get funding balance",
     {
@@ -287,7 +287,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_monthly_statement",
+    "fund_monthly_statement",
     "READ",
     "[D:Funds] get funding balance",
     {},
@@ -302,7 +302,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_asset_balances",
+    "fund_asset_balances",
     "READ",
     "[D:Funds] get funding balance",
     { ccy: z.string().optional().describe("指定币种，不填返回全部") },

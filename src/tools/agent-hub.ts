@@ -8,7 +8,7 @@ export function registerAgentHubTools(server: McpServer): void {
   // ── agent_hub_status ──────────────────────────────────────────────────
   registerTool(
     server,
-    "agent_hub_status",
+    "sys_hub_status",
     "READ",
     "[D:System] Agent集群管理",
     {},
@@ -22,7 +22,7 @@ export function registerAgentHubTools(server: McpServer): void {
   // ── agent_hub_dispatch ──────────────────────────────────────────────────
   registerTool(
     server,
-    "agent_hub_dispatch",
+    "sys_hub_dispatch",
     "READ",
     "[D:System] Agent集群管理",
     {
@@ -78,7 +78,7 @@ export function registerAgentHubTools(server: McpServer): void {
   // ── agent_hub_review ──────────────────────────────────────────────────
   registerTool(
     server,
-    "agent_hub_review",
+    "sys_hub_review",
     "READ",
     "[D:System] Agent集群管理",
     {
@@ -117,7 +117,7 @@ export function registerAgentHubTools(server: McpServer): void {
   // ── agent_room_send ──────────────────────────────────────────────────
   registerTool(
     server,
-    "agent_room_send",
+    "sys_room_send",
     "READ",
     "[D:System] Agent集群管理",
     {
@@ -140,7 +140,7 @@ export function registerAgentHubTools(server: McpServer): void {
   // ── agent_room_view ──────────────────────────────────────────────────
   registerTool(
     server,
-    "agent_room_view",
+    "sys_room_view",
     "READ",
     "[D:System] Agent集群管理",
     {

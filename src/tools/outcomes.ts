@@ -6,7 +6,7 @@ import { getAuth, getHRailsClient, toResult, toError, AUTH_REQUIRED , registerTo
 export function registerOutcomesTools(server: McpServer): void {
   registerTool(
     server,
-    "outcomes_list_events",
+    "predict_market_events",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -30,7 +30,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "outcomes_get_event",
+    "predict_market_event",
     "READ",
     "[D:Prediction] 预测市场数据",
     { eventId: z.string().describe("事件ID") },
@@ -46,7 +46,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "outcomes_get_market",
+    "predict_market_detail",
     "READ",
     "[D:Prediction] 预测市场数据",
     { marketId: z.string().describe("市场ID") },
@@ -62,7 +62,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "outcomes_get_ticker",
+    "predict_market_ticker",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -81,7 +81,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "outcomes_get_orderbook",
+    "predict_market_orderbook",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -101,7 +101,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "outcomes_get_candles",
+    "predict_market_candles",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -122,7 +122,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "outcomes_check_arbitrage",
+    "predict_market_arbitrage",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -164,7 +164,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "outcomes_list_markets",
+    "predict_market_list",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -185,7 +185,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_event_series",
+    "predict_event_series",
     "READ",
     "[D:Prediction] 预测市场数据",
     {},
@@ -199,7 +199,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_event_markets",
+    "predict_event_market_list",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -215,7 +215,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_event_events",
+    "predict_event_list",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -233,7 +233,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_list_events",
+    "predict_events",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -257,7 +257,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_search_events",
+    "predict_events_search",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -273,7 +273,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_get_event",
+    "predict_event",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -289,7 +289,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_get_event_markets",
+    "predict_event_markets",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -305,7 +305,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_get_market",
+    "predict_market",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -323,7 +323,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_ticker",
+    "predict_ticker",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -339,7 +339,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_candles",
+    "predict_candles",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -357,7 +357,7 @@ export function registerOutcomesTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_predictions_orderbook",
+    "predict_orderbook",
     "READ",
     "[D:Prediction] 预测市场数据",
     {
@@ -375,7 +375,7 @@ export function registerOutcomesTools(server: McpServer): void {
   // ══ T-005: 事件合约交易 ═══════════════════════════════════════════════
 
   registerTool(server,
-    "okx_event_place_order",
+    "predict_event_place",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { instId: z.string().describe("合约ID"), side: z.enum(["buy","sell"]).describe("买卖方向"),
@@ -395,7 +395,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_event_cancel_order",
+    "predict_event_cancel",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID") },
@@ -409,7 +409,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_event_amend_order",
+    "predict_event_amend",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { instId: z.string().describe("合约ID"), ordId: z.string().describe("订单ID"),
@@ -427,7 +427,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_event_fills",
+    "predict_event_fills",
     "READ",
     "[D:Prediction] 预测市场数据",
     { instId: z.string().optional().describe("合约ID"), limit: z.number().int().min(1).max(100).optional().describe("返回条数") },
@@ -441,7 +441,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_event_instruments",
+    "predict_event_instruments",
     "READ",
     "[D:Prediction] 预测市场数据",
     { seriesId: z.string().optional().describe("事件系列ID") },
@@ -457,7 +457,7 @@ export function registerOutcomesTools(server: McpServer): void {
   // ══ T-003: Outcomes 订单管理 ═══════════════════════════════════════════
 
   registerTool(server,
-    "okx_predictions_place_order",
+    "predict_place",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { marketId: z.string().describe("市场ID（必填）"),
@@ -477,7 +477,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_cancel_order",
+    "predict_cancel",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { orderId: z.string().optional().describe("订单ID") },
@@ -493,7 +493,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_cancel_all",
+    "predict_cancel_all",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { assetIds: z.string().optional().describe("资产ID列表，逗号分隔") },
@@ -509,7 +509,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_heartbeat",
+    "predict_heartbeat",
     "READ",
     "[D:Prediction] 预测市场数据",
     {},
@@ -523,7 +523,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_get_order",
+    "predict_order",
     "READ",
     "[D:Prediction] 预测市场数据",
     { orderId: z.string().describe("订单ID（必填）") },
@@ -537,7 +537,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_order_list",
+    "predict_orders",
     "READ",
     "[D:Prediction] 预测市场数据",
     { marketId: z.string().optional().describe("市场ID"),
@@ -555,7 +555,7 @@ export function registerOutcomesTools(server: McpServer): void {
   // ══ T-004: Outcomes 持仓 & 账户 ═════════════════════════════════════
 
   registerTool(server,
-    "okx_predictions_positions",
+    "predict_positions",
     "READ",
     "[D:Prediction] 预测市场数据",
     { marketId: z.string().optional().describe("市场ID"),
@@ -570,7 +570,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_split",
+    "predict_split",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { amount: z.string().describe("拆分数量（必填）") },
@@ -584,7 +584,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_merge",
+    "predict_merge",
     "WRITE",
     "[D:Prediction] 预测市场数据",
     { amount: z.string().describe("合并数量（必填）") },
@@ -598,7 +598,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_redeem",
+    "predict_redeem",
     "FUND_TRANSFER",
     "[D:Prediction] 预测市场数据",
     { assetId: z.string().optional().describe("资产ID") },
@@ -614,7 +614,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_balance",
+    "predict_balance",
     "READ",
     "[D:Prediction] 预测市场数据",
     {},
@@ -628,7 +628,7 @@ export function registerOutcomesTools(server: McpServer): void {
     })
 
   registerTool(server,
-    "okx_predictions_trades",
+    "predict_trades",
     "READ",
     "[D:Prediction] 预测市场数据",
     { marketId: z.string().optional().describe("市场ID"),

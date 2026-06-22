@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 export function registerSpreadTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_spreads",
+    "trade_spread_listings",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -25,7 +25,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_ticker",
+    "trade_spread_ticker",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -45,7 +45,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_orderbook",
+    "trade_spread_orderbook",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -69,7 +69,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_trades",
+    "trade_spread_trades",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -90,7 +90,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_candles",
+    "trade_spread_candles",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -120,7 +120,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_place_spread_order",
+    "trade_spread_place",
     "WRITE",
     "[D:Strategy] get spreads",
     {
@@ -143,7 +143,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_cancel_spread_order",
+    "trade_spread_cancel",
     "WRITE",
     "[D:Strategy] get spreads",
     {
@@ -161,7 +161,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_orders",
+    "trade_spread_orders",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -178,7 +178,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_amend_spread_order",
+    "trade_spread_amend",
     "WRITE",
     "[D:Strategy] get spreads",
     {
@@ -201,7 +201,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_orders_history",
+    "trade_spread_orders_history",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -219,7 +219,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_fills",
+    "trade_spread_fills",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -237,7 +237,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_books",
+    "trade_spread_books",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -262,7 +262,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_orders_pending",
+    "trade_spread_orders_active",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -279,7 +279,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_orders_history_archive",
+    "trade_spread_orders_archive",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -296,7 +296,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_trades_public",
+    "trade_spread_trades_public",
     "READ",
     "[D:Strategy] get spreads",
     {
@@ -316,7 +316,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_spread_trades_fills",
+    "trade_spread_fills_detail",
     "READ",
     "[D:Strategy] get spreads",
     {

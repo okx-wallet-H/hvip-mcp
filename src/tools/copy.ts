@@ -9,7 +9,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_lead_trader_positions",
+    "strategy_copy_lead_positions",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -26,7 +26,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_lead_trader_history",
+    "strategy_copy_lead_history",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -44,7 +44,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_lead_trader_stats",
+    "strategy_copy_lead_stats",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -64,7 +64,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_my_lead_positions",
+    "strategy_copy_my_lead_positions",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -81,7 +81,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_my_lead_history",
+    "strategy_copy_my_lead_history",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -99,7 +99,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_copy_instruments",
+    "strategy_copy_instruments",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -116,7 +116,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_profit_sharing_total",
+    "strategy_copy_profit_sharing",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -133,7 +133,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_profit_sharing_details",
+    "strategy_copy_profit_sharing_details",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -153,7 +153,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_copy_trader",
+    "strategy_copy_start",
     "WRITE",
     "[D:Strategy] get lead trader positions",
     {
@@ -175,7 +175,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_stop_copy_trader",
+    "strategy_copy_stop",
     "WRITE",
     "[D:Strategy] get lead trader positions",
     {
@@ -194,7 +194,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_copy_settings",
+    "strategy_copy_settings",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -209,7 +209,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_set_copy_settings",
+    "strategy_copy_settings_set",
     "WRITE",
     "[D:Strategy] get lead trader positions",
     {
@@ -236,7 +236,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_public_lead_traders",
+    "strategy_copy_public_leaders",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -250,7 +250,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_public_copy_config",
+    "strategy_copy_public_config",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -264,7 +264,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_public_lead_trader_pnl",
+    "strategy_copy_public_leader_pnl",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -283,7 +283,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_copy_traders",
+    "strategy_copy_traders",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -298,7 +298,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_first_copy_settings",
+    "strategy_copy_first_settings",
     "WRITE",
     "[D:Strategy] get lead trader positions",
     {
@@ -320,7 +320,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_unrealized_profit_sharing",
+    "strategy_copy_unrealized_profit",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -335,7 +335,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_total_unrealized_profit_sharing",
+    "strategy_copy_total_unrealized_profit",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -350,7 +350,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_amend_profit_sharing_ratio",
+    "strategy_copy_profit_ratio_set",
     "WRITE",
     "[D:Strategy] get lead trader positions",
     {
@@ -367,7 +367,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_amend_copy_settings",
+    "strategy_copy_settings_amend",
     "WRITE",
     "[D:Strategy] get lead trader positions",
     {
@@ -389,7 +389,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_public_preference_currency",
+    "strategy_copy_public_currency",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -405,7 +405,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_stop_copy_trading",
+    "strategy_copy_stop_trading",
     "WRITE",
     "[D:Strategy] get lead trader positions",
     {},

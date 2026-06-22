@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 export function registerSubAccountTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_subaccount_list",
+    "account_subaccount_list",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -23,7 +23,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_list_subaccounts",
+    "account_subaccounts",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -40,7 +40,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_get_subaccount_balance",
+    "account_subaccount_balance",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -57,7 +57,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_transfer_subaccount",
+    "account_subaccount_transfer",
     "WRITE",
     "[D:Account] get subaccount list",
     {
@@ -82,7 +82,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_subaccount_set_transfer_out",
+    "account_subaccount_transfer_out",
     "WRITE",
     "[D:Account] get subaccount list",
     {
@@ -100,7 +100,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_get_subaccount_api_key",
+    "account_subaccount_api_key",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -117,7 +117,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_create_subaccount_api_key",
+    "account_subaccount_api_key_create",
     "WRITE",
     "[D:Account] get subaccount list",
     {
@@ -140,7 +140,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_reset_subaccount_api_key",
+    "account_subaccount_api_key_reset",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -165,7 +165,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_delete_subaccount_api_key",
+    "account_subaccount_api_key_delete",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -183,7 +183,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_get_subaccount_bills",
+    "account_subaccount_bills",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -203,7 +203,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_get_subaccount_assets",
+    "account_subaccount_assets",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -220,7 +220,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_create_subaccount",
+    "account_subaccount_create",
     "WRITE",
     "[D:Account] get subaccount list",
     {
@@ -240,7 +240,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "okx_get_entrust_subaccount_list",
+    "account_subaccount_entrust_list",
     "READ",
     "[D:Account] get subaccount list",
     {},

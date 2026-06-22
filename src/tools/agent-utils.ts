@@ -94,13 +94,13 @@ function extractOrderbook(raw: any): { asks: any[][]; bids: any[][] } {
 export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
 
   // ══════════════════════════════════════════════════════════════════════
-  // okx_account_overview — 账户全景快照
+  // account_overview — 账户全景快照
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "okx_account_overview",
+    "account_overview",
     "READ",
-    "[D:Account] 账户全景快照：余额+持仓+配置+估值一次性返回 | 无需参数 | Agent首次了解用户账户第一个调的 → 深入持仓用 account_positions → 想交易先调 agent_simulate_order 模拟",
+    "[D:Account] 账户全景快照：余额+持仓+配置+估值一次性返回 | 无需参数 | Agent首次了解用户账户第一个调的 → 深入持仓用 account_positions → 想交易先调 sim_order 模拟",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -182,13 +182,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // okx_quick_market — 单产品市场速览
+  // market_quick — 单产品市场速览
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "okx_quick_market",
+    "market_quick",
     "READ",
-    "[D:Market] 单产品市场速览：行情+5档深度+资金费率+产品规格一次性返回 | instId 如 BTC-USDT、ETH-USDT-SWAP | 批量扫市场用 agent_market_scan → 技术面用 okx_indicator → 想交易先模拟 agent_simulate_order",
+    "[D:Market] 单产品市场速览：行情+5档深度+资金费率+产品规格一次性返回 | instId 如 BTC-USDT、ETH-USDT-SWAP | 批量扫市场用 scan_market → 技术面用 indicator_calc → 想交易先模拟 sim_order",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP"),
     },
@@ -267,13 +267,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // okx_preflight_check — 下单前预检
+  // trade_preflight — 下单前预检
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "okx_preflight_check",
+    "trade_preflight",
     "READ",
-    "[D:Trading] 下单前一次性预检：最大可开+限价范围+合约张数换算+当前价 | instId, tdMode, sz 必填；px, side, ordType 选填 | 先预检 → 再模拟 agent_simulate_order → 用户确认 → agent_quick_trade 下单",
+    "[D:Trading] 下单前一次性预检：最大可开+限价范围+合约张数换算+当前价 | instId, tdMode, sz 必填；px, side, ordType 选填 | 先预检 → 再模拟 sim_order → 用户确认 → trade_quick 下单",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       tdMode:  z.enum(["cash","cross","isolated"]).describe("交易模式。cash=现货, cross=全仓, isolated=逐仓"),
@@ -396,11 +396,11 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // okx_agent_feedback — 反馈留言板
+  // sys_feedback — 反馈留言板
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "okx_agent_feedback",
+    "sys_feedback",
     "READ",
     "[D:System] 提交使用反馈：当你遇到多步操作繁琐/参数试错/搜索不到工具/手工计算时调用 | title, what, tools, pain, suggestion | 反馈直接进入开发待办列表 → 每5条反馈产生一个新 Skill",
     {
@@ -437,14 +437,14 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_risk_overview — 风险仪表盘 (P0)
+  // risk_overview — 风险仪表盘 (P0)
   // 替代: getBalance → getPositions → getAccountConfig → getMarkPrice → getFundingRate 串行5步
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_risk_overview",
+    "risk_overview",
     "READ",
-    "[D:Risk] 风险仪表盘：持仓风险排序+总保证金率+强平预警+费率到期提醒 | 无需参数 | 有高风险仓位 → agent_quick_trade 平仓 → agent_pnl_report 复盘",
+    "[D:Risk] 风险仪表盘：持仓风险排序+总保证金率+强平预警+费率到期提醒 | 无需参数 | 有高风险仓位 → trade_quick 平仓 → pnl_report 复盘",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -556,14 +556,14 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_quick_trade — 一步下单 (P0)
+  // trade_quick — 一步下单 (P0)
   // 替代: getBalance → getMaxSize → getFeeRates → convertContractCoin → placeOrder 串行5步
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_quick_trade",
+    "trade_quick",
     "WRITE",
-    "[D:Trading] 一步完成交易全流程：自动查余额+算最大可开+检查限价+下单 | instId, side, sz, tdMode 必填；px, ordType 选填 | ⚠️真实下单需用户确认 → 先用 agent_simulate_order 模拟预估成本",
+    "[D:Trading] 一步完成交易全流程：自动查余额+算最大可开+检查限价+下单 | instId, side, sz, tdMode 必填；px, ordType 选填 | ⚠️真实下单需用户确认 → 先用 sim_order 模拟预估成本",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP"),
       side:    z.enum(["buy","sell"]).describe("买卖方向"),
@@ -686,14 +686,14 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_market_scan — 市场扫描 (P1)
+  // scan_market — 市场扫描 (P1)
   // 替代: getTickers → 手动排序/过滤 → 逐个查费率/成交量 重复N次
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_market_scan",
+    "scan_market",
     "READ",
-    "[D:Scan] 一键扫描市场异动：涨幅榜+跌幅榜+成交量异动+费率异常 | instType 默认SWAP, topN 默认10, sortBy=change|vol|fundingRate | 发现机会 → okx_quick_market 深入 → okx_indicator 看技术面",
+    "[D:Scan] 一键扫描市场异动：涨幅榜+跌幅榜+成交量异动+费率异常 | instType 默认SWAP, topN 默认10, sortBy=change|vol|fundingRate | 发现机会 → market_quick 深入 → indicator_calc 看技术面",
     {
       instType: z.enum(["SPOT","SWAP","FUTURES"]).optional().describe("产品类型，默认SWAP"),
       topN:     z.number().int().min(3).max(50).optional().describe("返回条数，默认10"),
@@ -782,21 +782,21 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
           volumeLeader,
           fundingAlerts,
           _summary: `共扫描${arr.length}个${it}品种。${sb === "fundingRate" ? `资金费率前${n}: ${top.slice(0, 3).map((t: any) => `${t.instId}(${(t.fundingRate * 100).toFixed(3)}%)`).join("、")}` : `涨幅前5: ${gainers.slice(0, 3).map((g: any) => g.instId).join("、") || "无"}。跌幅前5: ${losers.slice(0, 3).map((l: any) => l.instId).join("、") || "无"}`}。${fundingAlerts.length > 0 ? `⚠️ ${fundingAlerts.length}个品种资金费率异常。` : ""}`,
-          tip: "扫描结果为快照。具体品种用 okx_quick_market 深入分析。",
+          tip: "扫描结果为快照。具体品种用 market_quick 深入分析。",
         })
       } catch (e) { return toError(e) }
     }
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_pnl_report — 盈亏报告 (P2)
+  // pnl_report — 盈亏报告 (P2)
   // 替代: getFills → 手动汇总 → 按品种/日期分组计算 重复多次
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_pnl_report",
+    "pnl_report",
     "READ",
-    "[D:PnL] 一键盈亏报告：当前浮动盈亏+近N日已实现盈亏汇总 | days 默认7 | 配合 agent_risk_overview 看风险 → okx_smart_sentiment 看市场情绪",
+    "[D:PnL] 一键盈亏报告：当前浮动盈亏+近N日已实现盈亏汇总 | days 默认7 | 配合 risk_overview 看风险 → smart_sentiment 看市场情绪",
     {
       days: z.number().int().min(1).max(90).optional().describe("统计天数，默认7"),
     },
@@ -870,14 +870,14 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_simulate_order — 模拟下单沙盒
+  // sim_order — 模拟下单沙盒
   // 替代: getTicker → 手动估算滑点 → getFeeRates → 心算成本
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_simulate_order",
+    "sim_order",
     "READ",
-    "[D:Simulate] 模拟下单沙盒：预估成交价+滑点+手续费+资金占用，不产生真实订单 | instId, side, sz, tdMode 必填 | ⭐hvip独有 → 先模拟确认成本 → agent_quick_trade 真实下单",
+    "[D:Simulate] 模拟下单沙盒：预估成交价+滑点+手续费+资金占用，不产生真实订单 | instId, side, sz, tdMode 必填 | ⭐hvip独有 → 先模拟确认成本 → trade_quick 真实下单",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP"),
       side:   z.enum(["buy","sell"]).describe("买卖方向"),
@@ -984,7 +984,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
           },
           errors,
           _summary: `模拟${side === "buy" ? "买入" : "卖出"} ${sz} ${instId}：预估成交价 $${orderPx.toFixed(2)}，手续费 $${estFee.toFixed(4)}，合计 $${(estCost + estFee).toFixed(2)}，滑点 ${slippage.toFixed(2)}%。${pxWithinLimit ? "价格在限价范围内。" : "⚠️ 价格超出限价范围，Agent 请调整。"}`,
-          tip: "以上为模拟结果，不产生真实订单。确认后可用 agent_quick_trade 真实下单。",
+          tip: "以上为模拟结果，不产生真实订单。确认后可用 trade_quick 真实下单。",
         })
       } catch (e) { return toError(e) }
     }
@@ -992,13 +992,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
 
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 1: agent_market_sentiment — 市场情绪综合分析（合并 sentiment + funding 扫描）
+  // Skill 1: scan_sentiment — 市场情绪综合分析（合并 sentiment + funding 扫描）
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_market_sentiment",
+    "scan_sentiment",
     "READ",
-    "[D:Scan] 市场情绪综合分析：多空比+PCR+资金费率+大户情绪→方向评分 | instType?, topN? | ⭐配合 okx_indicator 技术面 → okx_smart_sentiment 聪明钱情绪交叉验证",
+    "[D:Scan] 市场情绪综合分析：多空比+PCR+资金费率+大户情绪→方向评分 | instType?, topN? | ⭐配合 indicator_calc 技术面 → smart_sentiment 聪明钱情绪交叉验证",
     {
       mode: z.enum(["sentiment","funding"]).optional().default("sentiment").describe("sentiment=市场情绪评分, funding=资金费率异常扫描"),
       instType: z.enum(["SWAP","FUTURES","SPOT"]).optional().default("SWAP").describe("产品类型"),
@@ -1118,11 +1118,11 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 2: agent_asset_center — 资产指挥中心（合并 fund + earn + subaccount）
+  // Skill 2: account_asset_center — 资产指挥中心（合并 fund + earn + subaccount）
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_asset_center",
+    "account_asset_center",
     "READ",
     "[D:Account] 资产指挥中心：资金账户+交易账户+理财+子账户全景一览 | 无需参数 | 想划转用 fund_transfer → 想理财看 earn_* 系列",
     {
@@ -1221,11 +1221,11 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 3: agent_strategy_center — 策略交易中心（合并 dashboard + grid advisor）
+  // Skill 3: strategy_center — 策略交易中心（合并 dashboard + grid advisor）
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_strategy_center",
+    "strategy_center",
     "READ",
     "[D:Strategy] 策略交易中心：活跃策略仪表盘+网格参数AI推荐 | instType, algoOrdType? | ⭐hvip独有AI网格参数 → 一键创建 strategy_grid_create",
     {
@@ -1268,7 +1268,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
             recommendation: { direction: direction || "neutral", upperPrice: gUpper, lowerPrice: gLower, gridCount: gCount },
             errors,
             _summary: `${instId} 30日年化波动率 ${(volatility * 100).toFixed(1)}%。AI推荐网格 [${gLower}, ${gUpper}]，${gCount} 档。`,
-            tip: "确认后用 okx_create_grid_order 创建网格。",
+            tip: "确认后用 strategy_grid_create 创建网格。",
           })
         }
 
@@ -1308,13 +1308,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 4: agent_stop_loss_master — 一键止损风控
+  // Skill 4: risk_stop_loss — 一键止损风控
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_stop_loss_master",
+    "risk_stop_loss",
     "WRITE",
-    "[D:Risk] 全局风控：批量设止损条件单+一键全部撤单+查看风控状态 | action=stop|auto_stop|cancel_all|status | ⚠️WRITE操作需用户确认 → 先看 agent_risk_overview 评估风险",
+    "[D:Risk] 全局风控：批量设止损条件单+一键全部撤单+查看风控状态 | action=stop|auto_stop|cancel_all|status | ⚠️WRITE操作需用户确认 → 先看 risk_overview 评估风险",
     {
       instId: z.string().optional().describe("指定品种，不填则对所有持仓操作"),
       stopLossPct: z.string().optional().describe("止损百分比，如 '5' 表示亏损 5% 止损"),
@@ -1377,13 +1377,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 5: agent_copy_trader_search — 智能跟单搜索
+  // Skill 5: strategy_copy_search — 智能跟单搜索
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_copy_trader_search",
+    "strategy_copy_search",
     "READ",
-    "[D:Strategy] 智能跟单搜索：按收益率+胜率+回撤+夏普比筛选最优带单员 | sortBy=pnl|winRate|sharpe, topN | 找到交易员 → okx_copy_trader 开始跟单 → okx_smart_trader_detail 深度分析",
+    "[D:Strategy] 智能跟单搜索：按收益率+胜率+回撤+夏普比筛选最优带单员 | sortBy=pnl|winRate|sharpe, topN | 找到交易员 → strategy_copy_start 开始跟单 → smart_trader_detail 深度分析",
     {
       instType: z.enum(["SPOT","SWAP"]).optional().default("SWAP"),
       sortBy: z.enum(["pnl","winRate","copyCount"]).optional().default("pnl"),
@@ -1419,20 +1419,20 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         return toResult({
           tsIso: new Date().toISOString(), instType: type, sortBy, topTraders: ranked,
           _summary: `Top ${ranked.length} 带单员 (按${sortBy === "pnl" ? "收益" : sortBy === "winRate" ? "胜率" : "跟单人数"}排序)。`,
-          tip: "确认带单员后，使用 okx_first_copy_settings { uniqueCode } → okx_copy_trader 开始跟单。",
+          tip: "确认带单员后，使用 strategy_copy_first_settings { uniqueCode } → strategy_copy_start 开始跟单。",
         })
       } catch (e) { return toError(e) }
     }
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 6: agent_option_scanner — 期权市场扫描
+  // Skill 6: scan_options — 期权市场扫描
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_option_scanner",
+    "scan_options",
     "READ",
-    "[D:Strategy] 期权全景扫描：OI到期分布+行权价分布+PCR+大宗交易量 | instType, uly? | ⭐hvip独有期权分析 → 配合 okx_smart_sentiment 市场情绪",
+    "[D:Strategy] 期权全景扫描：OI到期分布+行权价分布+PCR+大宗交易量 | instType, uly? | ⭐hvip独有期权分析 → 配合 smart_sentiment 市场情绪",
     { uly: z.string().describe("标的，如 BTC-USD、ETH-USD。必填") },
     async ({ uly }) => {
       try {
@@ -1463,13 +1463,13 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 7: agent_prediction_arbitrage — 预测市场套利
+  // Skill 7: predict_arbitrage — 预测市场套利
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_prediction_arbitrage",
+    "predict_arbitrage",
     "READ",
-    "[D:Prediction] 预测市场套利扫描：自动发现 YES+NO < 1.0 的无风险套利机会 | 无需参数 | ⭐hvip独有 → 找到套利 → okx_event_place_order 下单",
+    "[D:Prediction] 预测市场套利扫描：自动发现 YES+NO < 1.0 的无风险套利机会 | 无需参数 | ⭐hvip独有 → 找到套利 → predict_event_place 下单",
     {},
     async () => {
       try {
@@ -1503,20 +1503,20 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
           _summary: opportunities.length > 0
             ? `发现 ${opportunities.length} 个套利机会：${opportunities.slice(0, 3).map((o: any) => `${o.title}(${o.discount})`).join(", ")}`
             : `已扫描 ${evtList.length} 个事件，当前无 YES+NO<1.0 的套利机会。`,
-          tip: "确认机会后用 okx_predictions_place_order 或 okx_event_place_order 分别买入 YES 和 NO。",
+          tip: "确认机会后用 predict_place 或 predict_event_place 分别买入 YES 和 NO。",
         })
       } catch (e) { return toError(e) }
     }
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // Skill 8: agent_technical_report — 多周期技术分析报告
+  // Skill 8: indicator_report — 多周期技术分析报告
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_technical_report",
+    "indicator_report",
     "READ",
-    "[D:Indicators] 多周期技术分析报告：1H+4H+1D 三周期RSI/MACD/趋势综合 → 方向共识信号 | instId | ⭐hvip独有 → 配合 okx_indicator_batch VBT信号交叉验证",
+    "[D:Indicators] 多周期技术分析报告：1H+4H+1D 三周期RSI/MACD/趋势综合 → 方向共识信号 | instId | ⭐hvip独有 → 配合 indicator_calc_batch VBT信号交叉验证",
     {
       instId: z.string().describe("交易品种，如 BTC-USDT。必填"),
       bars: z.array(z.enum(["1H","4H","1D","1W"])).optional().default(["1H","4H","1D"]).describe("K线周期"),
@@ -1555,20 +1555,20 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         return toResult({
           tsIso: new Date().toISOString(), instId, currentPrice: lastPrice, consensus, periods: periodResults, errors,
           _summary: `${instId} 多周期TA：${consensus}。当前价 $${lastPrice}。`,
-          disclaimer: "以上为L1基础指标计算，不构成投资建议。详细多指标分析可使用 okx_indicator_batch。",
+          disclaimer: "以上为L1基础指标计算，不构成投资建议。详细多指标分析可使用 indicator_calc_batch。",
         })
       } catch (e) { return toError(e) }
     }
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_get_preference — 获取 Agent 偏好 (restored)
+  // sys_preference — 获取 Agent 偏好 (restored)
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_get_preference",
+    "sys_preference",
     "READ",
-    "[D:System] 读取Agent持久化偏好（默认交易对/风险偏好/仓位占比），跨会话恢复 | key? 不填返回全部 | 新会话第一步调这个 → 再到 agent_catalog 导航",
+    "[D:System] 读取Agent持久化偏好（默认交易对/风险偏好/仓位占比），跨会话恢复 | key? 不填返回全部 | 新会话第一步调这个 → 再到 sys_catalog 导航",
     {
       key: z.string().optional().describe("偏好键名，不填返回全部"),
     },
@@ -1601,7 +1601,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   // ══════════════════════════════════════════════════════════════════════
   registerTool(
     server,
-    "agent_set_preference",
+    "sys_preference_set",
     "READ",
     "[D:System] 持久化偏好设置，跨会话保留 | key, value | 常用键: default_instId(默认交易对), default_tdMode(交易模式), risk_level(风险偏好), position_size_pct(仓位占比)",
     {
@@ -1638,7 +1638,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_catalog — 全局工具导航（Agent 首次连接入口）
+  // sys_catalog — 全局工具导航（Agent 首次连接入口）
   // ══════════════════════════════════════════════════════════════════════
 
   // 目录数据：按「用户想做什么」分组，不按 API 模块分组
@@ -1646,9 +1646,9 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "agent_catalog",
+    "sys_catalog",
     "READ",
-    "[D:System] 🔰 全局工具导航——Agent首次连接第一个调的工具 | 无需参数 | 返回15域地图(7公开+8需Key) → 匹配用户意图到域 → go_to直达目标工具 → 详细看 agent_catalog_detail",
+    "[D:System] 🔰 全局工具导航——Agent首次连接第一个调的工具 | 无需参数 | 返回15域地图(7公开+8需Key) → 匹配用户意图到域 → go_to直达目标工具 → 详细看 sys_catalog_detail",
     {},
     async () => {
       try {
@@ -1672,7 +1672,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
         }
 
         const onboarding = hasAuth
-          ? "API Key 已配置。建议第一步: agent_get_preference 恢复偏好 -> okx_account_overview 了解账户全景 -> 根据用户意图匹配域 go_to 工具"
+          ? "API Key 已配置。建议第一步: sys_preference 恢复偏好 -> account_overview 了解账户全景 -> 根据用户意图匹配域 go_to 工具"
           : "欢迎！hvip MCP 已连接但尚未配置 API Key。告诉用户：想看行情和指标现在就能看，想看账户和交易请先配 Key。配好后重连 MCP 即可。"
 
         const publicDomains = CATALOG.domains.filter((d: any) => !d.authRequired)
@@ -1692,7 +1692,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
   )
 
   // ══════════════════════════════════════════════════════════════════════
-  // agent_catalog_detail — 单域工具详情
+  // sys_catalog_detail — 单域工具详情
   // ══════════════════════════════════════════════════════════════════════
 
   // 每个域的详细工具清单（含参数提示、鉴权、调用顺序）
@@ -1700,9 +1700,9 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "agent_catalog_detail",
+    "sys_catalog_detail",
     "READ",
-    "[D:System] 查看某个功能域的完整工具清单：含每个工具的参数+鉴权+推荐调用顺序 | domain 如\"行情看盘\"\"账户资产\" | agent_catalog 选域 → 本工具拿详情 → 直接调目标工具",
+    "[D:System] 查看某个功能域的完整工具清单：含每个工具的参数+鉴权+推荐调用顺序 | domain 如\"行情看盘\"\"账户资产\" | sys_catalog 选域 → 本工具拿详情 → 直接调目标工具",
     {
       domain: z.string().describe("域名称。可选: 账户资产, 行情看盘, 技术指标, 下单交易, 风险风控, 市场扫描, 聪明钱, 盈亏复盘, 资金管理, 策略交易, 预测市场, 代码智能, WebSocket 实时, 模拟估算, 系统工具"),
     },
@@ -1715,7 +1715,7 @@ export function registerAgentUtils(server: McpServer, auth: Auth | null): void {
             found: false,
             domain,
             availableDomains: Object.keys(DOMAIN_DETAILS),
-            hint: "请从 availableDomains 中选择一个域，或调 agent_catalog 查看完整导航",
+            hint: "请从 availableDomains 中选择一个域，或调 sys_catalog 查看完整导航",
             tsIso: new Date().toISOString(),
           })
         }

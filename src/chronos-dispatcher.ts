@@ -631,7 +631,7 @@ async function activePatrol() {
     if (data.data?.[0]) {
       const t = data.data[0]
       const change24h = parseFloat(t.open24h) ? Math.abs((t.last - t.open24h) / t.open24h * 100) : 0
-      marketInfo = `BTC $${parseFloat(t.last).toFixed(0)} 24h ${change24h.toFixed(1)}% 量${(parseFloat(t.vol24h) / 1e6).toFixed(0)}M`
+      marketInfo = `BTC $${parseFloat(t.last).toFixed(0)} 24h ${change24h.toFixed(1)}% 量${(parseFloat(t.volCcy24h) / 1e6).toFixed(0)}M`
       // High volatility threshold: >3% in 24h
       if (change24h > 3) volatilityHigh = true
     }

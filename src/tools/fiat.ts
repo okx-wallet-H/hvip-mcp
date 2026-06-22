@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 export function registerFiatTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_fiat_buy_sell_pair",
+    "fund_fiat_pairs",
     "READ",
     "[D:Funds] get fiat buy sell pair",
     {},
@@ -21,7 +21,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_fiat_deposit",
+    "fund_fiat_deposit",
     "READ",
     "[D:Funds] get fiat buy sell pair",
     {},
@@ -36,7 +36,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_fiat_deposit_orders",
+    "fund_fiat_deposit_orders",
     "READ",
     "[D:Funds] get fiat buy sell pair",
     {},
@@ -51,7 +51,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_fiat_deposit_methods",
+    "fund_fiat_deposit_methods",
     "READ",
     "[D:Funds] get fiat buy sell pair",
     {},

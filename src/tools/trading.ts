@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE , registerTool} from 
 export function registerTradingTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_place_order",
+    "trade_place",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -30,7 +30,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_cancel_order",
+    "trade_cancel",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -48,7 +48,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_amend_order",
+    "trade_amend",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -71,7 +71,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_orders_pending",
+    "trade_orders_active",
     "READ",
     "[D:Trading] place order",
     {
@@ -90,7 +90,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_order",
+    "trade_order",
     "READ",
     "[D:Trading] place order",
     {
@@ -108,7 +108,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_fills",
+    "trade_fills",
     "READ",
     "[D:Trading] place order",
     {
@@ -127,7 +127,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_orders_history_archive",
+    "trade_orders_archive",
     "READ",
     "[D:Trading] place order",
     {
@@ -145,7 +145,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_batch_orders",
+    "trade_place_batch",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -163,7 +163,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_batch_cancel_orders",
+    "trade_cancel_batch",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -181,7 +181,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_close_position",
+    "trade_close",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -205,7 +205,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_amend_batch_orders",
+    "trade_amend_batch",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -223,7 +223,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_fills_history",
+    "trade_fills_history",
     "READ",
     "[D:Trading] place order",
     {
@@ -242,7 +242,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_mass_cancel",
+    "trade_cancel_all",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -260,7 +260,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_cancel_all_after",
+    "trade_cancel_all_after",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -277,7 +277,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_order_precheck",
+    "trade_order_precheck",
     "READ",
     "[D:Trading] place order",
     {
@@ -295,7 +295,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_account_rate_limit",
+    "account_rate_limit",
     "READ",
     "[D:Trading] place order",
     {},
@@ -310,7 +310,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_easy_convert",
+    "trade_easy_convert",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -329,7 +329,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_easy_convert_history",
+    "trade_easy_convert_history",
     "READ",
     "[D:Trading] place order",
     {
@@ -350,7 +350,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_mmp_config",
+    "trade_mmp_config",
     "READ",
     "[D:Trading] place order",
     {},
@@ -365,7 +365,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_mmp_config",
+    "trade_mmp_config_set",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -385,7 +385,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_order_algo",
+    "strategy_algo_order",
     "READ",
     "[D:Trading] place order",
     {
@@ -403,7 +403,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_reset_mmp",
+    "trade_mmp_reset",
     "READ",
     "[D:Trading] place order",
     {
@@ -420,7 +420,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_orders_archive",
+    "trade_orders_archived",
     "READ",
     "[D:Trading] place order",
     {
@@ -438,7 +438,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_order_by_clOrdId",
+    "trade_order_by_client",
     "READ",
     "[D:Trading] place order",
     {
@@ -458,7 +458,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_one_click_repay_list",
+    "trade_one_click_repay_options",
     "READ",
     "[D:Trading] place order",
     {},
@@ -473,7 +473,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_one_click_repay",
+    "trade_one_click_repay",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -491,7 +491,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_one_click_repay_history",
+    "trade_one_click_repay_history",
     "READ",
     "[D:Trading] place order",
     {},
@@ -506,7 +506,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_easy_convert_currency_list",
+    "trade_easy_convert_currencies",
     "READ",
     "[D:Trading] place order",
     {},

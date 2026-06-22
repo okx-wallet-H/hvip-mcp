@@ -16,7 +16,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   // ── okx_smart_leaderboard ──────────────────────────────────────────────
   registerTool(
     server,
-    "okx_smart_leaderboard",
+    "smart_leaderboard",
     "READ",
     "[D:SmartMoney] 聪明钱",
     {
@@ -72,7 +72,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   // ── okx_smart_trader_detail ────────────────────────────────────────────
   registerTool(
     server,
-    "okx_smart_trader_detail",
+    "smart_trader_detail",
     "READ",
     "[D:SmartMoney] 聪明钱",
     {
@@ -141,7 +141,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
   // ── okx_smart_sentiment ────────────────────────────────────────────────
   registerTool(
     server,
-    "okx_smart_sentiment",
+    "smart_sentiment",
     "READ",
     "[D:SmartMoney] 聪明钱",
     {

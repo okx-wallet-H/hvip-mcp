@@ -366,7 +366,7 @@ export function registerIndicatorTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_indicator",
+    "indicator_calc",
     "READ",
     "[D:Indicators] indicator",
     {
@@ -579,7 +579,7 @@ export function registerIndicatorTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_indicator_batch",
+    "indicator_batch",
     "READ",
     "[D:Indicators] indicator",
     {

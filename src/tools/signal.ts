@@ -7,7 +7,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_bots_pending",
+    "strategy_signal_bots_active",
     "READ",
     "[D:Strategy] get signal bots pending",
     {
@@ -25,7 +25,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_bots_history",
+    "strategy_signal_bots_history",
     "READ",
     "[D:Strategy] get signal bots pending",
     {
@@ -44,7 +44,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_positions",
+    "strategy_signal_positions",
     "READ",
     "[D:Strategy] get signal bots pending",
     {
@@ -61,7 +61,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_positions_history",
+    "strategy_signal_positions_history",
     "READ",
     "[D:Strategy] get signal bots pending",
     {
@@ -79,7 +79,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_sub_orders",
+    "strategy_signal_sub_orders",
     "READ",
     "[D:Strategy] get signal bots pending",
     {
@@ -97,7 +97,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_event_history",
+    "strategy_signal_event_history",
     "READ",
     "[D:Strategy] get signal bots pending",
     {
@@ -117,7 +117,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_create_signal_bot",
+    "strategy_signal_bot_create",
     "WRITE",
     "[D:Strategy] get signal bots pending",
     {
@@ -135,7 +135,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_stop_signal_bot",
+    "strategy_signal_bot_stop",
     "WRITE",
     "[D:Strategy] get signal bots pending",
     {
@@ -152,7 +152,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_orders",
+    "strategy_signal_orders",
     "READ",
     "[D:Strategy] get signal bots pending",
     {
@@ -169,7 +169,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_signal_subscriptions",
+    "strategy_signal_subscriptions",
     "READ",
     "[D:Strategy] get signal bots pending",
     {},

@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 export function registerAffiliateTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_affiliate_invitee_list",
+    "sys_affiliate_invitees",
     "READ",
     "[D:System] get affiliate invitee list",
     {},
@@ -21,7 +21,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
 
   registerTool(
     server,
-    "okx_get_affiliate_invitee_detail",
+    "sys_affiliate_invitee_detail",
     "READ",
     "[D:System] get affiliate invitee list",
     {
@@ -38,7 +38,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
 
   registerTool(
     server,
-    "okx_get_affiliate_link_list",
+    "sys_affiliate_links",
     "READ",
     "[D:System] get affiliate invitee list",
     {},
@@ -53,7 +53,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
 
   registerTool(
     server,
-    "okx_get_affiliate_performance",
+    "sys_affiliate_performance",
     "READ",
     "[D:System] get affiliate invitee list",
     {},
@@ -68,7 +68,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
 
   registerTool(
     server,
-    "okx_get_co_inviter_list",
+    "sys_affiliate_co_inviters",
     "READ",
     "[D:System] get affiliate invitee list",
     {},
@@ -83,7 +83,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
 
   registerTool(
     server,
-    "okx_get_sub_affiliate_list",
+    "sys_affiliate_sub_list",
     "READ",
     "[D:System] get affiliate invitee list",
     {},

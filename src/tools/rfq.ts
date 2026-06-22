@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 export function registerRfqTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_create_rfq",
+    "trade_rfq_create",
     "WRITE",
     "[D:Strategy] create rfq",
     {
@@ -28,7 +28,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_execute_quote",
+    "trade_rfq_execute",
     "READ",
     "[D:Strategy] create rfq",
     {
@@ -48,7 +48,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_rfqs",
+    "trade_rfq_list",
     "READ",
     "[D:Strategy] create rfq",
     {
@@ -65,7 +65,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_quotes",
+    "trade_rfq_quotes",
     "READ",
     "[D:Strategy] create rfq",
     {
@@ -84,7 +84,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_rfq_counterparties",
+    "trade_rfq_counterparties",
     "READ",
     "[D:Strategy] create rfq",
     {},
@@ -99,7 +99,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_cancel_rfq",
+    "trade_rfq_cancel",
     "WRITE",
     "[D:Strategy] create rfq",
     {
@@ -116,7 +116,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_cancel_batch_rfqs",
+    "trade_rfq_cancel_batch",
     "WRITE",
     "[D:Strategy] create rfq",
     {
@@ -134,7 +134,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_cancel_all_rfqs",
+    "trade_rfq_cancel_all",
     "WRITE",
     "[D:Strategy] create rfq",
     {},
@@ -149,7 +149,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_create_quote",
+    "trade_rfq_quote_create",
     "WRITE",
     "[D:Strategy] create rfq",
     {
@@ -168,7 +168,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_cancel_quote",
+    "trade_rfq_quote_cancel",
     "WRITE",
     "[D:Strategy] create rfq",
     {
@@ -186,7 +186,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_rfq_trades",
+    "trade_rfq_trades",
     "READ",
     "[D:Strategy] create rfq",
     {},
@@ -200,7 +200,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
   )
   registerTool(
     server,
-    "okx_reset_rfq_mmp",
+    "trade_rfq_mmp_reset",
     "READ",
     "[D:Strategy] create rfq",
     {},

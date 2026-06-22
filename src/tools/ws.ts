@@ -66,7 +66,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_ws_subscribe",
+    "ws_subscribe",
     "READ",
     "[D:WebSocket] WebSocket实时数据",
     {
@@ -99,7 +99,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_ws_subscribe_private",
+    "ws_subscribe_private",
     "READ",
     "[D:WebSocket] WebSocket实时数据",
     {
@@ -137,7 +137,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_ws_events",
+    "ws_events",
     "READ",
     "[D:WebSocket] WebSocket实时数据",
     {
@@ -166,7 +166,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_ws_status",
+    "ws_status",
     "READ",
     "[D:WebSocket] WebSocket实时数据",
     {},
@@ -184,7 +184,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_ws_close",
+    "ws_close",
     "READ",
     "[D:WebSocket] WebSocket实时数据",
     {

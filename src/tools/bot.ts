@@ -9,7 +9,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_grid_ai_param",
+    "strategy_grid_ai_params",
     "READ",
     "[D:Strategy] get grid ai param",
     {
@@ -27,7 +27,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_grid_orders_pending",
+    "strategy_grid_orders_active",
     "READ",
     "[D:Strategy] get grid ai param",
     {
@@ -46,7 +46,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_grid_orders_history",
+    "strategy_grid_orders_history",
     "READ",
     "[D:Strategy] get grid ai param",
     {
@@ -65,7 +65,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_grid_sub_orders",
+    "strategy_grid_sub_orders",
     "READ",
     "[D:Strategy] get grid ai param",
     {
@@ -86,7 +86,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_recurring_orders_pending",
+    "strategy_recurring_orders_active",
     "READ",
     "[D:Strategy] get grid ai param",
     {},
@@ -101,7 +101,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_recurring_orders_history",
+    "strategy_recurring_orders_history",
     "READ",
     "[D:Strategy] get grid ai param",
     {},
@@ -118,7 +118,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_create_recurring_plan",
+    "strategy_recurring_create",
     "WRITE",
     "[D:Strategy] get grid ai param",
     {
@@ -138,7 +138,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_stop_recurring_plan",
+    "strategy_recurring_stop",
     "WRITE",
     "[D:Strategy] get grid ai param",
     {
@@ -155,7 +155,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_recurring_sub_orders",
+    "strategy_recurring_sub_orders",
     "READ",
     "[D:Strategy] get grid ai param",
     {
@@ -175,7 +175,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_create_grid_order",
+    "strategy_grid_create",
     "WRITE",
     "[D:Strategy] get grid ai param",
     {
@@ -199,7 +199,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_stop_grid_order",
+    "strategy_grid_stop",
     "WRITE",
     "[D:Strategy] get grid ai param",
     {
@@ -218,7 +218,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_close_grid_position",
+    "strategy_grid_close",
     "WRITE",
     "[D:Strategy] get grid ai param",
     {
@@ -236,7 +236,7 @@ export function registerBotTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_grid_positions",
+    "strategy_grid_positions",
     "READ",
     "[D:Strategy] get grid ai param",
     {

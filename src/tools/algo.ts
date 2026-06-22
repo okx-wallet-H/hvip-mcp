@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE , registerTool} from 
 export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_algo_orders",
+    "strategy_algo_orders",
     "READ",
     "[D:Strategy] get algo orders",
     {
@@ -24,7 +24,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_algo_orders_history",
+    "strategy_algo_orders_history",
     "READ",
     "[D:Strategy] get algo orders",
     {
@@ -43,7 +43,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_place_algo_order",
+    "strategy_algo_place",
     "WRITE",
     "[D:Strategy] get algo orders",
     { params: z.record(z.unknown()).describe("订单参数，参考OKX文档") },
@@ -58,7 +58,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_cancel_algo_order",
+    "strategy_algo_cancel",
     "WRITE",
     "[D:Strategy] get algo orders",
     {
@@ -76,7 +76,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_get_orders_algo_pending",
+    "strategy_algo_orders_active",
     "READ",
     "[D:Strategy] get algo orders",
     {
@@ -97,7 +97,7 @@ export function registerAlgoTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "okx_amend_algo_order",
+    "strategy_algo_amend",
     "WRITE",
     "[D:Strategy] get algo orders",
     {

@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE, INST_TYPE_PUBLIC , r
 export function registerAccountTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_balance",
+    "account_balance",
     "READ",
     "[D:Account] get balance",
     { ccy: z.string().optional().describe("指定币种如 BTC、USDT，不填则返回所有币种") },
@@ -21,7 +21,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_positions",
+    "account_positions",
     "READ",
     "[D:Account] get balance",
     { instType: z.enum(INST_TYPE_PUBLIC).optional().describe("产品类型，不填则返回全部") },
@@ -35,7 +35,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
           ...p,
           tsIso: p.uTime ? new Date(parseInt(p.uTime)).toISOString() : undefined,
           _actionContext: {
-            closePosition: "okx_close_position",
+            closePosition: "trade_close",
             requiredParams: {
               instId: p.instId,
               posSide: p.posSide,
@@ -54,7 +54,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_orders_history",
+    "account_orders_history",
     "READ",
     "[D:Account] get balance",
     {
@@ -72,7 +72,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_account_bills",
+    "account_bills",
     "READ",
     "[D:Account] get balance",
     {
@@ -91,7 +91,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_account_config",
+    "account_config",
     "READ",
     "[D:Account] get balance",
     {},
@@ -106,7 +106,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_leverage_info",
+    "account_leverage",
     "READ",
     "[D:Account] get balance",
     {
@@ -124,7 +124,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_max_size",
+    "trade_max_size",
     "READ",
     "[D:Account] get balance",
     {
@@ -143,7 +143,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_fee_rates",
+    "account_fee_rates",
     "READ",
     "[D:Account] get balance",
     {
@@ -162,7 +162,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_positions_history",
+    "account_positions_history",
     "READ",
     "[D:Account] get balance",
     {
@@ -181,7 +181,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_leverage",
+    "account_leverage_set",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -203,7 +203,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_max_loan",
+    "account_max_loan",
     "READ",
     "[D:Account] get balance",
     {
@@ -221,7 +221,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_interest_accrued",
+    "account_interest_accrued",
     "READ",
     "[D:Account] get balance",
     {
@@ -240,7 +240,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_position_mode",
+    "account_position_mode_set",
     "ADMIN",
     "[D:Account] get balance",
     {
@@ -257,7 +257,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_asset_valuation",
+    "account_valuation",
     "READ",
     "[D:Account] get balance",
     {
@@ -274,7 +274,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_convert_currencies",
+    "account_convert_currencies",
     "READ",
     "[D:Account] get balance",
     {},
@@ -289,7 +289,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_convert_trade",
+    "account_convert_trade",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -308,7 +308,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_margin_balance",
+    "account_margin_balance",
     "READ",
     "[D:Account] get balance",
     {
@@ -326,7 +326,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_bills",
+    "account_bills_detail",
     "READ",
     "[D:Account] get balance",
     {
@@ -345,7 +345,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_interest_rates",
+    "account_interest_rates",
     "READ",
     "[D:Account] get balance",
     {
@@ -366,7 +366,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_max_withdrawal",
+    "account_max_withdrawal",
     "READ",
     "[D:Account] get balance",
     {
@@ -383,7 +383,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_account_greeks",
+    "account_greeks",
     "READ",
     "[D:Account] get balance",
     {
@@ -403,7 +403,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_account_mode",
+    "account_mode_set",
     "ADMIN",
     "[D:Account] get balance",
     {
@@ -420,7 +420,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_account_position_risk",
+    "account_position_risk",
     "READ",
     "[D:Account] get balance",
     {},
@@ -435,7 +435,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_interest_limits",
+    "account_interest_limits",
     "READ",
     "[D:Account] get balance",
     {},
@@ -450,7 +450,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_account_subtypes",
+    "account_subtypes",
     "READ",
     "[D:Account] get balance",
     {},
@@ -465,7 +465,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_subaccount_trading_balance",
+    "account_sub_trading_balance",
     "READ",
     "[D:Account] get balance",
     {
@@ -482,7 +482,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_preset_account_switch",
+    "account_preset_switch",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -499,7 +499,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_activate_option",
+    "account_option_activate",
     "WRITE",
     "[D:Account] get balance",
     {},
@@ -514,7 +514,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_position_builder",
+    "account_position_builder",
     "READ",
     "[D:Account] get balance",
     {
@@ -532,7 +532,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_auto_earn",
+    "account_auto_earn_set",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -550,7 +550,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_fee_type",
+    "account_fee_type_set",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -567,7 +567,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_settle_currency",
+    "account_settle_currency_set",
     "ADMIN",
     "[D:Account] get balance",
     {
@@ -584,7 +584,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_position_builder_graph",
+    "account_position_builder_graph",
     "READ",
     "[D:Account] get balance",
     {},
@@ -599,7 +599,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_precheck_delta_neutral",
+    "account_delta_neutral_check",
     "READ",
     "[D:Account] get balance",
     {},
@@ -614,7 +614,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_trade_fee",
+    "account_trade_fee",
     "READ",
     "[D:Account] get balance",
     {
@@ -633,7 +633,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_risk_state",
+    "risk_state",
     "READ",
     "[D:Account] get balance",
     {},
@@ -648,7 +648,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_borrow_repay",
+    "account_borrow_repay",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -667,7 +667,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_borrow_repay_history",
+    "account_borrow_repay_history",
     "READ",
     "[D:Account] get balance",
     {},
@@ -686,7 +686,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_account_bills_archive",
+    "account_bills_archive",
     "READ",
     "[D:Account] get balance",
     {},
@@ -701,7 +701,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_auto_loan",
+    "account_auto_loan_set",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -719,7 +719,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_trading_config",
+    "account_trading_config_set",
     "WRITE",
     "[D:Account] get balance",
     {
@@ -737,7 +737,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_move_positions",
+    "account_positions_move",
     "WRITE",
     "[D:Account] get balance",
     {

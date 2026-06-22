@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED , registerTool} from "./shared.js"
 export function registerFinanceTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_savings_balance",
+    "fund_savings_balance",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -23,7 +23,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_savings_history",
+    "fund_savings_history",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -40,7 +40,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_staking_offers",
+    "fund_staking_offers",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -57,7 +57,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_eth_staking_balance",
+    "fund_eth_staking_balance",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -72,7 +72,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_eth_staking_history",
+    "fund_eth_staking_history",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -89,7 +89,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_sol_staking_balance",
+    "fund_sol_staking_balance",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -104,7 +104,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_staking_orders",
+    "fund_staking_orders",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -123,7 +123,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_stake_eth",
+    "fund_eth_stake",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -143,7 +143,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_unstake_eth",
+    "fund_eth_unstake",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -160,7 +160,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_sol_staking_history",
+    "fund_sol_staking_history",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -178,7 +178,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_purchase_savings",
+    "fund_savings_purchase",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -200,7 +200,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_sfp_products",
+    "fund_sfp_products",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -215,7 +215,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_redeem_sfp",
+    "fund_sfp_redeem",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -233,7 +233,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_staking_active_orders",
+    "fund_staking_orders_active",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -248,7 +248,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_cancel_redeem_eth",
+    "fund_eth_cancel_redeem",
     "WRITE",
     "[D:Funds] get savings balance",
     {
@@ -265,7 +265,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_purchase_sol_staking",
+    "fund_sol_staking_purchase",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -282,7 +282,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_redeem_sol_staking",
+    "fund_sol_staking_redeem",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -299,7 +299,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_adjust_collateral",
+    "fund_collateral_adjust",
     "READ",
     "[D:Funds] get savings balance",
     {
@@ -318,7 +318,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_flexible_loan_collateral",
+    "fund_flexible_loan_collateral",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -333,7 +333,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_flexible_loan_info",
+    "fund_flexible_loan_info",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -348,7 +348,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_flexible_loan_history",
+    "fund_flexible_loan_history",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -363,7 +363,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_stable_rewards_product",
+    "fund_stable_rewards_product",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -378,7 +378,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_lending_rate_history",
+    "fund_lending_rate_history",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -396,7 +396,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_set_lending_rate",
+    "fund_lending_rate_set",
     "WRITE",
     "[D:Funds] get savings balance",
     {
@@ -414,7 +414,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_stable_rewards_apy",
+    "fund_stable_rewards_apy",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -429,7 +429,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_stable_rewards_history",
+    "fund_stable_rewards_history",
     "READ",
     "[D:Funds] get savings balance",
     {},
@@ -444,7 +444,7 @@ export function registerFinanceTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "okx_get_sfp_order_history",
+    "fund_sfp_order_history",
     "READ",
     "[D:Funds] get savings balance",
     {},

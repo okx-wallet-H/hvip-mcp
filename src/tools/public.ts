@@ -6,7 +6,7 @@ import { toResult, toError, AUTH_REQUIRED, INST_TYPE_TRADE, INST_TYPE_PUBLIC, IN
 export function registerPublicTools(server: McpServer, auth: Auth | null): void {
   registerTool(
     server,
-    "okx_get_instruments",
+    "market_instruments",
     "READ",
     "[D:Market] get instruments",
     {
@@ -25,7 +25,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_funding_rate",
+    "market_funding_rate",
     "READ",
     "[D:Market] get instruments",
     { instId: z.string().describe("永续合约产品ID，如 BTC-USDT-SWAP") },
@@ -45,7 +45,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_mark_price",
+    "market_mark_price",
     "READ",
     "[D:Market] get instruments",
     {
@@ -67,7 +67,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_index_price",
+    "market_index_price",
     "READ",
     "[D:Market] get instruments",
     { instId: z.string().describe("指数产品ID，如 BTC-USDT") },
@@ -85,7 +85,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_open_interest",
+    "market_open_interest",
     "READ",
     "[D:Market] get instruments",
     {
@@ -107,7 +107,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_system_time",
+    "sys_time",
     "READ",
     "[D:Market] get instruments",
     {},
@@ -121,7 +121,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_opt_summary",
+    "market_option_summary",
     "READ",
     "[D:Market] get instruments",
     {
@@ -142,7 +142,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_insurance_fund",
+    "sys_insurance_fund",
     "READ",
     "[D:Market] get instruments",
     {
@@ -163,7 +163,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_convert_contract_coin",
+    "trade_contract_convert",
     "READ",
     "[D:Market] get instruments",
     {
@@ -182,7 +182,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_announcements",
+    "sys_announcements",
     "READ",
     "[D:Market] get instruments",
     {
@@ -199,7 +199,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_announcement_types",
+    "sys_announcement_types",
     "READ",
     "[D:Market] get instruments",
     {},
@@ -213,7 +213,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_price_limit",
+    "market_price_limit",
     "READ",
     "[D:Market] get instruments",
     {
@@ -233,7 +233,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_position_tiers",
+    "account_position_tiers",
     "READ",
     "[D:Market] get instruments",
     {
@@ -252,7 +252,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_open_interest_history",
+    "market_open_interest_history",
     "READ",
     "[D:Market] get instruments",
     {
@@ -277,7 +277,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_underlying",
+    "market_underlying",
     "READ",
     "[D:Market] get instruments",
     {
@@ -293,7 +293,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_taker_flow",
+    "market_taker_flow",
     "READ",
     "[D:Market] get instruments",
     {
@@ -316,7 +316,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_platform_24_volume",
+    "market_platform_volume",
     "READ",
     "[D:Market] get instruments",
     {},
@@ -334,7 +334,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_call_auction_details",
+    "market_call_auction",
     "READ",
     "[D:Market] get instruments",
     {
@@ -355,7 +355,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_option_instrument_family_trades",
+    "market_option_family_trades",
     "READ",
     "[D:Market] get instruments",
     {
@@ -372,7 +372,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_option_trades",
+    "market_option_trades",
     "READ",
     "[D:Market] get instruments",
     {
@@ -394,7 +394,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_exchange_rate",
+    "sys_exchange_rate",
     "READ",
     "[D:Market] get instruments",
     {},
@@ -408,7 +408,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_search_instruments",
+    "market_instruments_search",
     "READ",
     "[D:Market] get instruments",
     {
@@ -438,7 +438,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_economic_calendar",
+    "market_economic_calendar",
     "READ",
     "[D:Market] get instruments",
     {
@@ -463,7 +463,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_index_components",
+    "market_index_components",
     "READ",
     "[D:Market] get instruments",
     {
@@ -483,7 +483,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_index_components_market",
+    "market_index_components_detail",
     "READ",
     "[D:Market] get instruments",
     {
@@ -503,7 +503,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_discount_info",
+    "sys_discount_info",
     "READ",
     "[D:Market] get instruments",
     {},
@@ -517,7 +517,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_estimated_price",
+    "market_estimated_price",
     "READ",
     "[D:Market] get instruments",
     {
@@ -539,7 +539,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_funding_rate_history",
+    "market_funding_rate_history",
     "READ",
     "[D:Market] get instruments",
     {
@@ -562,7 +562,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_interest_rate_loan_quota",
+    "market_interest_loan_quota",
     "READ",
     "[D:Market] get instruments",
     {},
@@ -576,7 +576,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_premium_history",
+    "market_premium_history",
     "READ",
     "[D:Market] get instruments",
     {
@@ -597,7 +597,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_delivery_exercise_history",
+    "market_delivery_history",
     "READ",
     "[D:Market] get instruments",
     {
@@ -615,7 +615,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_settlement_history",
+    "market_settlement_history",
     "READ",
     "[D:Market] get instruments",
     {
@@ -633,7 +633,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_public_block_trades",
+    "market_block_trades",
     "READ",
     "[D:Market] get instruments",
     {
@@ -653,7 +653,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "okx_get_instrument_tick_bands",
+    "market_tick_bands",
     "READ",
     "[D:Market] get instruments",
     {

@@ -8,7 +8,7 @@ export function registerXLayerWSTools(server: McpServer): void {
   // ── xlayer_subscribe ──────────────────────────────────────────────────
   registerTool(
     server,
-    "xlayer_subscribe",
+    "ws_xlayer_subscribe",
     "READ",
     "[D:WebSocket] X Layer链上",
     {
@@ -40,7 +40,7 @@ export function registerXLayerWSTools(server: McpServer): void {
   // ── xlayer_get_events ──────────────────────────────────────────────────
   registerTool(
     server,
-    "xlayer_get_events",
+    "ws_xlayer_events",
     "READ",
     "[D:WebSocket] X Layer链上",
     {
@@ -74,7 +74,7 @@ export function registerXLayerWSTools(server: McpServer): void {
   // ── xlayer_unsubscribe ──────────────────────────────────────────────────
   registerTool(
     server,
-    "xlayer_unsubscribe",
+    "ws_xlayer_unsubscribe",
     "READ",
     "[D:WebSocket] X Layer链上",
     {
@@ -91,7 +91,7 @@ export function registerXLayerWSTools(server: McpServer): void {
   // ── xlayer_call ──────────────────────────────────────────────────────
   registerTool(
     server,
-    "xlayer_call",
+    "ws_xlayer_call",
     "WRITE",
     "[D:WebSocket] X Layer链上",
     {
@@ -118,7 +118,7 @@ export function registerXLayerWSTools(server: McpServer): void {
   // ── xlayer_list_subscriptions ──────────────────────────────────────────
   registerTool(
     server,
-    "xlayer_list_subscriptions",
+    "ws_xlayer_subscriptions",
     "READ",
     "[D:WebSocket] X Layer链上",
     {},

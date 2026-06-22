@@ -357,50 +357,50 @@ export function classifyRisk(toolNameOrDesc: string): RiskLevel {
   // 回退：旧工具未加 L: 标记时用名称推断
   const toolName = toolNameOrDesc
   // ── ADMIN：修改账户全局配置 ──
-  const admin = ["okx_set_account_mode", "okx_set_position_mode", "okx_set_settle_currency"]
+  const admin = ["account_mode_set", "account_position_mode_set", "account_settle_currency_set"]
   if (admin.includes(toolName)) return "ADMIN"
 
   // ── FUND_TRANSFER：真实资金移动 ──
-  const fund = ["okx_withdrawal", "okx_predictions_redeem"]
+  const fund = ["fund_withdraw", "predict_redeem"]
   if (fund.some(p => toolName.startsWith(p))) return "FUND_TRANSFER"
 
   // ── WRITE：产生交易/修改状态 ──
   const writePrefixes = [
     "okx_place_", "okx_cancel_", "okx_amend_", "okx_create_",
     "okx_stop_", "okx_close_", "okx_batch_", "okx_set_",
-    "okx_transfer", "okx_borrow", "okx_repay",
-    "okx_convert_trade", "okx_preset_", "okx_activate_",
+    "fund_transfer", "okx_borrow", "okx_repay",
+    "account_convert_trade", "okx_preset_", "okx_activate_",
     "okx_move_", "okx_copy_", "okx_first_",
-    "okx_one_click_", "okx_easy_convert",
-    "okx_mass_cancel", "okx_subaccount_set_",
+    "okx_one_click_", "trade_easy_convert",
+    "trade_cancel_all", "okx_subaccount_set_",
     "okx_event_place_", "okx_event_cancel_", "okx_event_amend_",
     "okx_predictions_place_", "okx_predictions_cancel_",
-    "okx_predictions_split", "okx_predictions_merge",
-    "agent_quick_trade",
+    "predict_split", "predict_merge",
+    "trade_quick",
   ]
   if (writePrefixes.some(p => toolName.startsWith(p))) return "WRITE"
 
   // ── 特殊：模拟/预检 虽是 agent 工具但只读 ──
   const readSpecials = [
-    "agent_simulate_order", "okx_preflight_check",
-    "agent_catalog", "agent_catalog_detail", "agent_hub_status",
-    "agent_hub_dispatch", "agent_hub_review", "agent_room_send", "agent_room_view",
-    "okx_ws_subscribe", "okx_ws_subscribe_private", "okx_ws_events", "okx_ws_status", "okx_ws_close",
+    "sim_order", "trade_preflight",
+    "sys_catalog", "sys_catalog_detail", "sys_hub_status",
+    "sys_hub_dispatch", "sys_hub_review", "sys_room_send", "sys_room_view",
+    "ws_subscribe", "ws_subscribe_private", "ws_events", "ws_status", "ws_close",
     "okx_predictions_ws_subscribe", "okx_predictions_ws_unsubscribe",
     "okx_predictions_ws_events", "okx_predictions_ws_status",
-    "xlayer_subscribe", "xlayer_get_events", "xlayer_unsubscribe",
-    "codegraph_status", "codegraph_query",
-    "agent_get_preference",
+    "ws_xlayer_subscribe", "ws_xlayer_events", "ws_xlayer_unsubscribe",
+    "code_status", "code_query",
+    "sys_preference",
     "agent_simulate_transfer", "agent_read_only_trade",
-    "okx_event_instruments",
+    "predict_event_instruments",
   ]
   if (readSpecials.includes(toolName)) return "READ"
 
   // ── 反馈/偏好写入虽是 agent 工具，但有磁盘写入副作用 ──
-  if (["okx_agent_feedback", "agent_set_preference"].includes(toolName)) return "WRITE"
+  if (["sys_feedback", "sys_preference_set"].includes(toolName)) return "WRITE"
 
   // ── X Layer 写操作 ──
-  if (toolName.startsWith("xlayer_call")) return "WRITE"
+  if (toolName.startsWith("ws_xlayer_call")) return "WRITE"
 
   return "READ"
 }

@@ -6,7 +6,7 @@ import { toResult, toError, INST_TYPE_RUBIK, INST_TYPE_SWAP_FUT , registerTool} 
 export function registerStatsTools(server: McpServer): void {
   registerTool(
     server,
-    "okx_get_long_short_ratio",
+    "market_long_short_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -28,7 +28,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_taker_volume",
+    "market_taker_volume",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -51,7 +51,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_open_interest_volume",
+    "market_open_interest_volume",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -73,7 +73,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_margin_lending_ratio",
+    "market_margin_lending_ratio",
     "READ",
     "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、USDT") },
@@ -91,7 +91,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_stats_support_coin",
+    "market_stats_coins",
     "READ",
     "[D:Market] get long short ratio",
     {},
@@ -105,7 +105,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_top_trader_long_short_ratio",
+    "market_top_trader_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -127,7 +127,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_put_call_ratio",
+    "market_put_call_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -149,7 +149,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_lending_rate_summary",
+    "market_lending_rate_summary",
     "READ",
     "[D:Market] get long short ratio",
     { ccy: z.string().optional().describe("币种，如 BTC、USDT，不填返回全部") },
@@ -163,7 +163,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_top_traders_contract_ls_ratio",
+    "market_top_trader_ls_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -185,7 +185,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_contracts_taker_volume",
+    "market_contract_taker_volume",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -207,7 +207,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_contracts_long_short_ratio",
+    "market_contract_ls_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -229,7 +229,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_long_short_ratio_all",
+    "market_long_short_ratio_all",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -251,7 +251,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_taker_flow_contract",
+    "market_taker_flow_contract",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -274,7 +274,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_open_interest_history_rubik",
+    "market_open_interest_rubik",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -299,7 +299,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_savings_lending_rate",
+    "market_savings_lending_rate",
     "READ",
     "[D:Market] get long short ratio",
     { ccy: z.string().optional().describe("币种，如 BTC、USDT，不填返回全部") },
@@ -313,7 +313,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_margin_lending_ratio_history",
+    "market_margin_lending_ratio_history",
     "READ",
     "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、USDT") },
@@ -331,7 +331,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_option_open_interest",
+    "market_option_open_interest",
     "READ",
     "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、ETH。必填") },
@@ -345,7 +345,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_option_oi_expiry",
+    "market_option_oi_expiry",
     "READ",
     "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、ETH。必填") },
@@ -368,7 +368,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_option_oi_strike",
+    "market_option_oi_strike",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -394,7 +394,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_long_short_account_ratio",
+    "market_account_ls_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -416,7 +416,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_contract_trader_ls_ratio",
+    "market_contract_trader_ls_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -438,7 +438,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_contract_position_trader_ratio",
+    "market_contract_position_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -458,7 +458,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_option_oi_ratio",
+    "market_option_oi_ratio",
     "READ",
     "[D:Market] get long short ratio",
     {
@@ -480,7 +480,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_option_taker_block_volume",
+    "market_option_taker_block_volume",
     "READ",
     "[D:Market] get long short ratio",
     { ccy: z.string().describe("币种，如 BTC、ETH。必填") },
@@ -494,7 +494,7 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "okx_get_taker_volume_contract",
+    "market_taker_volume_contract",
     "READ",
     "[D:Market] get long short ratio",
     {
