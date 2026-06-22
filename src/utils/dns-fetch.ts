@@ -195,5 +195,4 @@ export function patchGlobalFetch(): void {
   console.log("[dns-fetch] 全局 fetch 已替换为 DNS 感知版本")
 }
 
-// 如果此模块被导入，自动打补丁
-patchGlobalFetch()
+// 不在此处自动调用。由入口文件(index.ts/dns-fix.ts)显式调用。

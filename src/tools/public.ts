@@ -483,26 +483,6 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
 
   registerTool(
     server,
-    "market_index_components_detail",
-    "READ",
-    "[D:Market] get instruments",
-    {
-      index: z.string().describe("指数名称，如 BTC-USD。必填"),
-    },
-    async ({ index }) => {
-      try {
-        const data = await publicApi.getIndexComponents(index)
-        const enriched = typeof data === 'object' && !Array.isArray(data) ? {
-          ...data,
-          tsIso: (data as any).ts ? new Date(parseInt((data as any).ts)).toISOString() : undefined,
-        } : data
-        return toResult(enriched)
-      } catch (e) { return toError(e) }
-    }
-  )
-
-  registerTool(
-    server,
     "sys_discount_info",
     "READ",
     "[D:System] 利率/免息额度 | 无需参数 | 借币前参考 → account_loan_quota",
