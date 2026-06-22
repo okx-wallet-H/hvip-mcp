@@ -8,7 +8,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "sys_affiliate_invitees",
     "READ",
-    "[D:System] get affiliate invitee list",
+    "[D:System] 推广数据查询 | 推广相关",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -23,7 +23,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "sys_affiliate_invitee_detail",
     "READ",
-    "[D:System] get affiliate invitee list",
+    "[D:System] 推广数据查询 | 推广相关",
     {
       uid: z.string().optional().describe("用户ID"),
     },
@@ -40,7 +40,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "sys_affiliate_links",
     "READ",
-    "[D:System] get affiliate invitee list",
+    "[D:System] 推广数据查询 | 推广相关",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -55,7 +55,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "sys_affiliate_performance",
     "READ",
-    "[D:System] get affiliate invitee list",
+    "[D:System] 推广数据查询 | 推广相关",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -70,7 +70,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "sys_affiliate_co_inviters",
     "READ",
-    "[D:System] get affiliate invitee list",
+    "[D:System] 推广数据查询 | 推广相关",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -85,7 +85,7 @@ export function registerAffiliateTools(server: McpServer, auth: Auth | null): vo
     server,
     "sys_affiliate_sub_list",
     "READ",
-    "[D:System] get affiliate invitee list",
+    "[D:System] 推广数据查询 | 推广相关",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

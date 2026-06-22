@@ -11,7 +11,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_lead_positions",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode: z.string().describe("带单员唯一标识码，从OKX App「跟单」页面获取"),
       instType:   z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型，不填返回全部"),
@@ -28,7 +28,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_lead_history",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode: z.string().describe("带单员唯一标识码"),
       instType:   z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型，不填返回全部"),
@@ -46,7 +46,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_lead_stats",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode: z.string().describe("带单员唯一标识码"),
       instType:   z.enum(INST_TYPE_SWAP_FUT).describe("产品类型"),
@@ -66,7 +66,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_my_positions",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型，不填返回全部"),
     },
@@ -83,7 +83,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_my_history",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
       limit:    z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -101,7 +101,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_instruments",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
     },
@@ -118,7 +118,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_profit_sharing",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
     },
@@ -135,7 +135,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_profit_sharing_details",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       instType: z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
       limit:    z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -155,7 +155,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_start",
     "WRITE",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode:  z.string().describe("带单员唯一标识码。必填"),
       instType:    z.enum(INST_TYPE_SWAP_FUT).describe("产品类型。SWAP=永续, FUTURES=交割"),
@@ -177,7 +177,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_stop",
     "WRITE",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       subPosId: z.string().optional().describe("子持仓ID"),
     },
@@ -196,7 +196,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_settings",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -211,7 +211,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_settings_set",
     "WRITE",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode: z.string().optional().describe("带单员唯一标识码"),
       instType:   z.enum(INST_TYPE_SWAP_FUT).optional().describe("产品类型"),
@@ -238,7 +238,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_leaders",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {},
     async () => {
       try {
@@ -252,7 +252,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_config",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {},
     async () => {
       try {
@@ -266,7 +266,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_leader_pnl",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode: z.string().describe("带单员唯一标识码。必填"),
       lastDays:   z.enum(["7","30","90","180"]).describe("统计周期（天）：7/30/90/180"),
@@ -285,7 +285,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_traders",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -300,7 +300,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_first_settings",
     "WRITE",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode: z.string().describe("带单员唯一标识码。必填"),
       instType:   z.enum(INST_TYPE_SWAP_FUT).describe("产品类型。SWAP=永续, FUTURES=交割"),
@@ -322,7 +322,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_unrealized_profit",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -337,7 +337,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_total_unrealized_profit",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -352,7 +352,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_profit_ratio_set",
     "WRITE",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       profitSharingRatio: z.string().describe("分成比例。必填"),
     },
@@ -369,7 +369,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_settings_amend",
     "WRITE",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       subPosId:   z.string().describe("子持仓ID。必填"),
       amount:     z.string().optional().describe("新跟单数量"),
@@ -391,7 +391,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_currency",
     "READ",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {
       uniqueCode: z.string().describe("带单员唯一标识码。必填"),
     },
@@ -407,7 +407,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
     server,
     "strategy_copy_stop_trading",
     "WRITE",
-    "[D:Strategy] get lead trader positions",
+    "[D:Strategy] 当前持仓(含强平价/保证金率) | instType?, instId? | 全景用 account_overview",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

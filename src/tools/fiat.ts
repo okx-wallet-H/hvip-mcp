@@ -8,7 +8,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "fund_fiat_pairs",
     "READ",
-    "[D:Funds] get fiat buy sell pair",
+    "[D:Funds] 法币入金 | ccy, side | 需确认",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -23,7 +23,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "fund_fiat_deposit",
     "READ",
-    "[D:Funds] get fiat buy sell pair",
+    "[D:Funds] 法币入金 | ccy, side | 需确认",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -38,7 +38,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "fund_fiat_deposit_orders",
     "READ",
-    "[D:Funds] get fiat buy sell pair",
+    "[D:Funds] 法币入金 | ccy, side | 需确认",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -53,7 +53,7 @@ export function registerFiatTools(server: McpServer, auth: Auth | null): void {
     server,
     "fund_fiat_deposit_methods",
     "READ",
-    "[D:Funds] get fiat buy sell pair",
+    "[D:Funds] 法币入金 | ccy, side | 需确认",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

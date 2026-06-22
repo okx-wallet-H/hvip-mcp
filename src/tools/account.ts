@@ -8,7 +8,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_balance",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     { ccy: z.string().optional().describe("指定币种如 BTC、USDT，不填则返回所有币种") },
     async ({ ccy }) => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -23,7 +23,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_positions",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     { instType: z.enum(INST_TYPE_PUBLIC).optional().describe("产品类型，不填则返回全部") },
     async ({ instType }) => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -56,7 +56,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_orders_history",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instType: z.enum(INST_TYPE_TRADE).describe("产品类型"),
       limit:    z.number().int().min(1).max(100).optional().describe("返回条数，默认50"),
@@ -74,7 +74,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_bills",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型，不填返回全部"),
       ccy:      z.string().optional().describe("币种，如 USDT"),
@@ -93,7 +93,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_config",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -108,7 +108,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_leverage",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP"),
       mgnMode: z.enum(["isolated","cross"]).describe("保证金模式：isolated=逐仓，cross=全仓"),
@@ -126,7 +126,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "trade_max_size",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       tdMode: z.enum(["cross","isolated","cash"]).describe("保证金模式。cross=全仓, isolated=逐仓, cash=非保证金"),
@@ -145,7 +145,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_fee_rates",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型，不填返回全部"),
       instId:   z.string().optional().describe("产品ID，如 BTC-USDT"),
@@ -164,7 +164,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_positions_history",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instType: z.enum(INST_TYPE_PUBLIC).optional().describe("产品类型。MARGIN=杠杆, SWAP=永续, FUTURES=交割, OPTION=期权。不填返回全部"),
       instId:   z.string().optional().describe("产品ID，如 BTC-USDT-SWAP"),
@@ -183,7 +183,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_leverage_set",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       lever:   z.string().describe("杠杆倍数，如 10。必须在仓位档位允许范围内"),
@@ -205,7 +205,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_max_loan",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT。必填"),
       mgnMode: z.enum(["cross","isolated"]).describe("保证金模式。cross=全仓, isolated=逐仓"),
@@ -223,7 +223,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_interest_accrued",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instId: z.string().optional().describe("产品ID，可选"),
       ccy:    z.string().optional().describe("币种，如 USDT"),
@@ -242,7 +242,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_position_mode_set",
     "ADMIN",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       posMode: z.enum(["long_short_mode","net_mode"]).describe("持仓模式。long_short_mode=双向持仓, net_mode=单向持仓"),
     },
@@ -259,7 +259,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_valuation",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy: z.string().optional().describe("计价币种，如 USD、CNY。不填默认按所有币种"),
     },
@@ -276,7 +276,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_convert_currencies",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -291,7 +291,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_convert_trade",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       fromCcy: z.string().describe("卖出币种，如 USDT。必填"),
       toCcy:   z.string().describe("买入币种，如 BTC。必填"),
@@ -310,7 +310,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_margin_balance",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT。必填"),
       mgnMode: z.enum(["cross","isolated"]).describe("保证金模式。cross=全仓, isolated=逐仓"),
@@ -328,7 +328,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_bills_detail",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型，不填返回全部"),
       ccy:      z.string().optional().describe("币种，如 USDT"),
@@ -347,7 +347,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_interest_rates",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy: z.string().optional().describe("币种，如 USDT、BTC。不填返回全部"),
     },
@@ -368,7 +368,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_max_withdrawal",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy: z.string().optional().describe("币种，如 USDT。不填返回全部"),
     },
@@ -385,7 +385,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_greeks",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instType:   z.enum(INST_TYPE_TRADE).optional().describe("产品类型。SPOT/MARGIN/SWAP/FUTURES/OPTION"),
       instFamily: z.string().optional().describe("产品族，如 BTC-USD"),
@@ -405,7 +405,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_mode_set",
     "ADMIN",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       acctLv: z.enum(["1","2","3","4"]).describe("账户层级。1=简单交易, 2=单币种保证金, 3=多币种保证金, 4=组合保证金"),
     },
@@ -422,7 +422,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_position_risk",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -437,7 +437,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_interest_limits",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -452,7 +452,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_subtypes",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -467,7 +467,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_sub_trading_balance",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       subAcct: z.string().describe("子账户名称。必填"),
     },
@@ -484,7 +484,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_preset_switch",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       acctLv: z.string().describe("目标账户层级。必填"),
     },
@@ -501,7 +501,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_option_activate",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -516,7 +516,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_position_builder",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       body: z.string().describe("试算参数JSON字符串。必填"),
     },
@@ -534,7 +534,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_auto_earn_set",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy:      z.string().describe("币种。必填"),
       autoEarn: z.boolean().describe("是否开启自动理财。true=开启, false=关闭"),
@@ -552,7 +552,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_fee_type_set",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       feeType: z.enum(["0","1"]).describe("手续费类型。0=按币, 1=按USDT"),
     },
@@ -569,7 +569,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_settle_currency_set",
     "ADMIN",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy: z.string().describe("结算币种，如 USDT。必填"),
     },
@@ -586,7 +586,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_position_builder_graph",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -601,7 +601,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_delta_neutral_check",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -616,7 +616,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_trade_fee",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       instType: z.enum(INST_TYPE_TRADE).optional().describe("产品类型"),
       instId:   z.string().optional().describe("产品ID"),
@@ -635,7 +635,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "risk_state",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -650,7 +650,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_borrow_repay",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy:  z.string().describe("币种。必填"),
       side: z.enum(["borrow","repay"]).describe("方向。borrow=借币, repay=还款"),
@@ -669,7 +669,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_borrow_repay_history",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -688,7 +688,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_bills_archive",
     "READ",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -703,7 +703,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_auto_loan_set",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy:  z.string().describe("币种。必填"),
       side: z.enum(["on","off"]).describe("方向。on=开启, off=关闭"),
@@ -721,7 +721,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_trading_config_set",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       jsonString: z.string().describe("配置参数JSON字符串。必填"),
     },
@@ -739,7 +739,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     server,
     "account_positions_move",
     "WRITE",
-    "[D:Account] get balance",
+    "[D:Account] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       body: z.string().describe("迁移参数JSON字符串。必填"),
     },

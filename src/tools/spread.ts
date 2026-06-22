@@ -8,7 +8,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_listings",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId:  z.string().optional().describe("价差合约ID，如 BTC-USDT_BTC-USDT-SWAP"),
       baseCcy: z.string().optional().describe("标的币种，如 BTC"),
@@ -27,7 +27,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_ticker",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID，如 BTC-USD-SWAP_BTC-USD-260925"),
     },
@@ -47,7 +47,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_orderbook",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID"),
       depth:  z.number().int().min(1).max(400).optional().describe("深度档位，默认20，最大400"),
@@ -71,7 +71,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_trades",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -92,7 +92,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_candles",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID"),
       bar:    z.enum(["1m","5m","15m","30m","1H","4H","1D"]).optional().describe("K线周期，默认1H"),
@@ -122,7 +122,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_place",
     "WRITE",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId:  z.string().describe("价差合约ID。必填"),
       side:    z.enum(["buy","sell"]).describe("买卖方向。buy=买入, sell=卖出"),
@@ -145,7 +145,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_cancel",
     "WRITE",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
       ordId:  z.string().describe("订单ID。必填"),
@@ -163,7 +163,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_orders",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
     },
@@ -180,7 +180,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_amend",
     "WRITE",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
       ordId:  z.string().describe("订单ID。必填"),
@@ -203,7 +203,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_orders_history",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -221,7 +221,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_fills",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -239,7 +239,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_books",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
     },
@@ -264,7 +264,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_orders_active",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
     },
@@ -281,7 +281,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_orders_archive",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
     },
@@ -298,7 +298,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_trades_public",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
     },
@@ -318,7 +318,7 @@ export function registerSpreadTools(server: McpServer, auth: Auth | null): void 
     server,
     "trade_spread_fills_detail",
     "READ",
-    "[D:Strategy] get spreads",
+    "[D:Trading] 价差合约操作 | instId?, instType? | 价差交易",
     {
       sprdId: z.string().optional().describe("价差合约ID"),
     },

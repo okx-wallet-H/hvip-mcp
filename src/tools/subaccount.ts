@@ -8,7 +8,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_list",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       enable: z.boolean().optional().describe("筛选启用状态，不填则返回全部"),
     },
@@ -25,7 +25,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccounts",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       enable: z.boolean().optional().describe("筛选启用状态，不填则返回全部"),
     },
@@ -42,7 +42,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_balance",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct: z.string().describe("子账户名称"),
     },
@@ -59,7 +59,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_transfer",
     "WRITE",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       ccy:            z.string().describe("划转币种"),
       amt:            z.string().describe("划转数量"),
@@ -84,7 +84,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_transfer_out",
     "WRITE",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct:        z.string().describe("子账户名称。必填"),
       canTransferOut: z.boolean().describe("是否允许转出。true=允许, false=禁止"),
@@ -102,7 +102,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_sub_key",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct: z.string().describe("子账户名称。必填"),
     },
@@ -119,7 +119,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_sub_key_create",
     "WRITE",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct:    z.string().describe("子账户名称。必填"),
       label:      z.string().describe("API Key备注名称。必填"),
@@ -142,7 +142,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_sub_key_reset",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       apiKey:  z.string().describe("需要修改的API Key。必填"),
@@ -167,7 +167,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_sub_key_delete",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       apiKey:  z.string().describe("需要删除的API Key。必填"),
@@ -185,7 +185,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_bills",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       after:   z.string().optional().describe("查询此时间戳之后的记录（毫秒Unix时间戳）"),
@@ -205,7 +205,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_assets",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct: z.string().describe("子账户名称。必填"),
     },
@@ -222,7 +222,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_create",
     "WRITE",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {
       subAcct: z.string().describe("子账户名称。必填"),
       label:   z.string().optional().describe("子账户备注"),
@@ -242,7 +242,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
     server,
     "account_subaccount_entrust_list",
     "READ",
-    "[D:Account] get subaccount list",
+    "[D:Account] 子账户管理 | 相关子账户操作",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)

@@ -8,7 +8,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_balance",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     { ccy: z.string().optional().describe("指定币种，不填则返回全部") },
     async ({ ccy }) => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -23,7 +23,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_transfer",
     "WRITE",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy:  z.string().describe("划转币种"),
       amt:  z.string().describe("划转数量"),
@@ -43,7 +43,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_currencies",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     { ccy: z.string().optional().describe("指定币种，如 BTC，不填返回全部") },
     async ({ ccy }) => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -58,7 +58,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_deposit_address",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     { ccy: z.string().describe("币种，如 USDT、BTC、ETH") },
     async ({ ccy }) => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -73,7 +73,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_deposit_history",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy:   z.string().optional().describe("币种，不填返回全部"),
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -91,7 +91,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_withdrawal_history",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy:   z.string().optional().describe("币种，不填返回全部"),
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -109,7 +109,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_withdraw",
     "FUND_TRANSFER",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy:    z.string().describe("币种，如 USDT。必填"),
       amt:    z.string().describe("提币数量。必填"),
@@ -139,7 +139,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_deposit_lightning",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy: z.string().describe("币种，如 USDT。必填"),
     },
@@ -156,7 +156,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_withdraw_lightning",
     "FUND_TRANSFER",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       ccy: z.string().describe("提现币种。必填"),
       amt: z.string().describe("提现数量。必填"),
@@ -175,7 +175,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_transfer_state",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       transferId: z.string().describe("划转ID（从 okx_transfer 返回获取）。必填"),
     },
@@ -194,7 +194,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_non_tradable_assets",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -209,7 +209,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_exchange_list",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       try {
@@ -223,7 +223,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_deposit_withdraw_status",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -238,7 +238,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_bills_history",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
     },
@@ -255,7 +255,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_convert_pair",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -270,7 +270,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_convert_quote",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {
       fromCcy: z.string().describe("卖出币种。必填"),
       toCcy:   z.string().describe("买入币种。必填"),
@@ -289,7 +289,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_monthly_statement",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -304,7 +304,7 @@ export function registerFundingTools(server: McpServer, auth: Auth | null): void
     server,
     "fund_asset_balances",
     "READ",
-    "[D:Funds] get funding balance",
+    "[D:Funds] 账户余额查询 | ccy?不填全部 | 估值用 account_valuation → 持仓用 account_positions",
     { ccy: z.string().optional().describe("指定币种，不填返回全部") },
     async ({ ccy }) => {
       if (!auth) return toError(AUTH_REQUIRED)

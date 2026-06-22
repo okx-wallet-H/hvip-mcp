@@ -8,7 +8,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_create",
     "WRITE",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       instId: z.string().describe("产品ID。必填"),
       side:   z.enum(["buy","sell"]).describe("买卖方向。buy=买入, sell=卖出"),
@@ -30,7 +30,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_execute",
     "READ",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       instId:  z.string().describe("产品ID。必填"),
       quoteId: z.string().describe("报价ID。必填"),
@@ -50,7 +50,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_list",
     "READ",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       state: z.enum(["active","executed","canceled"]).optional().describe("状态筛选。active=进行中, executed=已成交, canceled=已取消"),
     },
@@ -67,7 +67,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_quotes",
     "READ",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       rfqId: z.string().describe("RFQ ID。必填"),
     },
@@ -86,7 +86,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_counterparties",
     "READ",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -101,7 +101,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_cancel",
     "WRITE",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       rfqId: z.string().describe("RFQ ID。必填"),
     },
@@ -118,7 +118,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_cancel_batch",
     "WRITE",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       rfqIds: z.string().describe("RFQ ID数组JSON字符串，如 '[\"123\",\"456\"]'"),
     },
@@ -136,7 +136,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_cancel_all",
     "WRITE",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -151,7 +151,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_quote_create",
     "WRITE",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
       quotePx: z.string().describe("报价价格。必填"),
@@ -170,7 +170,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_quote_cancel",
     "WRITE",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {
       rfqId:   z.string().describe("RFQ ID。必填"),
       quoteId: z.string().describe("报价ID。必填"),
@@ -188,7 +188,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_trades",
     "READ",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -202,7 +202,7 @@ export function registerRfqTools(server: McpServer, auth: Auth | null): void {
     server,
     "trade_rfq_mmp_reset",
     "READ",
-    "[D:Strategy] create rfq",
+    "[D:Trading] 大宗询价RFQ操作 | instId, sz, side | 需确认 → 大宗交易",
     {},
     async () => {
       if (!auth) return toError(AUTH_REQUIRED)
