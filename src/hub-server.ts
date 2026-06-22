@@ -168,7 +168,11 @@ function startHttpServer(): void {
       if (_req.url === "/v2/") {
         filePath = join(v2Dir, "index.html")
       } else {
-        filePath = join(v2Dir, _req.url!.replace(/^\/v2\//, ""))
+        const relative = _req.url!.replace(/^\/v2\//, "")
+        if (relative.includes("..") || relative.includes("~") || relative.includes("\\")) {
+          res.writeHead(403); res.end("Forbidden"); return
+        }
+        filePath = join(v2Dir, relative)
       }
 
       // Serve the file if it exists, otherwise fall back to index.html (SPA)
