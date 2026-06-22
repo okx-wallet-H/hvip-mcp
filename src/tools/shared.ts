@@ -1,8 +1,23 @@
+import { AsyncLocalStorage } from "node:async_hooks"
 import type { Auth } from "../adapters/okx.js"
 import { createHRailsClient, type HRailsClient } from "../adapters/hrails.js"
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 
+/**
+ * 请求级 Auth 上下文（用于多用户 Chat 代理注入）
+ *
+ * hub-server 通过 X-OKX-Api-Key / X-OKX-Secret / X-OKX-Passphrase 头
+ * 传入用户自己的 OKX 凭证。MCP HTTP handler 读取这些头并设置 ALS 上下文，
+ * getAuth() 优先使用 ALS 中的凭证，fallback 到 process.env（原有行为）。
+ */
+export const authStore = new AsyncLocalStorage<Auth | null>()
+
 export function getAuth(): Auth | null {
+  // 1) 优先：请求级上下文（多用户 Chat 代理注入）
+  const ctx = authStore.getStore()
+  if (ctx?.apiKey && ctx?.secret && ctx?.passphrase) return ctx
+
+  // 2) Fallback：环境变量（原有行为，向后兼容）
   const apiKey = process.env["OKX_API_KEY"]
   const secret = process.env["OKX_SECRET_KEY"]
   const passphrase = process.env["OKX_PASSPHRASE"]
