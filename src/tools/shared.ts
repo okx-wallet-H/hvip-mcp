@@ -368,7 +368,7 @@ export function classifyRisk(toolNameOrDesc: string): RiskLevel {
   const writePrefixes = [
     "trade_place", "trade_cancel", "trade_amend",
     "trade_close", "trade_place_batch", "trade_cancel_batch", "trade_amend_batch",
-    "trade_cancel_all", "trade_easy_convert", "trade_one_click_repay",
+    "trade_cancel_all", "trade_easy_convert", "trade_repay",
     "trade_quick",
     "strategy_grid_create", "strategy_grid_stop", "strategy_grid_close",
     "strategy_recurring_create", "strategy_recurring_stop",

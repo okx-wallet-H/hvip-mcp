@@ -100,7 +100,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "account_subaccount_api_key",
+    "account_sub_key",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -117,7 +117,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "account_subaccount_api_key_create",
+    "account_sub_key_create",
     "WRITE",
     "[D:Account] get subaccount list",
     {
@@ -140,7 +140,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "account_subaccount_api_key_reset",
+    "account_sub_key_reset",
     "READ",
     "[D:Account] get subaccount list",
     {
@@ -165,7 +165,7 @@ export function registerSubAccountTools(server: McpServer, auth: Auth | null): v
 
   registerTool(
     server,
-    "account_subaccount_api_key_delete",
+    "account_sub_key_delete",
     "READ",
     "[D:Account] get subaccount list",
     {

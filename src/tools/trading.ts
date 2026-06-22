@@ -458,7 +458,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "trade_one_click_repay_options",
+    "trade_repay_options",
     "READ",
     "[D:Trading] place order",
     {},
@@ -473,7 +473,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "trade_one_click_repay",
+    "trade_repay",
     "WRITE",
     "[D:Trading] place order",
     {
@@ -491,7 +491,7 @@ export function registerTradingTools(server: McpServer, auth: Auth | null): void
 
   registerTool(
     server,
-    "trade_one_click_repay_history",
+    "trade_repay_history",
     "READ",
     "[D:Trading] place order",
     {},

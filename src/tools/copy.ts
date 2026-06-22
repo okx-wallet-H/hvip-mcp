@@ -64,7 +64,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "strategy_copy_my_lead_positions",
+    "strategy_copy_my_positions",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -81,7 +81,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "strategy_copy_my_lead_history",
+    "strategy_copy_my_history",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -236,7 +236,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "strategy_copy_public_leaders",
+    "strategy_copy_leaders",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -250,7 +250,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "strategy_copy_public_config",
+    "strategy_copy_config",
     "READ",
     "[D:Strategy] get lead trader positions",
     {},
@@ -264,7 +264,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "strategy_copy_public_leader_pnl",
+    "strategy_copy_leader_pnl",
     "READ",
     "[D:Strategy] get lead trader positions",
     {
@@ -389,7 +389,7 @@ export function registerCopyTools(server: McpServer, auth: Auth | null): void {
 
   registerTool(
     server,
-    "strategy_copy_public_currency",
+    "strategy_copy_currency",
     "READ",
     "[D:Strategy] get lead trader positions",
     {

@@ -142,7 +142,7 @@ export const DOMAIN_DETAILS: Record<string, any> = {
         { name: "strategy_recurring_stop", auth: "API Key (交易)", params: "algoId", what: "停止定投" },
         { name: "strategy_copy_start", auth: "API Key (交易)", params: "uniqueCode, copyTotalAmt, instType", what: "开始跟单 — WRITE，需确认" },
         { name: "strategy_copy_traders", auth: "API Key", params: "无", what: "我关注的交易员" },
-        { name: "strategy_copy_public_leaders", auth: "公开", params: "instType, sortType?", what: "公开交易员列表" },
+        { name: "strategy_copy_leaders", auth: "公开", params: "instType, sortType?", what: "公开交易员列表" },
         { name: "strategy_copy_lead_positions", auth: "API Key", params: "uniqueCode", what: "交易员当前持仓" },
         { name: "strategy_copy_lead_stats", auth: "API Key", params: "uniqueCode", what: "交易员业绩统计" },
         { name: "strategy_algo_place", auth: "API Key (交易)", params: "instId, tdMode, side, ordType, sz, triggerPx", what: "策略委托下单 — WRITE" },
