@@ -111,6 +111,15 @@ for (const f of webFiles) {
   }
 }
 
+// ── Copy tool-name-map.json to dist/ ──
+const mapSrc = join("src", "tools", "tool-name-map.json")
+const mapDst = join("dist", "tools", "tool-name-map.json")
+if (existsSync(mapSrc)) {
+  if (!existsSync(join("dist", "tools"))) mkdirSync(join("dist", "tools"), { recursive: true })
+  writeFileSync(mapDst, readFileSync(mapSrc))
+  console.log("✅ dist/tools/tool-name-map.json copied")
+}
+
 // ── Copy chat-app to dist/ ──
 const chatAppDir = join("chat-app")
 const distChatApp = join("dist", "chat-app")

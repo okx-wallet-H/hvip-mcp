@@ -163,7 +163,7 @@
     "okx_get_top_trader_long_short_ratio": "market_top_trader_long_short_ratio",
     "okx_get_put_call_ratio": "market_put_call_ratio",
     "okx_get_lending_rate_summary": "market_lending_rate_summary",
-    "okx_get_top_traders_contract_ls_ratio": "market_top_trader_long_short_ratio",
+    "okx_get_top_traders_contract_ls_ratio": "market_contract_top_trader_long_short_ratio",
     "okx_get_contracts_taker_volume": "market_contract_taker_volume",
     "okx_get_contracts_long_short_ratio": "market_contract_long_short_ratio",
     "okx_get_long_short_ratio_all": "market_long_short_ratio_all",

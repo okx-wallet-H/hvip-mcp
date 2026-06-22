@@ -163,9 +163,9 @@ export function registerStatsTools(server: McpServer): void {
 
   registerTool(
     server,
-    "market_top_trader_long_short_ratio",
+    "market_contract_top_trader_long_short_ratio",
     "READ",
-    "[D:Market] get long short ratio",
+    "[D:Market] 顶级交易员合约多空比 | ccy?如BTC/ETH，不填全部 | 非合约版用 market_top_trader_long_short_ratio",
     {
       ccy:   z.string().optional().describe("币种，如 BTC、ETH。不填返回全部"),
       begin: z.string().optional().describe("开始时间戳（毫秒）"),

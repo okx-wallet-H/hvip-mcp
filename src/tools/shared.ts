@@ -334,6 +334,7 @@ export function registerTool(
   description: string,
   paramsSchema: Record<string, unknown>,
   callback: (...args: any[]) => any,
+  aliases?: string[],
 ): void {
   const taggedDesc = `[L:${accessLevel}] ${description}`
   const wrappedCallback = async (...args: any[]) => {
@@ -348,6 +349,45 @@ export function registerTool(
     }
   }
   server.tool(name, taggedDesc, paramsSchema, wrappedCallback)
+  // 向后兼容别名：旧名自动映射到新工具
+  if (aliases) {
+    const aliasDesc = `[L:${accessLevel}] → 已迁移至 ${name}，请使用新名`
+    for (const alias of aliases) {
+      server.tool(alias, aliasDesc, paramsSchema, wrappedCallback)
+    }
+  }
+}
+
+// 别名注册表：loadAliases() 遍历 tool-name-map.json 批量注册
+export function registerAliases(server: McpServer): number {
+  try {
+    const fs = require("node:fs")
+    const path = require("node:path")
+    const mapPath = path.join(__dirname, "tools", "tool-name-map.json")
+    const data = JSON.parse(fs.readFileSync(mapPath, "utf8"))
+    const mappings = data.mappings
+    if (!mappings) return 0
+    let count = 0
+    const aliasDesc = "[L:READ] ⚠️ 旧工具名，请改用新名，参见 agent_catalog"
+    for (const [oldName, newName] of Object.entries(mappings)) {
+      if (oldName === newName) continue
+      // 如果同名则跳过（某些工具未改名）
+      try {
+        // 从 server 获取已注册的工具信息来创建别名...
+        // MCP SDK 不支持直接读取已注册工具，所以我们用 server.tool 重新注册旧名
+        server.tool(oldName, aliasDesc, {}, async () => ({
+          content: [{ type: "text", text: JSON.stringify({
+            _alias: true,
+            _migratedTo: newName,
+            _hint: `此工具已重命名为 ${newName}，请更新你的调用`,
+            tsIso: new Date().toISOString(),
+          }) }],
+        }))
+        count++
+      } catch { /* skip if alias already exists */ }
+    }
+    return count
+  } catch { return 0 }
 }
 
 /** 从描述中提取 [L:READ] 标记，有则直接返回，无则回退到名称推断 */

@@ -33,7 +33,7 @@ import { registerAgentHubTools } from "./tools/agent-hub.js"
 import { registerCodeGraphTools } from "./tools/codegraph.js"
 import { startAgentHub } from "./adapters/agent-hub.js"
 import { getApiCredits, CREDIT_COST } from "./adapters/api-credits.js"
-import { getAuth, classifyRisk, type RiskLevel, authStore, toolStats } from "./tools/shared.js"
+import { getAuth, classifyRisk, type RiskLevel, authStore, toolStats, registerAliases } from "./tools/shared.js"
 import { privateApi } from "./adapters/okx.js"
 
 type TransportMode = "stdio" | "http"
@@ -162,6 +162,10 @@ function registerAllTools(
   registerWsTools(server, auth)
   registerAgentHubTools(server)
   registerCodeGraphTools(server)
+
+  // 向后兼容别名：旧工具名 → 新工具名
+  const aliasCount = registerAliases(server)
+  if (aliasCount > 0) skipLog.push(`别名: ${aliasCount} 个旧名已注册`)
 
   return { skipped, skipLog }
 }
