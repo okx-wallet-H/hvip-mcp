@@ -28,6 +28,8 @@ import { checkAndAlert, DAILY_BUDGET_USD, QUEUE_DEPTH_WARN } from "./adapters/hu
 // ═══════════════════════════════════════════════════════════
 
 const HUB_URL = process.env.HUB_URL || "ws://127.0.0.1:9321"
+// 🔧 FIX: 移除自引用导致 TDZ 崩溃的 Bug，添加本地回退 URL
+const HUB_API = process.env.HUB_API_URL || "http://127.0.0.1:3000"
 const AGENT_ID = "chronos-dispatcher"
 const AGENT_NAME = "Chronos·调度官"
 const INTERVAL_MS = parseInt(process.env.CHRONOS_INTERVAL || "60000", 10)
@@ -208,30 +210,58 @@ function processQueue() {
   }
 }
 
+// 🔧 FIX: syncWorkerPool 不再清空 workerPool，而是增量更新
+// 这样即使 HTTP API 不可用，WS 消息维护的 Worker 池也不会丢失
 async function syncWorkerPool() {
   try {
-    const resp = await circuitBreaker.wrap("hub-api", () => fetch("http://127.0.0.1:3000/api/status"))
+    const resp = await circuitBreaker.wrap("hub-api", () => fetch(HUB_API + "/api/status"))
     const data = await resp.json() as { agents: Array<{ agentId: string; name: string; status: string; capabilities: string[] }> }
-    // 全量刷新：先清空再重建，自动清理已下线 Worker
-    workerPool.clear()
+    
+    if (!data || !data.agents) {
+      log.warn("同步 Worker池: API 返回空数据，保留现有 Worker 池")
+      return
+    }
+
+    let addedCount = 0
+    let removedCount = 0
+    const apiAgentIds = new Set<string>()
+
     for (const a of data.agents || []) {
       if (a.agentId === AGENT_ID || a.agentId.startsWith("dashboard") || a.agentId.startsWith("term-")) continue
       // 跳过一次性 Worker（hub-worker.js spawn 的，只执行一个任务就退出）
       const caps = Array.isArray(a.capabilities) ? a.capabilities : []
       const hasProfile = caps.some((c: string) => ["code","quant","research","general","dispatcher","scheduler"].includes(c))
       if (!hasProfile && caps.length > 0) continue
+      
+      apiAgentIds.add(a.agentId)
+      
+      // 增量更新：保留已有 Worker 的额外状态（如 lastSeen）
+      const existing = workerPool.get(a.agentId)
       workerPool.set(a.agentId, {
         agentId: a.agentId,
         name: a.name || a.agentId,
         status: a.status === "working" ? "working" : "idle",
         capabilities: Array.isArray(a.capabilities) ? a.capabilities : [],
-        lastSeen: Date.now(),
+        lastSeen: existing?.lastSeen || Date.now(),
       })
+      addedCount++
     }
-    log.info(`同步 Worker池: ${workerPool.size} 个 Agent`)
+
+    // 只移除 API 明确说已经不存在的 Worker
+    for (const [id] of workerPool) {
+      if (!apiAgentIds.has(id)) {
+        workerPool.delete(id)
+        removedCount++
+      }
+    }
+
+    log.info(`同步 Worker池: ${workerPool.size} 个 Agent (+${addedCount} -${removedCount})`)
     processQueue()
   } catch (e) {
-    log.warn(`同步 Worker池失败: ${e instanceof Error ? e.message : String(e)}`)
+    // 🔧 FIX: API 不可用时保留现有 WS 维护的 Worker 池，不执行 clear()
+    log.warn(`同步 Worker池失败 (保留现有 ${workerPool.size} 个): ${e instanceof Error ? e.message : String(e)}`)
+    // 即使 API 失败，也尝试派发队列中的任务（WS 消息已维护的 Worker 池）
+    processQueue()
   }
 }
 
@@ -245,7 +275,7 @@ const STUCK_WORKING_TIMEOUT_MS = 30 * 60 * 1000 // 30分钟
 
 async function cleanupStuckTasks(): Promise<number> {
   try {
-    const resp = await fetch("http://127.0.0.1:3000/api/status")
+    const resp = await fetch(HUB_API + "/api/status")
     const data = await resp.json() as any
     const tasks = data.tasks || []
     const now = Date.now()
@@ -477,7 +507,7 @@ async function handleMessage(msg: Record<string, unknown>) {
             const reviewId = `REVIEW-${taskId}`
             log.info(`🔍 协同审查: ${taskId} → ${reviewer.name}`)
             try {
-              await fetch("http://127.0.0.1:3000/api/tasks", {
+              await fetch(HUB_API + "/api/tasks", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -530,7 +560,7 @@ async function activePatrol() {
   // Gather system state
   let systemInfo = ""
   try {
-    const resp = await fetch("http://127.0.0.1:3000/api/status")
+    const resp = await fetch(HUB_API + "/api/status")
     const data = await resp.json() as any
     const total = data.tasks?.length || 0
     const stuck = (data.tasks || []).filter((t: any) => t.status === "assigned" && !t.result).length
@@ -561,7 +591,7 @@ async function activePatrol() {
     if (!hasRecent) {
       const taskId = `VOL-${Date.now().toString(36)}`
       try {
-        await fetch("http://127.0.0.1:3000/api/tasks", {
+        await fetch(HUB_API + "/api/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -642,13 +672,13 @@ Worker池: ${idle}空闲 ${busy}忙碌
       }
       // 尝试获取成本数据
       try {
-        const costsResp = await fetch("http://127.0.0.1:3000/api/costs")
+        const costsResp = await fetch(HUB_API + "/api/costs")
         const costsData = await costsResp.json() as any
         alertCtx.costs.todayCost = costsData.today?.cost || 0
       } catch { log.warn("成本数据获取失败") }
       // 尝试获取 PM2 健康
       try {
-        const pm2Resp = await fetch("http://127.0.0.1:3000/api/health/pm2")
+        const pm2Resp = await fetch(HUB_API + "/api/health/pm2")
         const pm2Data = await pm2Resp.json() as any
         if (pm2Data.missing?.length) alertCtx.processHealth.missing = pm2Data.missing
       } catch { log.warn("PM2 健康数据获取失败") }
@@ -661,7 +691,7 @@ Worker池: ${idle}空闲 ${busy}忙碌
         const taskId = `HEAL-${Date.now().toString(36)}`
         log.info(`🔧 创建自愈任务: [${issue.severity}] ${issue.title}`)
         try {
-          await fetch("http://127.0.0.1:3000/api/tasks", {
+          await fetch(HUB_API + "/api/tasks", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

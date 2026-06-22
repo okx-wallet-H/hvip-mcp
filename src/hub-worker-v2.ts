@@ -408,5 +408,7 @@ log.info(`Hub: ${HUB_URL} | Repo: ${REPO_PATH}`)
 log.info(`工具: ${Object.keys(TOOLS).join(", ")}`)
 connect()
 
+process.on("uncaughtException", (err: Error) => { log.error(`💥 未捕获异常: ${err.message}\n${err.stack}`); setTimeout(() => process.exit(1), 1000) })
+process.on("unhandledRejection", (reason: unknown) => { log.error(`💥 未处理 Promise 拒绝: ${reason instanceof Error ? reason.message : String(reason)}`) })
 process.on("SIGINT", () => { log.info("收到 SIGINT，退出"); clearInterval(heartbeatTimer); ws.close(); process.exit(0) })
 process.on("SIGTERM", () => { log.info("收到 SIGTERM，退出"); clearInterval(heartbeatTimer); ws.close(); process.exit(0) })

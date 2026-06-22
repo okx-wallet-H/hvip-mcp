@@ -617,5 +617,7 @@ log.info(`AI Trader Engine — ${TRADERS.length} traders, interval ${INTERVAL_MS
 run()
 setInterval(run, INTERVAL_MS)
 
+process.on("uncaughtException", (err: Error) => { log.error(`💥 未捕获异常: ${err.message}\n${err.stack}`); setTimeout(() => process.exit(1), 1000) })
+process.on("unhandledRejection", (reason: unknown) => { log.error(`💥 未处理 Promise 拒绝: ${reason instanceof Error ? reason.message : String(reason)}`) })
 process.on("SIGINT", () => { log.info("关闭"); process.exit(0) })
 process.on("SIGTERM", () => { log.info("关闭"); process.exit(0) })

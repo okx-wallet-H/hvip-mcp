@@ -12,9 +12,14 @@
  *   - 4xx 错误 → 不降级（参数错误换了也没用）
  *   - 每个模型失败后冷却 60s
  *
+ * v6 自愈增强:
+ *   - 每步 API 调用超时 (timeout, 默认 120s)
+ *   - 总执行超时 (totalTimeout, 默认 600s)
+ *   - 超时后自动降级/终止，防止 Worker 永久卡住
+ *
  * 用法:
  *   const agent = new AgentLoop()
- *   const result = await agent.run({ system, prompt, tools })
+ *   const result = await agent.run(prompt, tools, { timeout: 120_000 })
  */
 
 import Anthropic from "@anthropic-ai/sdk"
@@ -86,7 +91,7 @@ export interface AgentTool {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Agent Loop with Fallback
+// Agent Loop with Fallback + Timeout
 // ═══════════════════════════════════════════════════════════════
 
 export interface AgentOptions {
@@ -100,6 +105,20 @@ export interface AgentOptions {
   onStepFinish?: (step: number) => void
   /** Force a specific provider (skip fallback) */
   forceProvider?: string
+  /**
+   * Per-step API call timeout in milliseconds.
+   * If a single API call (including tool exec) exceeds this, it triggers fallback/error.
+   * Default: 120_000 (2 min)
+   * Set to 0 to disable per-step timeout.
+   */
+  timeout?: number
+  /**
+   * Total execution timeout in milliseconds.
+   * If the entire agent.run() exceeds this, it throws an error.
+   * Default: 600_000 (10 min)
+   * Set to 0 to disable total timeout.
+   */
+  totalTimeout?: number
 }
 
 export interface AgentResult {
@@ -111,6 +130,16 @@ export interface AgentResult {
   model: string
   provider: string
   tsIso: string
+}
+
+/** 创建一个带超时的 AbortController */
+function withTimeout(ms: number): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(new Error(`请求超时 (${ms}ms)`)), ms)
+  return {
+    signal: controller.signal,
+    cleanup: () => { clearTimeout(timer); controller.abort() },
+  }
 }
 
 export class AgentLoop {
@@ -172,6 +201,12 @@ export class AgentLoop {
     return result
   }
 
+  /**
+   * Non-streaming agent loop with per-step timeout + total timeout.
+   *
+   * Per-step timeout: 每个 API 调用超过 timeout ms 即触发降级/报错
+   * Total timeout:    整个 run() 超过 totalTimeout ms 即强制抛错
+   */
   async run(prompt: string, tools: Record<string, AgentTool> = {}, opts: AgentOptions = {}): Promise<AgentResult> {
     const {
       model = "claude-sonnet-4-6",
@@ -182,6 +217,8 @@ export class AgentLoop {
       onText,
       onToolCall,
       onStepFinish,
+      timeout = 120_000,         // 默认每步 2 分钟
+      totalTimeout = 600_000,    // 默认总超时 10 分钟
     } = opts
 
     const anthropicTools: Tool[] = Object.values(tools).map(t => ({
@@ -201,66 +238,95 @@ export class AgentLoop {
     // Allow opts.model to override tier default (respects caller intent)
     const effectiveModel = opts.model || model
 
-    for (let step = 0; step < maxSteps; step++) {
-      const result = await this.tryWithFallback(
-        (client, tier) => client.messages.create({
-          model: effectiveModel || tier.model,
-          max_tokens: maxTokens,
-          temperature,
-          system,
-          messages,
-          tools: anthropicTools,
-        }),
-        opts.forceProvider,
-      )
+    // ── 总超时保护 ──
+    let totalTimedOut = false
+    let totalTimer: ReturnType<typeof setTimeout> | undefined
+    if (totalTimeout > 0) {
+      totalTimer = setTimeout(() => { totalTimedOut = true }, totalTimeout)
+    }
 
-      if (!result.success) {
-        throw new Error(`All model tiers failed. Last error: ${result.error}`)
-      }
+    try {
+      for (let step = 0; step < maxSteps; step++) {
+        // 检查总超时
+        if (totalTimedOut) {
+          throw new Error(`AgentLoop 总执行超时 (${totalTimeout}ms)`)
+        }
 
-      const resp = result.data!
-      activeProvider = result.tier!
-      activeModel = result.model!
+        // ── 每步 API 调用超时 ──
+        let stepCleanup: (() => void) | undefined
+        let stepSignal: AbortSignal | undefined
+        if (timeout > 0) {
+          const tc = withTimeout(timeout)
+          stepSignal = tc.signal
+          stepCleanup = tc.cleanup
+        }
 
-      totalInputTokens += resp.usage?.input_tokens || 0
-      totalOutputTokens += resp.usage?.output_tokens || 0
-      stopReason = resp.stop_reason
-
-      const toolUses = resp.content.filter((b): b is ToolUseBlock => b.type === "tool_use")
-      const textBlocks = resp.content.filter(b => b.type === "text")
-
-      const stepText = textBlocks.map(t => t.text).join("")
-      if (stepText && onText) onText(stepText)
-      finalText += stepText
-
-      onStepFinish?.(step + 1)
-
-      // No tool calls → done
-      if (toolUses.length === 0) break
-
-      // Execute all tools
-      const toolResults: MessageParam["content"] = []
-      for (const tu of toolUses) {
-        onToolCall?.(tu.name, tu.input)
         try {
-          const tool = tools[tu.name]
-          const result = tool ? await tool.execute(tu.input as Record<string, unknown>) : { error: `unknown tool: ${tu.name}` }
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: tu.id,
-            content: typeof result === "string" ? result : JSON.stringify(result),
-          })
-        } catch (e: unknown) {
-          toolResults.push({
-            type: "tool_result",
-            tool_use_id: tu.id,
-            content: JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
-          })
+          const result = await this.tryWithFallback(
+            (client, tier) => client.messages.create({
+              model: effectiveModel || tier.model,
+              max_tokens: maxTokens,
+              temperature,
+              system,
+              messages,
+              tools: anthropicTools,
+            }, stepSignal ? { signal: stepSignal } : undefined),
+            opts.forceProvider,
+          )
+
+          if (!result.success) {
+            throw new Error(`All model tiers failed. Last error: ${result.error}`)
+          }
+
+          const resp = result.data!
+          activeProvider = result.tier!
+          activeModel = result.model!
+
+          totalInputTokens += resp.usage?.input_tokens || 0
+          totalOutputTokens += resp.usage?.output_tokens || 0
+          stopReason = resp.stop_reason
+
+          const toolUses = resp.content.filter((b): b is ToolUseBlock => b.type === "tool_use")
+          const textBlocks = resp.content.filter(b => b.type === "text")
+
+          const stepText = textBlocks.map(t => t.text).join("")
+          if (stepText && onText) onText(stepText)
+          finalText += stepText
+
+          onStepFinish?.(step + 1)
+
+          // No tool calls → done
+          if (toolUses.length === 0) break
+
+          // Execute all tools (这些在 Worker 内部，不设超时，工具自己管理)
+          const toolResults: MessageParam["content"] = []
+          for (const tu of toolUses) {
+            onToolCall?.(tu.name, tu.input)
+            try {
+              const tool = tools[tu.name]
+              const result = tool ? await tool.execute(tu.input as Record<string, unknown>) : { error: `unknown tool: ${tu.name}` }
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tu.id,
+                content: typeof result === "string" ? result : JSON.stringify(result),
+              })
+            } catch (e: unknown) {
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tu.id,
+                content: JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
+              })
+            }
+          }
+
+          messages.push({ role: "assistant", content: resp.content })
+          messages.push({ role: "user", content: toolResults })
+        } finally {
+          stepCleanup?.()
         }
       }
-
-      messages.push({ role: "assistant", content: resp.content })
-      messages.push({ role: "user", content: toolResults })
+    } finally {
+      if (totalTimer) clearTimeout(totalTimer)
     }
 
     return {
@@ -275,7 +341,7 @@ export class AgentLoop {
     }
   }
 
-  /** Streaming variant with fallback */
+  /** Streaming variant with fallback + timeout */
   async runStream(prompt: string, tools: Record<string, AgentTool> = {}, opts: AgentOptions = {}): Promise<AgentResult> {
     const {
       model = "claude-sonnet-4-6",
@@ -286,6 +352,8 @@ export class AgentLoop {
       onText,
       onToolCall,
       onStepFinish,
+      timeout = 120_000,         // 默认每步 2 分钟
+      totalTimeout = 600_000,    // 默认总超时 10 分钟
     } = opts
 
     const anthropicTools: Tool[] = Object.values(tools).map(t => ({
@@ -303,80 +371,156 @@ export class AgentLoop {
     let activeModel = ""
 
     const effectiveModel = opts.model || model
-    let isFallback = false  // Track whether we fell back to non-streaming
+    let isFallback = false
 
-    for (let step = 0; step < maxSteps; step++) {
-      const tierList = this.getAvailableTiers(opts.forceProvider)
-      const primary = tierList[0]
-      if (!primary) throw new Error("No available model tiers")
+    // ── 总超时保护 ──
+    let totalTimedOut = false
+    let totalTimer: ReturnType<typeof setTimeout> | undefined
+    if (totalTimeout > 0) {
+      totalTimer = setTimeout(() => { totalTimedOut = true }, totalTimeout)
+    }
 
-      let resp: any
-      let alreadyCountedTokens = false  // Prevent double-counting
+    try {
+      for (let step = 0; step < maxSteps; step++) {
+        if (totalTimedOut) {
+          throw new Error(`AgentLoop 总执行超时 (${totalTimeout}ms)`)
+        }
 
-      if (primary.protocol === "anthropic") {
-        try {
-          const client = this.clients.get(primary.provider)
-          if (!client) throw new Error(`No client for ${primary.provider}`)
+        const tierList = this.getAvailableTiers(opts.forceProvider)
+        const primary = tierList[0]
+        if (!primary) throw new Error("No available model tiers")
 
-          const stream = await client.messages.create({
-            model: effectiveModel || primary.model,
-            max_tokens: maxTokens,
-            temperature,
-            system,
-            messages,
-            tools: anthropicTools,
-            stream: true,
-          })
+        let resp: any
+        let alreadyCountedTokens = false
 
-          const textChunks: string[] = []
-          for await (const event of stream) {
-            switch (event.type) {
-              case "message_start":
-                totalInputTokens += event.message.usage.input_tokens
-                break
-              case "content_block_delta":
-                if (event.delta.type === "text_delta" && event.delta.text) {
-                  textChunks.push(event.delta.text)
-                  onText?.(event.delta.text)
-                }
-                break
-              case "message_delta":
-                totalOutputTokens += event.usage.output_tokens
-                stopReason = event.delta.stop_reason || stopReason
-                break
-            }
+        if (primary.protocol === "anthropic") {
+          // ── 每步流式调用超时 ──
+          let stepCleanup: (() => void) | undefined
+          let stepSignal: AbortSignal | undefined
+          if (timeout > 0) {
+            const tc = withTimeout(timeout)
+            stepSignal = tc.signal
+            stepCleanup = tc.cleanup
           }
 
-          const stepText = textChunks.join("")
-          finalText += stepText
-          onStepFinish?.(step + 1)
-          this.recordSuccess(primary.provider)
-          activeProvider = primary.provider
-          activeModel = effectiveModel || primary.model
-          alreadyCountedTokens = true
+          try {
+            const client = this.clients.get(primary.provider)
+            if (!client) throw new Error(`No client for ${primary.provider}`)
 
-          // Re-fetch only for tool_use (not end_turn — that's a clean finish)
-          if (stopReason === "tool_use") {
-            const complete = await client.messages.create({
+            const stream = await client.messages.create({
               model: effectiveModel || primary.model,
-              max_tokens: maxTokens,  // Use original max to avoid truncation
+              max_tokens: maxTokens,
               temperature,
               system,
               messages,
               tools: anthropicTools,
-              stream: false,
-            })
-            totalInputTokens += complete.usage.input_tokens
-            totalOutputTokens += complete.usage.output_tokens
-            stopReason = complete.stop_reason
-            resp = complete
-          } else {
-            break
+              stream: true,
+            }, stepSignal ? { signal: stepSignal } : undefined)
+
+            const textChunks: string[] = []
+            for await (const event of stream) {
+              switch (event.type) {
+                case "message_start":
+                  totalInputTokens += event.message.usage.input_tokens
+                  break
+                case "content_block_delta":
+                  if (event.delta.type === "text_delta" && event.delta.text) {
+                    textChunks.push(event.delta.text)
+                    onText?.(event.delta.text)
+                  }
+                  break
+                case "message_delta":
+                  totalOutputTokens += event.usage.output_tokens
+                  stopReason = event.delta.stop_reason || stopReason
+                  break
+              }
+            }
+
+            const stepText = textChunks.join("")
+            finalText += stepText
+            onStepFinish?.(step + 1)
+            this.recordSuccess(primary.provider)
+            activeProvider = primary.provider
+            activeModel = effectiveModel || primary.model
+            alreadyCountedTokens = true
+
+            // Re-fetch only for tool_use
+            if (stopReason === "tool_use") {
+              let reFetchCleanup: (() => void) | undefined
+              let reFetchSignal: AbortSignal | undefined
+              if (timeout > 0) {
+                const tc = withTimeout(timeout)
+                reFetchSignal = tc.signal
+                reFetchCleanup = tc.cleanup
+              }
+              try {
+                const complete = await client.messages.create({
+                  model: effectiveModel || primary.model,
+                  max_tokens: maxTokens,
+                  temperature,
+                  system,
+                  messages,
+                  tools: anthropicTools,
+                  stream: false,
+                }, reFetchSignal ? { signal: reFetchSignal } : undefined)
+                totalInputTokens += complete.usage.input_tokens
+                totalOutputTokens += complete.usage.output_tokens
+                stopReason = complete.stop_reason
+                resp = complete
+              } finally {
+                reFetchCleanup?.()
+              }
+            } else {
+              break
+            }
+          } catch (e: any) {
+            if (this.isRetryable(e)) {
+              this.cooldown(primary.provider)
+              isFallback = true
+
+              let fbCleanup: (() => void) | undefined
+              let fbSignal: AbortSignal | undefined
+              if (timeout > 0) {
+                const tc = withTimeout(timeout)
+                fbSignal = tc.signal
+                fbCleanup = tc.cleanup
+              }
+              try {
+                const fallbackResult = await this.tryWithFallback(
+                  (client, tier) => client.messages.create({
+                    model: effectiveModel || tier.model,
+                    max_tokens: maxTokens,
+                    temperature,
+                    system,
+                    messages,
+                    tools: anthropicTools,
+                  }, fbSignal ? { signal: fbSignal } : undefined),
+                  opts.forceProvider,
+                )
+                if (!fallbackResult.success) throw e
+                resp = fallbackResult.data!
+                activeProvider = fallbackResult.tier!
+                activeModel = effectiveModel || fallbackResult.model!
+              } finally {
+                fbCleanup?.()
+              }
+            } else {
+              throw e
+            }
+          } finally {
+            stepCleanup?.()
           }
-        } catch (e: any) {
-          if (this.isRetryable(e)) {
-            this.cooldown(primary.provider)
-            isFallback = true
+        } else {
+          // Non-Anthropic protocol: use non-streaming
+          isFallback = true
+          let fbCleanup: (() => void) | undefined
+          let fbSignal: AbortSignal | undefined
+          if (timeout > 0) {
+            const tc = withTimeout(timeout)
+            fbSignal = tc.signal
+            fbCleanup = tc.cleanup
+          }
+          try {
             const fallbackResult = await this.tryWithFallback(
               (client, tier) => client.messages.create({
                 model: effectiveModel || tier.model,
@@ -385,85 +529,66 @@ export class AgentLoop {
                 system,
                 messages,
                 tools: anthropicTools,
-              }),
+              }, fbSignal ? { signal: fbSignal } : undefined),
               opts.forceProvider,
             )
-            if (!fallbackResult.success) throw e
+            if (!fallbackResult.success) throw new Error(fallbackResult.error || "All tiers failed")
             resp = fallbackResult.data!
             activeProvider = fallbackResult.tier!
             activeModel = effectiveModel || fallbackResult.model!
-          } else {
-            throw e
-          }
-        }
-      } else {
-        // Non-Anthropic protocol: use non-streaming
-        isFallback = true
-        const fallbackResult = await this.tryWithFallback(
-          (client, tier) => client.messages.create({
-            model: effectiveModel || tier.model,
-            max_tokens: maxTokens,
-            temperature,
-            system,
-            messages,
-            tools: anthropicTools,
-          }),
-          opts.forceProvider,
-        )
-        if (!fallbackResult.success) throw new Error(fallbackResult.error || "All tiers failed")
-        resp = fallbackResult.data!
-        activeProvider = fallbackResult.tier!
-        activeModel = effectiveModel || fallbackResult.model!
-      }
-
-      if (resp) {
-        // Only count tokens if not already counted from streaming + re-fetch
-        if (!alreadyCountedTokens) {
-          totalInputTokens += resp.usage?.input_tokens || 0
-          totalOutputTokens += resp.usage?.output_tokens || 0
-        }
-        stopReason = resp.stop_reason || stopReason
-
-        const toolUses = (resp.content || []).filter((b: any) => b.type === "tool_use")
-        const textBlocks = (resp.content || []).filter((b: any) => b.type === "text")
-        const stepText = textBlocks.map((t: any) => t.text).join("")
-        if (stepText) {
-          // Deduplicate: don't re-add text already captured during streaming
-          if (!finalText.includes(stepText)) finalText += stepText
-          // Fire onText for fallback/non-streaming paths
-          if (isFallback || primary.protocol !== "anthropic") onText?.(stepText)
-        }
-
-        if (toolUses.length === 0) break
-
-        const toolResults: MessageParam["content"] = []
-        for (const tu of toolUses) {
-          onToolCall?.(tu.name, tu.input)
-          try {
-            const tool = tools[tu.name]
-            const result = tool ? await tool.execute(tu.input as Record<string, unknown>) : { error: `unknown tool: ${tu.name}` }
-            toolResults.push({
-              type: "tool_result",
-              tool_use_id: tu.id,
-              content: typeof result === "string" ? result : JSON.stringify(result),
-            })
-          } catch (e: unknown) {
-            toolResults.push({
-              type: "tool_result",
-              tool_use_id: tu.id,
-              content: JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
-            })
+          } finally {
+            fbCleanup?.()
           }
         }
 
-        messages.push({ role: "assistant", content: resp.content.map((b: any) => {
-          if (b.type === "text") return { type: "text" as const, text: b.text }
-          return { type: "tool_use" as const, id: b.id, name: b.name, input: b.input }
-        }) })
-        messages.push({ role: "user", content: toolResults })
-      } else {
-        break
+        if (resp) {
+          if (!alreadyCountedTokens) {
+            totalInputTokens += resp.usage?.input_tokens || 0
+            totalOutputTokens += resp.usage?.output_tokens || 0
+          }
+          stopReason = resp.stop_reason || stopReason
+
+          const toolUses = (resp.content || []).filter((b: any) => b.type === "tool_use")
+          const textBlocks = (resp.content || []).filter((b: any) => b.type === "text")
+          const stepText = textBlocks.map((t: any) => t.text).join("")
+          if (stepText) {
+            if (!finalText.includes(stepText)) finalText += stepText
+            if (isFallback || primary.protocol !== "anthropic") onText?.(stepText)
+          }
+
+          if (toolUses.length === 0) break
+
+          const toolResults: MessageParam["content"] = []
+          for (const tu of toolUses) {
+            onToolCall?.(tu.name, tu.input)
+            try {
+              const tool = tools[tu.name]
+              const result = tool ? await tool.execute(tu.input as Record<string, unknown>) : { error: `unknown tool: ${tu.name}` }
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tu.id,
+                content: typeof result === "string" ? result : JSON.stringify(result),
+              })
+            } catch (e: unknown) {
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: tu.id,
+                content: JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
+              })
+            }
+          }
+
+          messages.push({ role: "assistant", content: resp.content.map((b: any) => {
+            if (b.type === "text") return { type: "text" as const, text: b.text }
+            return { type: "tool_use" as const, id: b.id, name: b.name, input: b.input }
+          }) })
+          messages.push({ role: "user", content: toolResults })
+        } else {
+          break
+        }
       }
+    } finally {
+      if (totalTimer) clearTimeout(totalTimer)
     }
 
     return {
@@ -532,9 +657,10 @@ export class AgentLoop {
     // 5xx server errors, 429 rate limits, network errors → retry
     if (status >= 500) return true
     if (status === 429) return true
-    // Network/timeout errors
+    // Network/timeout errors (including our custom abort/timeout)
     if (e?.code === "ECONNREFUSED" || e?.code === "ETIMEDOUT" || e?.code === "ENOTFOUND") return true
     if (e?.message?.includes("timeout") || e?.message?.includes("fetch failed")) return true
+    if (e?.name === "AbortError" || e?.message?.includes("aborted")) return true
     // 4xx client errors → don't retry (bad request, auth, etc.)
     return false
   }
