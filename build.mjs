@@ -1,5 +1,5 @@
 import { build } from "esbuild"
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, statSync } from "fs"
 import { join, dirname } from "path"
 
 await build({
@@ -80,6 +80,19 @@ await build({
 
 console.log("✅ dist/ai-trader.js built")
 
+await build({
+  entryPoints: ["src/mcp-gateway.ts"],
+  bundle: true,
+  platform: "node",
+  target: "node20",
+  format: "cjs",
+  outfile: "dist/mcp-gateway.js",
+  external: [],
+  banner: { js: "#!/usr/bin/env node" },
+})
+
+console.log("✅ dist/mcp-gateway.js built")
+
 // ── Copy web assets to dist/ ──
 const webFiles = [
   "dashboard.html",
@@ -95,5 +108,21 @@ for (const f of webFiles) {
     console.log(`✅ dist/web/${f} copied`)
   } else {
     console.log(`⚠️  src/web/${f} not found, skipped`)
+  }
+}
+
+// ── Copy chat-app to dist/ ──
+const chatAppDir = join("chat-app")
+const distChatApp = join("dist", "chat-app")
+if (existsSync(chatAppDir)) {
+  if (!existsSync(distChatApp)) mkdirSync(distChatApp, { recursive: true })
+  const chatFiles = readdirSync(chatAppDir)
+  for (const f of chatFiles) {
+    const src = join(chatAppDir, f)
+    const dst = join(distChatApp, f)
+    if (statSync(src).isFile()) {
+      writeFileSync(dst, readFileSync(src))
+      console.log(`✅ dist/chat-app/${f} copied`)
+    }
   }
 }

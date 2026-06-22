@@ -29,6 +29,7 @@ interface WorkerInfo {
 // ── Color markers for streaming text ──────────────────────────────────────
 // Supports: [[green]]...[[/green]], [[red]]...[[/red]], [[yellow]]...[[/yellow]],
 //           [[blue]]...[[/blue]], [[dim]]...[[/dim]], [[warn]]...[[/warn]]
+//           [[info]]...[[/info]], [[err]]...[[/err]], [[success]]...[[/success]]
 
 const COLOR_MAP: Record<string, string> = {
   green:  "text-emerald-400",
@@ -42,90 +43,33 @@ const COLOR_MAP: Record<string, string> = {
   success:"text-emerald-400 font-semibold",
 }
 
-/** Parse color markers in text and render as React nodes */
-function colorize(text: string): (string | React.ReactNode)[] {
-  const parts: (string | React.ReactNode)[] = []
-  const re = /\[\[(\w+)\]\]/g
-  let lastIdx = 0
-  let match: RegExpExecArray | null
-  const stack: string[] = []
-
-  while ((match = re.exec(text)) !== null) {
-    // Push text before this marker
-    if (match.index > lastIdx) {
-      const raw = text.slice(lastIdx, match.index)
-      parts.push(raw)
-    }
-    const tag = match[1]
-    if (tag.startsWith("/")) {
-      // Closing tag
-      const closeTag = tag.slice(1)
-      if (stack.length > 0 && stack[stack.length - 1] === closeTag) {
-        stack.pop()
-      }
-      // Push a marker to close styling — we handle via span nesting later
-      parts.push(`[[/${closeTag}]]`)
-    } else {
-      // Opening tag
-      stack.push(tag)
-      parts.push(`[[${tag}]]`)
-    }
-    lastIdx = match.index + match[0].length
-  }
-  // Remaining text
-  if (lastIdx < text.length) {
-    parts.push(text.slice(lastIdx))
-  }
-
-  // If no markers found, return as-is
-  if (!text.includes("[[")) return [text]
-
-  // Build React elements with proper nesting
-  const output: (string | React.ReactNode)[] = []
-  const openStack: string[] = []
-
-  for (let i = 0; i < parts.length; i++) {
-    const p = parts[i]
-    if (typeof p !== "string") { output.push(p); continue }
-
-    const openMatch = p.match(/^\[\[(\w+)\]\]$/)
-    const closeMatch = p.match(/^\[\/\/(\w+)\]\]$/)
-
-    if (closeMatch) {
-      const tag = closeMatch[1]
-      const idx = openStack.lastIndexOf(tag)
-      if (idx >= 0) {
-        openStack.splice(idx, 1)
-      }
-      continue
-    }
-
-    if (openMatch) {
-      const tag = openMatch[1]
-      openStack.push(tag)
-      continue
-    }
-
-    // Plain text with current style stack
-    if (openStack.length > 0) {
-      const className = openStack.map(t => COLOR_MAP[t] || "").filter(Boolean).join(" ")
-      output.push(
-        <span key={`c-${i}`} className={className}>{p}</span>
-      )
-    } else {
-      output.push(p)
-    }
-  }
-
-  return output
-}
-
 /** Format HH:MM:SS timestamp */
 function nowStamp(): string {
   return new Date().toLocaleTimeString("zh-CN", {
     hour: "2-digit", minute: "2-digit", second: "2-digit",
     hour12: false,
   })
+}
+
+/** Safe JSON.stringify with fallback — avoids crash on undefined/null args */
+function safeStringify(val: unknown, maxLen = 80): string {
+  try {
+    const s = JSON.stringify(val)
+    if (s === undefined) return "undefined"
+    return s.length > maxLen ? s.slice(0, maxLen) + "…" : s
+  } catch {
+    return String(val)
+  }
+}
+
+// ── WebSocket port discovery ──────────────────────────────────────────────
+// The hub-server injects window.__HUB_WS_PORT at serving time.
+// Fallback to 9321 for development / legacy builds.
+function getWsPort(): number {
+  if (typeof window !== "undefined" && (window as any).__HUB_WS_PORT) {
+    return (window as any).__HUB_WS_PORT as number
+  }
+  return 9321
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -137,12 +81,13 @@ export function LiveTerminal() {
   const [sending, setSending] = useState(false)
   const [workers, setWorkers] = useState<WorkerInfo[]>([])
   const [wsConnected, setWsConnected] = useState(false)
+  const [bufferCount, setBufferCount] = useState(0)       // ← NEW: real-time buffer count
   const bottomRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const blocksRef = useRef<AIBlock[]>([])
   const pauseBufferRef = useRef<Record<string, unknown>[]>([])
   const pausedRef = useRef(false)
-  const autoScrollRef = useRef(true)
+  const handleMessageRef = useRef<(msg: Record<string, unknown>) => void>(() => {})
 
   // Keep refs in sync
   useEffect(() => { blocksRef.current = blocks }, [blocks])
@@ -154,13 +99,18 @@ export function LiveTerminal() {
     setSending(true)
     const taskId = `Q-${Date.now().toString(36)}`
     try {
-      await fetch("/api/tasks", {
+      const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, title: text.trim(), template: "", params: {} }),
       })
+      if (!res.ok) {
+        console.error(`[Terminal] 提交任务失败: ${res.status} ${res.statusText}`)
+      }
       setPrompt("")
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("[Terminal] 提交任务网络错误:", err)
+    }
     setSending(false)
   }
 
@@ -179,7 +129,7 @@ export function LiveTerminal() {
           })))
         }
       }
-    } catch { /* ignore */ }
+    } catch { /* 网络错误静默忽略 */ }
   }, [])
 
   useEffect(() => {
@@ -188,71 +138,12 @@ export function LiveTerminal() {
     return () => clearInterval(timer)
   }, [fetchWorkers])
 
-  // ── WebSocket connection (independent of paused state!) ──
-  useEffect(() => {
-    let reconnectTimer: ReturnType<typeof setTimeout>
-
-    const connect = () => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) return
-      const ws = new WebSocket(`ws://${location.hostname}:9321`)
-      wsRef.current = ws
-
-      ws.onopen = () => {
-        setWsConnected(true)
-        ws.send(JSON.stringify({
-          type: "agent:hello",
-          agentId: `term-${Date.now()}`,
-          name: "终端面板",
-          version: "2.0",
-          capabilities: [],
-        }))
-        // Replay buffered messages on reconnect
-        const buf = pauseBufferRef.current
-        if (buf.length > 0) {
-          console.log(`[Terminal] 重放 ${buf.length} 条缓冲消息`)
-          for (const m of buf) handleMessage(m)
-          pauseBufferRef.current = []
-        }
-      }
-
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data)
-          // If paused, buffer the message instead of dropping
-          if (pausedRef.current) {
-            pauseBufferRef.current.push(msg)
-            // Cap buffer at 500 messages
-            if (pauseBufferRef.current.length > 500) {
-              pauseBufferRef.current.shift()
-            }
-            return
-          }
-          handleMessage(msg)
-        } catch { /* ignore malformed */ }
-      }
-
-      ws.onclose = () => {
-        setWsConnected(false)
-        reconnectTimer = setTimeout(connect, 3000)
-      }
-
-      ws.onerror = () => {
-        ws.close()
-      }
-    }
-
-    connect()
-    return () => {
-      clearTimeout(reconnectTimer)
-      wsRef.current?.close()
-    }
-  }, []) // ← Only mount/unmount, NOT paused!
-
   // ── Message handler ──
-  function handleMessage(msg: Record<string, unknown>) {
+  const handleMessage = useCallback((msg: Record<string, unknown>) => {
     const type = msg.type as string
     const taskId = (msg.taskId as string) || ""
     const agentId = (msg.agentId || msg.from as string) || ""
+    const stamp = nowStamp()
 
     switch (type) {
       case "task:progress": {
@@ -273,13 +164,12 @@ export function LiveTerminal() {
         updateBlock(taskId, block => ({
           ...block,
           tools: [...block.tools, { name: toolName, args: toolArgs }],
-          text: block.text + `\n🔧 调用工具: ${toolName}(${JSON.stringify(toolArgs).slice(0, 80)})\n`,
+          text: block.text + `\n[[dim]][${stamp}] 🔧 ${toolName}(${safeStringify(toolArgs)})[[/dim]]\n`,
         }), taskId, (msg.title as string) || taskId)
         break
       }
 
       case "task:done": {
-        const result = (msg.result as string) || ""
         const usage = msg.usage as { inputTokens: number; outputTokens: number } | undefined
         const error = msg.error as string
         updateBlock(taskId, block => ({
@@ -287,18 +177,45 @@ export function LiveTerminal() {
           status: error ? "error" : "done",
           tokens: usage ? { input: usage.inputTokens, output: usage.outputTokens } : undefined,
           text: block.text + (error
-            ? `\n[[err]]❌ ${error}[[/err]]\n`
-            : `\n[[success]]✅ 完成 (${usage?.inputTokens || 0}+${usage?.outputTokens || 0} tokens)[[/success]]\n`),
+            ? `\n[[err]][${stamp}] ❌ ${error}[[/err]]\n`
+            : `\n[[success]][${stamp}] ✅ 完成 (${usage?.inputTokens || 0}+${usage?.outputTokens || 0} tokens)[[/success]]\n`),
         }), taskId, (msg.title as string) || taskId)
-        // Refresh worker count after task completes
         fetchWorkers()
+        break
+      }
+
+      case "task:released": {
+        const reason = (msg.reason as string) || "未知原因"
+        if (taskId) {
+          updateBlock(taskId, block => ({
+            ...block,
+            status: "error" as const,
+            text: block.text + `\n[[warn]][${stamp}] ⚠️ 任务已释放: ${reason}[[/warn]]\n`,
+          }), taskId, (msg.title as string) || taskId)
+          fetchWorkers()
+        }
+        break
+      }
+
+      case "task:completed": {
+        if (taskId) {
+          updateBlock(taskId, block => ({
+            ...block,
+            status: "done" as const,
+            text: block.text + `\n[[success]][${stamp}] ✅ 任务已完成，等待审核[[/success]]\n`,
+          }), taskId, (msg.title as string) || taskId)
+          fetchWorkers()
+        }
         break
       }
 
       case "task:assigned":
       case "task:claim": {
         if (agentId && taskId) {
-          updateBlock(taskId, block => block, taskId, (msg.title as string) || taskId)
+          updateBlock(taskId, block => ({
+            ...block,
+            text: block.text + `\n[[info]][${stamp}] 👤 已分配给 ${agentId}[[/info]]\n`,
+          }), taskId, (msg.title as string) || taskId)
           fetchWorkers()
         }
         break
@@ -312,10 +229,10 @@ export function LiveTerminal() {
               id: Math.random().toString(36).slice(2),
               taskId,
               title: (msg.title as string) || taskId,
-              text: `[[dim]][${nowStamp()}] 任务已创建[[/dim]]\n`,
+              text: `[[dim]][${stamp}] 任务已创建[[/dim]]\n`,
               tools: [],
               status: "thinking",
-              startTime: nowStamp(),
+              startTime: stamp,
             }
             setBlocks(prev => {
               const next = [...prev, block]
@@ -327,7 +244,6 @@ export function LiveTerminal() {
       }
 
       case "agent:update": {
-        // Update worker list when agent status changes
         fetchWorkers()
         break
       }
@@ -337,7 +253,12 @@ export function LiveTerminal() {
         break
       }
     }
-  }
+  }, [fetchWorkers])
+
+  // Keep handleMessage ref for WS callback
+  useEffect(() => {
+    handleMessageRef.current = handleMessage
+  }, [handleMessage])
 
   function updateBlock(
     taskId: string,
@@ -367,6 +288,69 @@ export function LiveTerminal() {
     })
   }
 
+  // ── WebSocket connection (independent of paused state!) ──
+  useEffect(() => {
+    let reconnectTimer: ReturnType<typeof setTimeout>
+
+    const connect = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) return
+      const wsPort = getWsPort()
+      const ws = new WebSocket(`ws://${location.hostname}:${wsPort}`)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        setWsConnected(true)
+        ws.send(JSON.stringify({
+          type: "agent:hello",
+          agentId: `term-${Date.now()}`,
+          name: "终端面板",
+          version: "2.0",
+          capabilities: [],
+        }))
+        // Replay buffered messages on reconnect — respect pause state!
+        const buf = pauseBufferRef.current
+        if (buf.length > 0 && !pausedRef.current) {
+          console.log(`[Terminal] 重放 ${buf.length} 条缓冲消息`)
+          for (const m of buf) handleMessageRef.current(m)
+          pauseBufferRef.current = []
+          setBufferCount(0)
+        }
+      }
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data)
+          // If paused, buffer the message instead of dropping
+          if (pausedRef.current) {
+            pauseBufferRef.current.push(msg)
+            // Cap buffer at 500 messages
+            if (pauseBufferRef.current.length > 500) {
+              pauseBufferRef.current.shift()
+            }
+            setBufferCount(pauseBufferRef.current.length)  // ← update UI counter
+            return
+          }
+          handleMessageRef.current(msg)
+        } catch { /* ignore malformed */ }
+      }
+
+      ws.onclose = () => {
+        setWsConnected(false)
+        reconnectTimer = setTimeout(connect, 3000)
+      }
+
+      ws.onerror = () => {
+        ws.close()
+      }
+    }
+
+    connect()
+    return () => {
+      clearTimeout(reconnectTimer)
+      wsRef.current?.close()
+    }
+  }, []) // ← Only mount/unmount, NOT paused!
+
   // ── Auto-scroll (respects pause) ──
   useEffect(() => {
     if (!paused) {
@@ -377,8 +361,19 @@ export function LiveTerminal() {
   // ── Derived stats ──
   const activeBlocks = blocks.filter(b => b.status === "thinking")
   const doneBlocks = blocks.filter(b => b.status === "done" || b.status === "error")
-  const workingWorkers = workers.filter(w => w.status === "working" && !w.agentId.startsWith("term-") && !w.agentId.startsWith("dashboard"))
-  const idleWorkers = workers.filter(w => w.status === "idle" && !w.agentId.startsWith("term-") && !w.agentId.startsWith("dashboard"))
+  // Filter out: terminal panels, dashboard viewers, chronos dispatcher, and hub server itself
+  const workingWorkers = workers.filter(w =>
+    w.status === "working"
+    && !w.agentId.startsWith("term-")
+    && !w.agentId.startsWith("dashboard")
+    && w.agentId !== "chronos-dispatcher"
+  )
+  const idleWorkers = workers.filter(w =>
+    w.status === "idle"
+    && !w.agentId.startsWith("term-")
+    && !w.agentId.startsWith("dashboard")
+    && w.agentId !== "chronos-dispatcher"
+  )
   const totalWorkers = workingWorkers.length + idleWorkers.length
 
   const quickActions = [
@@ -404,18 +399,20 @@ export function LiveTerminal() {
           </span>
         </div>
         <span className="text-zinc-600">|</span>
-        {/* Worker indicators */}
-        <div className="flex items-center gap-1.5">
+        {/* Worker indicators with LIVE/idle labels */}
+        <div className="flex items-center gap-1.5 flex-wrap">
           {workingWorkers.map(w => (
             <span key={w.agentId} className="flex items-center gap-1">
               <Circle className="h-2 w-2 fill-emerald-500 text-emerald-500" />
-              <span className="text-emerald-400">{w.name}</span>
+              <span className="text-emerald-400 font-medium">{w.name}</span>
+              <span className="text-emerald-500/70 text-[9px]">● LIVE</span>
             </span>
           ))}
           {idleWorkers.map(w => (
             <span key={w.agentId} className="flex items-center gap-1">
               <Circle className="h-2 w-2 fill-zinc-600 text-zinc-600" />
               <span className="text-zinc-400">{w.name}</span>
+              <span className="text-zinc-500/50 text-[9px]">○ idle</span>
             </span>
           ))}
           {totalWorkers === 0 && (
@@ -551,17 +548,23 @@ export function LiveTerminal() {
           variant="ghost"
           className={cn("h-6 w-6 p-0", paused && "bg-amber-500/10")}
           onClick={() => {
-            setPaused(!paused)
+            const newPaused = !paused
+            // 🐛 FIX: Sync ref IMMEDIATELY before setPaused to avoid race with WS handler
+            pausedRef.current = newPaused
+            setPaused(newPaused)
+
             if (paused) {
-              // Unpausing: replay buffer then auto-scroll
+              // ← old state was true → we were paused, now unpausing
+              // Replay buffer then auto-scroll — use ref to avoid stale closure
               const buf = pauseBufferRef.current
               if (buf.length > 0) {
                 console.log(`[Terminal] 恢复暂停，重放 ${buf.length} 条消息`)
-                for (const m of buf) handleMessage(m)
+                for (const m of buf) handleMessageRef.current(m)
                 pauseBufferRef.current = []
+                setBufferCount(0)
               }
-              autoScrollRef.current = true
             }
+            // else: pausing — WS handler will now buffer because pausedRef.current is already true
           }}
           title={paused ? "恢复自动滚动" : "暂停自动滚动"}
         >
@@ -603,7 +606,7 @@ export function LiveTerminal() {
         {/* Paused indicator */}
         {paused && (
           <Badge variant="secondary" className="text-[9px] bg-amber-500/15 text-amber-400 border-amber-500/30 ml-auto">
-            已暂停 · 缓冲 {pauseBufferRef.current.length} 条
+            已暂停 · 缓冲 {bufferCount} 条
           </Badge>
         )}
       </div>
@@ -618,9 +621,10 @@ function ColorizedText({ text }: { text: string }) {
     return <>{text}</>
   }
 
-  // Simple parser: split by color markers
+  // Simple parser: split by [[color]]...[[/color]] markers
+  // 🐛 FIXED: Use double-bracket regex to match actual markers [[green]]/[[/green]]
   const segments: { text: string; color?: string }[] = []
-  const re = /\[\[(\/?\w+)\]\]/g
+  const re = /\[\[\/?\w+\]\]/g
   let lastIdx = 0
   let match: RegExpExecArray | null
   const stack: string[] = []
@@ -632,7 +636,9 @@ function ColorizedText({ text }: { text: string }) {
         color: stack.length > 0 ? stack[stack.length - 1] : undefined,
       })
     }
-    const tag = match[1]
+    // match[0] = "[[green]]" → slice(2, -2) = "green"
+    // match[0] = "[[/green]]" → slice(2, -2) = "/green"
+    const tag = match[0].slice(2, -2)
     if (tag.startsWith("/")) {
       stack.pop()
     } else {

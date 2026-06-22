@@ -28,6 +28,19 @@ interface Signal {
   conclusion: string
   indicator: string
   last5: string[]
+  /** vbt-backtest 扩展字段 */
+  strategy: string
+  totalReturn: number
+  trades: number
+}
+
+/**
+ * 构建兼容带括号和不带括号两种格式的正则。
+ * vbt-signal 输出 SHARPE: 1.5
+ * vbt-backtest 输出 [SHARPE]: 1.5
+ */
+function brace(key: string): string {
+  return `(?:\\[)?${key}(?:\\])?:`
 }
 
 function extractSignals(tasks: Task[]): Signal[] {
@@ -39,20 +52,61 @@ function extractSignals(tasks: Task[]): Signal[] {
         taskId: t.taskId, title: t.title || t.taskId, status: t.status,
         currentSignal: "NEUTRAL", price: "--", sharpe: 0, mdd: 0, winRate: 0,
         confidence: 0, conclusion: "", symbol: "BTC/USDT", indicator: "", last5: [],
+        strategy: "", totalReturn: 0, trades: 0,
       }
-      const sm = r.match(/CURRENT_SIGNAL:\s*(\w+)/i); if (sm) sig.currentSignal = sm[1].toUpperCase()
-      const pm = r.match(/CURRENT_PRICE:\s*(\S+)/i); if (pm) sig.price = pm[1]
-      const sym = r.match(/SYMBOL:\s*(\S+)/i); if (sym) sig.symbol = sym[1]
-      const ind = r.match(/INDICATOR:\s*(\S+)/i); if (ind) sig.indicator = ind[1]
-      const sh = r.match(/SHARPE:\s*([\d.]+)/i); if (sh) sig.sharpe = parseFloat(sh[1])
-      const dd = r.match(/MAX_DD:\s*([\d.]+)/i); if (dd) sig.mdd = parseFloat(dd[1])
-      const wr = r.match(/WIN_RATE:\s*([\d.]+)/i); if (wr) sig.winRate = parseFloat(wr[1])
-      const cf = r.match(/CONFIDENCE:\s*(\d+)/i); if (cf) sig.confidence = parseInt(cf[1])
-      const cl = r.match(/CONCLUSION:\s*(.+)/i); if (cl) sig.conclusion = cl[1].slice(0, 200)
-      const ls = r.match(/LAST_5_SIGNALS:\s*\[(.+)\]/i); if (ls) sig.last5 = ls[1].split(",").map(s => s.trim()).filter(Boolean)
+
+      // vbt-signal 独有字段
+      const sm = r.match(new RegExp(`CURRENT_SIGNAL:\\s*(\\w+)`, "i"))
+      if (sm) sig.currentSignal = sm[1].toUpperCase()
+
+      const pm = r.match(new RegExp(`CURRENT_PRICE:\\s*(\\S+)`, "i"))
+      if (pm) sig.price = pm[1]
+
+      const ind = r.match(new RegExp(`INDICATOR:\\s*(\\S+)`, "i"))
+      if (ind) sig.indicator = ind[1]
+
+      const ls = r.match(new RegExp(`LAST_5_SIGNALS:\\s*\\[(.+)\\]`, "i"))
+      if (ls) sig.last5 = ls[1].split(",").map(s => s.trim()).filter(Boolean)
+
+      // 通用字段 — 兼容 [KEY]: 和 KEY: 两种格式
+      const sym = r.match(new RegExp(`${brace("SYMBOL")}\\s*(\\S+)`, "i"))
+      if (sym) sig.symbol = sym[1]
+
+      const sh = r.match(new RegExp(`${brace("SHARPE")}\\s*([\\d.]+)`, "i"))
+      if (sh) sig.sharpe = parseFloat(sh[1])
+
+      const dd = r.match(new RegExp(`${brace("MAX_DD")}\\s*([\\d.]+)`, "i"))
+      if (dd) sig.mdd = parseFloat(dd[1])
+
+      const wr = r.match(new RegExp(`${brace("WIN_RATE")}\\s*([\\d.]+)`, "i"))
+      if (wr) sig.winRate = parseFloat(wr[1])
+
+      const cf = r.match(new RegExp(`${brace("CONFIDENCE")}\\s*(\\d+)`, "i"))
+      if (cf) sig.confidence = parseInt(cf[1], 10)
+
+      const cl = r.match(new RegExp(`${brace("CONCLUSION")}\\s*(.+)`, "i"))
+      if (cl) sig.conclusion = cl[1].slice(0, 200)
+
+      // vbt-backtest 扩展字段
+      const st = r.match(new RegExp(`${brace("STRATEGY")}\\s*(.+)`, "i"))
+      if (st) sig.strategy = st[1].trim()
+
+      const tr = r.match(new RegExp(`${brace("TOTAL_RETURN")}\\s*([\\d.]+)`, "i"))
+      if (tr) sig.totalReturn = parseFloat(tr[1])
+
+      const td = r.match(new RegExp(`${brace("TRADES")}\\s*(\\d+)`, "i"))
+      if (td) sig.trades = parseInt(td[1], 10)
+
+      // 如果结果中有 CURRENT_SIGNAL 但没找到 SYMBOL，从标题猜品种
+      if (!sym && sig.currentSignal !== "NEUTRAL" && t.title) {
+        const guess = t.title.match(/(BTC|ETH|SOL|DOGE|ADA|XRP|BNB)[-/]?USDT/i)
+        if (guess) sig.symbol = guess[1].toUpperCase() + "/USDT"
+      }
+
       return sig
     })
-    .filter(s => s.currentSignal !== "NEUTRAL" || s.status === "done" || s.status === "reviewed")
+    // 只保留有有效信号的条目：非NEUTRAL，或已完成/已审核
+    .filter(s => s.currentSignal !== "NEUTRAL" || s.status === "done" || s.status === "reviewed" || s.sharpe > 0)
 }
 
 interface SignalsPanelProps {
@@ -186,7 +240,7 @@ export function SignalsPanel({ tasks, onCreateTask, onRefresh }: SignalsPanelPro
             const isLong = s.currentSignal === "LONG"
             const isShort = s.currentSignal === "SHORT"
             const isNeutral = s.currentSignal === "NEUTRAL"
-            const confPct = s.confidence || (s.winRate > 0 ? s.winRate : 50)
+            const confPct = s.confidence || (s.winRate > 0 ? Math.round(s.winRate) : 50)
             const confColor = confPct >= 70 ? "text-emerald-600" : confPct >= 40 ? "text-amber-600" : "text-red-600"
 
             return (
@@ -204,7 +258,7 @@ export function SignalsPanel({ tasks, onCreateTask, onRefresh }: SignalsPanelPro
                         {isLong ? "做多" : isShort ? "做空" : "观望"}
                       </Badge>
                       <span className="text-sm font-semibold">{s.symbol}</span>
-                      <span className="text-xs text-muted-foreground">· {s.indicator || s.taskId}</span>
+                      <span className="text-xs text-muted-foreground">· {s.indicator || s.strategy || s.taskId}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="text-[10px]">{s.status}</Badge>
@@ -254,6 +308,14 @@ export function SignalsPanel({ tasks, onCreateTask, onRefresh }: SignalsPanelPro
                       "bg-muted border-l-indigo-400"
                     )}>
                       {s.conclusion}
+                    </div>
+                  )}
+                  {/* vbt-backtest 扩展信息 */}
+                  {(s.strategy || s.totalReturn > 0 || s.trades > 0) && (
+                    <div className="mt-2 flex gap-3 text-[10px] text-muted-foreground">
+                      {s.strategy && <span>策略: {s.strategy}</span>}
+                      {s.totalReturn > 0 && <span>总收益: <span className={s.totalReturn >= 0 ? "text-emerald-600" : "text-red-600"}>{s.totalReturn.toFixed(1)}%</span></span>}
+                      {s.trades > 0 && <span>交易: {s.trades} 次</span>}
                     </div>
                   )}
                   {s.last5.length > 0 && (

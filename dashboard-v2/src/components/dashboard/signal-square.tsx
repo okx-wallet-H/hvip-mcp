@@ -50,6 +50,51 @@ interface SignalStore {
   lastRun: string | null
 }
 
+// Normalize signal data from API (handles both camelCase and snake_case JSON keys)
+function normalizeSignal(d: any): SignalData {
+  return {
+    id: d.id || "",
+    symbol: d.symbol || "",
+    timeframe: d.timeframe || "",
+    direction: d.direction || "NEUTRAL",
+    confidence: d.confidence ?? 0,
+    price: d.price ?? 0,
+    grade: d.grade || "C",
+    qualityScore: d.qualityScore ?? d.quality_score ?? 0,
+    qualifiedCount: d.qualifiedCount ?? d.qualified_count ?? 0,
+    cautionedCount: d.cautionedCount ?? d.cautioned_count ?? 0,
+    testedCount: d.testedCount ?? d.tested_count ?? 0,
+    reason: d.reason || "",
+    multiTf: (d.multiTf || d.multi_tf) && typeof (d.multiTf || d.multi_tf) === "object"
+      ? {
+          agreement: (d.multiTf || d.multi_tf).agreement || "neutral",
+          secondary: (d.multiTf || d.multi_tf).secondary || {},
+        }
+      : { agreement: "neutral", secondary: {} },
+    risk: d.risk ? {
+      atr_14: d.risk.atr_14 ?? 0,
+      sl_price: d.risk.sl_price ?? 0,
+      tp_price: d.risk.tp_price ?? 0,
+      sl_distance: d.risk.sl_distance ?? 0,
+      tp_distance: d.risk.tp_distance ?? 0,
+      risk_reward_ratio: d.risk.risk_reward_ratio ?? 0,
+      suggested_position_pct: d.risk.suggested_position_pct ?? 0,
+      risk_per_trade_pct: d.risk.risk_per_trade_pct ?? 0,
+    } : null,
+    ensemble: d.ensemble ? {
+      avgSharpe: d.ensemble.avgSharpe ?? d.ensemble.avg_sharpe ?? 0,
+      avgWinRate: d.ensemble.avgWinRate ?? d.ensemble.avg_win_rate ?? 0,
+      avgTrades: d.ensemble.avgTrades ?? d.ensemble.avg_trades ?? 0,
+      breakdown: d.ensemble.breakdown || {},
+      agreement: d.ensemble.agreement || "",
+    } : { avgSharpe: 0, avgWinRate: 0, avgTrades: 0, breakdown: {}, agreement: "" },
+    topStrategy: d.topStrategy || d.top_strategy || "",
+    createdAt: d.createdAt || d.created_at || "",
+    expiresAt: d.expiresAt || d.expires_at || "",
+    followers: d.followers ?? 0,
+  }
+}
+
 // AI Trader names who might follow
 const TRADER_NAMES = ["Ares", "Athena", "Hermes", "Hades", "Apollo", "Artemis", "Poseidon", "Dionysus"]
 
@@ -61,7 +106,15 @@ export function SignalSquare() {
   useEffect(() => {
     const load = async () => {
       const r = await fetch("/api/signals").catch(() => null)
-      if (r?.ok) setStore(await r.json())
+      if (r?.ok) {
+        const raw = await r.json()
+        // Handle both { signals: [...] } and direct array
+        const rawList = raw.signals || raw || []
+        setStore({
+          signals: (Array.isArray(rawList) ? rawList : []).map(normalizeSignal),
+          lastRun: raw.lastUpdate || raw.lastRun || null,
+        })
+      }
     }
     load()
     const timer = setInterval(load, 15000)
@@ -165,7 +218,7 @@ export function SignalSquare() {
                   </div>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-[10px] font-mono text-muted-foreground">{s.id}</span>
-                    <span className="text-[10px] text-muted-foreground ml-auto">exp {expiresIn}m</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">exp {isNaN(expiresIn) ? "--" : expiresIn + "m"}</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-1.5 text-xs">
@@ -190,7 +243,7 @@ export function SignalSquare() {
                     <span className="font-mono">{s.qualifiedCount}+{s.cautionedCount}/{s.testedCount}</span>
                   </div>
                   {/* Risk bar */}
-                  {s.risk && (
+                  {s.risk && s.risk.sl_price > 0 && (
                     <div className="flex items-center gap-2 pt-1 mt-1 border-t border-border">
                       <div className="flex-1">
                         <div className="flex justify-between text-[9px]">
@@ -202,8 +255,8 @@ export function SignalSquare() {
                             className="absolute h-1 bg-primary rounded-full"
                             style={{
                               left: `${Math.min(100, Math.max(0, (s.price - (s.direction === "LONG" ? s.risk.sl_price : s.risk.tp_price)) /
-                                Math.abs(s.risk.tp_price - s.risk.sl_price) * 100))}%`,
-                              width: `${Math.abs(s.risk.tp_price - s.risk.sl_price) / s.price * 100}%`,
+                                Math.max(0.001, Math.abs(s.risk.tp_price - s.risk.sl_price)) * 100))}%`,
+                              width: `${Math.abs(s.risk.tp_price - s.risk.sl_price) / Math.max(0.001, s.price) * 100}%`,
                             }}
                           />
                         </div>
@@ -211,8 +264,8 @@ export function SignalSquare() {
                       <span className="text-[9px] font-mono text-muted-foreground">{s.risk.suggested_position_pct.toFixed(0)}%</span>
                     </div>
                   )}
-                  {/* Multi-TF badge */}
-                  {s.multiTf.agreement !== "neutral" && (
+                  {/* Multi-TF badge — safely check */}
+                  {s.multiTf && s.multiTf.agreement !== "neutral" && (
                     <Badge variant={s.multiTf.agreement === "confirmed" ? "success" : "warning"} className="text-[8px] mt-1">
                       {s.multiTf.agreement === "confirmed" ? "✓ multi-TF" : "⚠ cross-TF conflict"}
                     </Badge>
@@ -242,19 +295,19 @@ export function SignalSquare() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <div className="text-[10px] text-muted-foreground">入场价</div>
-                  <div className="text-sm font-bold font-mono">${s.price.toFixed(1)}</div>
+                  <div className="text-sm font-bold font-mono">${typeof s.price === "number" ? s.price.toFixed(1) : s.price}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-muted-foreground">止损价</div>
-                  <div className="text-sm font-bold font-mono text-red-600">${s.risk?.sl_price.toFixed(1) || "--"}</div>
+                  <div className="text-sm font-bold font-mono text-red-600">${s.risk?.sl_price?.toFixed(1) || "--"}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-muted-foreground">止盈价</div>
-                  <div className="text-sm font-bold font-mono text-emerald-600">${s.risk?.tp_price.toFixed(1) || "--"}</div>
+                  <div className="text-sm font-bold font-mono text-emerald-600">${s.risk?.tp_price?.toFixed(1) || "--"}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-muted-foreground">建议仓位</div>
-                  <div className="text-sm font-bold font-mono">{s.risk?.suggested_position_pct.toFixed(0) || "--"}%</div>
+                  <div className="text-sm font-bold font-mono">{s.risk?.suggested_position_pct?.toFixed(0) || "--"}%</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -275,8 +328,8 @@ export function SignalSquare() {
                   <span className="font-mono font-semibold">{s.topStrategy}</span>
                 </div>
               </div>
-              {/* Multi-TF */}
-              {Object.keys(s.multiTf.secondary).length > 0 && (
+              {/* Multi-TF safely */}
+              {s.multiTf && Object.keys(s.multiTf.secondary).length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <span className="text-[10px] text-muted-foreground">Multi-TF: </span>
                   {Object.entries(s.multiTf.secondary).map(([tf, info]) => (

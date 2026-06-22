@@ -19,6 +19,11 @@ interface KeyPoint {
   sentiment: number
 }
 
+/**
+ * buildDebateGroups — 将 D- 前缀任务按基组分组
+ * - 识别 D-XXX-W1 / D-XXX-W2 → 归入组 D-XXX
+ * - 从 title 中提取可读话题（支持 | ｜ || 、： 多种分隔符）
+ */
 function buildDebateGroups(tasks: Task[]): Record<string, DebateGroup> {
   const groups: Record<string, DebateGroup> = {}
   for (const t of tasks) {
@@ -29,16 +34,32 @@ function buildDebateGroups(tasks: Task[]): Record<string, DebateGroup> {
   }
   for (const g of Object.values(groups)) {
     const raw = g.workers[0]?.title || g.parent
-    const m = raw.match(/[|｜]\s*(.+)/)
-    g.topic = m ? m[1] : raw.replace(/^D-/, "").replace(/-W\d+$/, "").replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+    // 尝试提取 | ｜后的内容（支持双管道 ||）
+    const m = raw.match(/[|｜]{1,2}\s*(.+)/)
+    if (m) {
+      g.topic = m[1].trim()
+    } else {
+      // 尝试提取 ：或：后的内容
+      const m2 = raw.match(/[：:]\s*(.+)/)
+      if (m2) {
+        g.topic = m2[1].trim()
+      } else {
+        // 降级：清理 taskId
+        g.topic = raw
+          .replace(/^D-/, "")
+          .replace(/-W\d+$/, "")
+          .replace(/[_-]/g, " ")
+          .replace(/\b\w/g, c => c.toUpperCase())
+      }
+    }
   }
   return groups
 }
 
 function calcSentiment(text: string): number {
   if (!text) return 50
-  const bull = (text.match(/bullish|LONG|看涨|做多|上涨|利好/gi) || []).length
-  const bear = (text.match(/bearish|SHORT|看跌|做空|下跌|利空/gi) || []).length
+  const bull = (text.match(/bullish|LONG|看涨|做多|上涨|利好|乐观/gi) || []).length
+  const bear = (text.match(/bearish|SHORT|看跌|做空|下跌|利空|悲观/gi) || []).length
   if (bull + bear === 0) return 50
   return Math.round((bull / (bull + bear)) * 100)
 }
@@ -55,17 +76,21 @@ function parseKeyPoints(text: string): string[] {
   const points: string[] = []
 
   // 1) 提取章节标题下的内容
+  // 支持两种格式: "关键论点：内容" 和 "## 关键论点\n内容"
   const sectionPatterns = [
+    // 冒号/冒号分隔: 关键论点: ... 直到遇到下一个章节标题或结尾
     /(?:关键论点|Key\s*[Pp]oints|论点|Arguments|论据)[：:]\s*([\s\S]*?)(?=\n(?:CONCLUSION|结论|Summary|综合判断|最终观点|##)|$)/i,
+    // Markdown 标题格式: ## 关键论点\n... 直到遇到下一个 ## 或结论
     /(?:##\s*)?(?:关键论点|Key\s*Points|论点)\s*\n+([\s\S]*?)(?=\n(?:##|结论|CONCLUSION)|$)/i,
   ]
   for (const pat of sectionPatterns) {
     const m = text.match(pat)
     if (m) {
       const content = m[1].trim()
+      // 尝试按行解析编号/无序列表
       const items = content.split(/\n/).filter(line => {
         const tr = line.trim()
-        return tr && (tr.match(/^\d+[.、\)]/) || tr.match(/^[①-⑩]/) || tr.match(/^[\(\[]\d+[\)\]]/) || tr.startsWith("- ") || tr.startsWith("* "))
+        return tr && (tr.match(/^\d+[.、\)]/) || tr.match(/^[①-⑩]/) || tr.match(/^[\(\[\]\d+[\)\]]/) || tr.startsWith("- ") || tr.startsWith("* "))
       }).map(line => line.replace(/^\s*\d+[.、\)]\s*/, "").replace(/^[-*]\s*/, "").replace(/^[①-⑩]\s*/, "").trim())
       if (items.length > 0) {
         points.push(...items)
@@ -77,11 +102,19 @@ function parseKeyPoints(text: string): string[] {
     }
   }
 
-  // 2) 全局提取编号列表作为降级方案
+  // 2) 全局提取编号列表作为降级方案（当章节匹配未找到时）
   if (points.length === 0) {
+    // 匹配行首的数字编号: "1. xxx", "1、xxx"
     const numberedItems = text.match(/^\d+[.、].+$/gm)
     if (numberedItems) {
       points.push(...numberedItems.map(s => s.replace(/^\d+[.、]\s*/, "").trim()))
+    }
+    // 如果还是没有，尝试提取所有列表项
+    if (points.length === 0) {
+      const dashItems = text.match(/^- .+$/gm)
+      if (dashItems) {
+        points.push(...dashItems.map(s => s.replace(/^-\s*/, "").trim()))
+      }
     }
   }
 
@@ -91,27 +124,32 @@ function parseKeyPoints(text: string): string[] {
 /**
  * extractTableRows — 识别 Markdown 表格行
  * 匹配以 | 开头和结尾且包含多个 | 的行
+ * 修复：移除管道符语法产生的首尾空单元格，准确识别分隔行
+ *
+ * 分隔行识别规则：所有单元格都匹配 :?---+:? 模式
+ * （防止误将含 "---" 内容的真实数据行过滤掉）
  */
 function extractTableRows(text: string): string[][] {
   if (!text) return []
   const rows: string[][] = []
   const lines = text.split('\n')
-  let inTable = false
   for (const line of lines) {
     const tr = line.trim()
-    if (tr.startsWith('|') && tr.endsWith('|')) {
-      const cells = tr.split('|').filter((c, i, arr) => {
-        // 跳过空的首尾，保留中间空单元格
-        return arr.length > 2 ? true : c.trim()
-      }).map(c => c.trim())
-      // 过滤分隔行 (|---|)
-      if (cells.some(c => c.includes('---'))) continue
-      if (cells.length >= 2) {
-        rows.push(cells)
-        inTable = true
-      }
-    } else {
-      inTable = false
+    if (!tr.startsWith('|') || !tr.endsWith('|')) continue
+
+    // 分割管道符，移除首尾空的单元格（Markdown 管道表格语法产生）
+    const parts = tr.split('|')
+    if (parts.length >= 3) {
+      if (parts[0].trim() === '') parts.shift()
+      if (parts[parts.length - 1].trim() === '') parts.pop()
+    }
+    const cells = parts.map(c => c.trim())
+
+    // 分隔行识别：所有单元格都匹配 :?---+:? 模式（如 ---, :---, ---:, :---:）
+    if (cells.length > 0 && cells.every(c => /^:?-{2,}:?$/.test(c))) continue
+
+    if (cells.length >= 2) {
+      rows.push(cells)
     }
   }
   return rows
@@ -120,19 +158,24 @@ function extractTableRows(text: string): string[][] {
 /**
  * extractConclusion — 提取结论/综合判断
  * 匹配: CONCLUSION / 结论 / Summary / 综合判断 / 最终观点
+ *
+ * 边界检测：遇到下一个 ## 标题、Key Points、论点、分割线或文本结尾时截断
  */
 function extractConclusion(text: string): string {
   if (!text) return ''
   const patterns = [
+    // "结论：" 格式 — 冒号后内容直到下一个章节或结尾
     /(?:CONCLUSION|结论|Summary|综合判断|最终观点)[：:]\s*([\s\S]*?)(?=\n(?:##|$))/i,
+    // "## 结论" 格式 — Markdown 标题后的内容直到下一个 ## 或结尾
     /(?:##\s*)?(?:结论|CONCLUSION|总结|综合)\s*\n+([\s\S]*?)(?=\n##|$)/i,
   ]
   for (const pat of patterns) {
     const m = text.match(pat)
     if (m) {
       const raw = m[1].trim()
-      // 截取到下一个章节或结尾
-      const cutoff = raw.search(/\n(?=##|Key\s*Points|论点|———|---|___|$)/)
+      if (!raw) continue
+      // 截取到下一个章节或分割线
+      const cutoff = raw.search(/\n(?=##|Key\s*Points|论点|———|___|$)/)
       return cutoff > 0 ? raw.slice(0, cutoff).trim().slice(0, 500) : raw.slice(0, 500)
     }
   }
@@ -158,8 +201,12 @@ export function DebatePanel({ tasks }: { tasks: Task[] }) {
       {groups.map(g => {
         const done = g.workers.filter(w => w.status === "done" || w.status === "reviewed").length
         const sentiments = g.workers.map(w => calcSentiment(w.result || ""))
-        const avg = sentiments.reduce((a, b) => a + b, 0) / sentiments.length
-        const agreement = Math.max(0, 100 - Math.max(...sentiments.map(s => Math.abs(s - avg))) * 2)
+        const avg = sentiments.length > 0
+          ? sentiments.reduce((a, b) => a + b, 0) / sentiments.length
+          : 50
+        const agreement = Number.isFinite(avg)
+          ? Math.max(0, 100 - Math.max(...sentiments.map(s => Math.abs(s - avg))) * 2)
+          : 50
         const stanceCls = avg > 60 ? "bullish" : avg < 40 ? "bearish" : "neutral"
         const statusCls = done === g.workers.length ? "done" : "running"
 
@@ -215,9 +262,13 @@ export function DebatePanel({ tasks }: { tasks: Task[] }) {
 
 function DebateDetail({ group, onBack }: { group: DebateGroup; onBack: () => void }) {
   const sentiments = group.workers.map(w => calcSentiment(w.result || ""))
-  const avg = sentiments.reduce((a, b) => a + b, 0) / sentiments.length
+  const avg = sentiments.length > 0
+    ? sentiments.reduce((a, b) => a + b, 0) / sentiments.length
+    : 50
   const stance = avg > 60 ? "🐂 偏多" : avg < 40 ? "🐻 偏空" : "➖ 中性"
-  const agreement = Math.max(0, 100 - Math.max(...sentiments.map(s => Math.abs(s - avg))) * 2)
+  const agreement = Number.isFinite(avg)
+    ? Math.max(0, 100 - Math.max(...sentiments.map(s => Math.abs(s - avg))) * 2)
+    : 50
 
   // 提取所有论点和结论
   const allKeyPoints: KeyPoint[] = useMemo(() => {
