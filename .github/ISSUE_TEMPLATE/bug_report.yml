@@ -1,0 +1,28 @@
+---
+name: Bug 报告
+description: 工具调用报错、返回数据异常、MCP 连接问题
+labels: [bug]
+body:
+  - type: input
+    attributes:
+      label: 使用的 AI 客户端
+      description: Claude Desktop / Claude Code / Cursor / Cline / 其他
+      placeholder: Claude Code
+  - type: input
+    attributes:
+      label: 出问题的工具名
+      description: 调了哪个工具？
+      placeholder: okx_get_ticker
+  - type: textarea
+    attributes:
+      label: 期望行为
+      description: 应该返回什么？
+  - type: textarea
+    attributes:
+      label: 实际结果
+      description: 返回了什么？包含 errorCategory 如果有的话
+  - type: input
+    attributes:
+      label: 环境
+      description: 系统 + 是否配置了 API Key
+      placeholder: Windows 11 / 已配置 OKX API Key

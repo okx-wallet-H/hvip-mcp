@@ -1,0 +1,38 @@
+---
+name: 新工具请求
+description: 建议增加某个 OKX API 对应的工具
+labels: [new-tool]
+body:
+  - type: input
+    attributes:
+      label: OKX API 端点
+      description: 如 GET /api/v5/market/ticker
+  - type: dropdown
+    attributes:
+      label: 属于哪个域
+      options:
+        - 行情看盘
+        - 账户资产
+        - 下单交易
+        - 策略交易
+        - 资金管理
+        - 聪明钱
+        - 预测市场
+        - WebSocket 实时
+        - 系统工具
+        - 代码智能
+        - 其他
+  - type: dropdown
+    attributes:
+      label: 是否需要 API Key
+      options:
+        - 公开（无需 Key）
+        - 需要 Key（只读）
+        - 需要 Key（交易/划转）
+  - type: dropdown
+    attributes:
+      label: 优先级
+      options:
+        - P0 — 阻塞核心工作流
+        - P1 — 高频使用
+        - P2 — 边缘场景

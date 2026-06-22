@@ -1,0 +1,40 @@
+---
+name: 功能请求
+description: 想要新的工具、新的域、或者改进现有功能
+labels: [enhancement]
+body:
+  - type: dropdown
+    attributes:
+      label: 属于哪个功能域
+      options:
+        - 行情看盘
+        - 技术指标
+        - 市场扫描
+        - 账户资产
+        - 下单交易
+        - 风险风控
+        - 策略交易
+        - 盈亏复盘
+        - 资金管理
+        - 聪明钱
+        - 预测市场
+        - WebSocket 实时
+        - 模拟沙盒
+        - 系统工具
+        - 代码智能
+        - 新域（不存在于现有 15 域中）
+  - type: textarea
+    attributes:
+      label: Agent 想完成什么
+      description: 描述 Agent 想做什么，目前怎么做
+  - type: textarea
+    attributes:
+      label: 现在的绕路做法
+      description: 要调几个工具才能做到？
+  - type: dropdown
+    attributes:
+      label: 优先级
+      options:
+        - P0 — 核心功能缺失
+        - P1 — 高频使用
+        - P2 — 锦上添花
