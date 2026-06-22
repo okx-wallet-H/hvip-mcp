@@ -2,7 +2,18 @@
 
 ## ⚡ 快速启动（新会话进来第一句）
 
-> **"检查工作台"** — 读 MEMORY.md → 检查 PM2 进程/端口/调度器 → Playwright 截图仪表盘 → 报告状态
+> **"检查工作台"** — 读 MEMORY.md → 检查 PM2 进程/端口/调度器 → 报告状态
+>
+> **有开发任务时** — 读 `.claude/plans/velvet-swimming-wand.md` 了解当前升级进度
+
+## 关键文档
+
+| 文件 | 谁看 |
+|------|------|
+| `AGENTS.md` | **外部 AI Agent 首次连接指南** |
+| `CLAUDE.md` | 开发 Agent 项目指南 |
+| `README.md` | 用户和 Agent |
+| `.claude/plans/velvet-swimming-wand.md` | 当前升级计划 |
 
 ## 快速索引
 
@@ -111,9 +122,14 @@ SKILL_FEEDBACK.md      ← Agent 反馈留言板
 
 ## 开发规范
 
-1. **描述格式**：每个工具的 description 必须用 9 字段模板（功能/场景/关键词/参数/鉴权/风险/返回量/分类/关联）。参考 `src/tools/market.ts` 的 `okx_get_ticker`
-2. **枚举**：全部使用 `src/tools/shared.ts` 中的 `INST_TYPE_*` 常量，禁止硬编码
-3. **错误格式**：统一 `toError()` / `toResult()`，含 `errorCategory`（BUSINESS/AUTH/VALIDATION/NETWORK/RATE_LIMIT）
+1. **描述格式**：每个工具一行中文描述，格式为 `[D:Domain] {一句话说清功能} | {参数提示} | {关联引导}`
+   - 15 个域标签：Market / Account / Trading / Funds / Strategy / SmartMoney / Prediction / Indicators / Scan / Risk / PnL / Simulate / WebSocket / System / CodeIntel
+   - 示例：`"[D:Market] 单个产品实时行情(价格/涨跌幅/24h量) | instId如BTC-USDT，逗号批量 | 批量扫用 okx_get_tickers → 深入用 okx_quick_market"`
+   - 禁止旧格式 `CAT:[X] | → 请先调用 agent_catalog`
+2. **命名规范**：域前缀 + 资源名，最多 4 词。查询类不加 get_，操作类保留动词。全称不缩写。
+   - 示例：`market_ticker` 非 `okx_get_ticker`，`trade_orders_active` 非 `okx_get_orders_pending`
+3. **枚举**：全部使用 `src/tools/shared.ts` 中的 `INST_TYPE_*` 常量，禁止硬编码
+4. **错误格式**：统一 `toError()` / `toResult()`，含 `errorCategory`（BUSINESS/AUTH/VALIDATION/NETWORK/RATE_LIMIT）
 4. **时间戳**：必须加 `tsIso` 字段
 5. **防幻觉**：接新端点前必须 curl 验证 OKX 真实 API，404 跳过。WS 频道必须确认在 OKX 官方文档有记载
 
