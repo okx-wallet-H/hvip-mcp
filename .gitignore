@@ -6,3 +6,6 @@ dist/
 *.tar.gz
 *.zip
 .hub/
+*.db
+*.db-journal
+*.db-wal

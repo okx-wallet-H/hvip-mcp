@@ -28,6 +28,10 @@ import { readFileSync, existsSync } from "node:fs"
 import { join } from "node:path"
 import { TASK_TEMPLATES } from "./adapters/hub-templates.js"
 import { getApiCredits } from "./adapters/api-credits.js"
+import { ChatDB } from "./adapters/chat-db.js"
+import { authStore } from "./adapters/chat-auth-store.js"
+import { chatLLM } from "./adapters/chat-llm.js"
+import type { OkxCredentials } from "./adapters/chat-encryption.js"
 
 // ── 加载 .env ──
 const envPath = join(process.cwd(), ".env")
@@ -190,6 +194,15 @@ function startHttpServer(): void {
       for (const p of paths) { if (existsSync(p)) { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(readFileSync(p, "utf-8")); return } }
       res.writeHead(404)
       res.end("chat UI not found")
+      return
+    }
+
+    // GET /chat-app — 新版 AI 交易助手（多用户 + OKX Key 绑定）
+    if (_req.method === "GET" && (_req.url === "/chat-app" || _req.url === "/chat-app/")) {
+      const paths = [join(__dirname, "..", "chat-app", "index.html"), join(__dirname, "..", "..", "chat-app", "index.html")]
+      for (const p of paths) { if (existsSync(p)) { res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }); res.end(readFileSync(p, "utf-8")); return } }
+      res.writeHead(404)
+      res.end("chat-app not found")
       return
     }
 
@@ -628,9 +641,9 @@ function startHttpServer(): void {
           })
           const body = await mcpRes.text()
 
-          // Parse SSE: find last `data: {...}` block
+          // Parse SSE: find last `data: {...}` block（贪婪匹配整个 JSON）
           let result = body
-          const match = body.match(/data:\s*(\{[\s\S]*?\})\s*$/m)
+          const match = body.match(/data:\s*(\{[\s\S]*\})\s*$/m)
           if (match) {
             try {
               const parsed = JSON.parse(match[1])
@@ -714,6 +727,414 @@ function startHttpServer(): void {
           }
         } catch (e: any) { res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ error: e.message })) }
       })
+      return
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // /api/v2/auth/* — 聊天助手认证路由
+    // ═══════════════════════════════════════════════════════════
+
+    // POST /api/v2/auth/register — 注册
+    if (_req.method === "POST" && _req.url === "/api/v2/auth/register") {
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", () => {
+        try {
+          const { username, pin } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!username || !pin) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify({ ok: false, error: "缺少 username 或 pin" }))
+            return
+          }
+          const result = chatDb.registerUser(username, pin)
+          res.writeHead(result.ok ? 201 : 409, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify(result))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ ok: false, error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // POST /api/v2/auth/unlock — 解锁（验证 PIN + 解密 OKX Key + 创建 session）
+    if (_req.method === "POST" && _req.url === "/api/v2/auth/unlock") {
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", () => {
+        try {
+          const { username, pin } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!username || !pin) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify({ ok: false, error: "缺少 username 或 pin" }))
+            return
+          }
+
+          // 验证 PIN
+          const authResult = chatDb.authenticateUser(username, pin)
+          if (!authResult.ok) {
+            res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify(authResult))
+            return
+          }
+
+          const userId = authResult.userId!
+
+          // 解密 OKX Key
+          const keyResult = chatDb.getDecryptedKeys(userId, pin)
+          const hasKeys = keyResult.ok && !!keyResult.cred
+
+          // 创建会话
+          const session = chatDb.createSession(userId)
+          if (!session.ok) {
+            res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify({ ok: false, error: "创建会话失败" }))
+            return
+          }
+
+          // 存入 AuthStore（内存中持有明文凭证）
+          if (hasKeys && keyResult.cred) {
+            authStore.set(session.sessionToken!, {
+              userId,
+              username,
+              cred: keyResult.cred,
+            })
+          } else {
+            // 未绑 Key — 仍创建会话但无 OKX Auth（仅公开工具可用）
+            authStore.set(session.sessionToken!, {
+              userId,
+              username,
+              cred: { apiKey: "", secret: "", passphrase: "", isDemo: false },
+            })
+          }
+
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({
+            ok: true,
+            sessionToken: session.sessionToken,
+            username,
+            hasKeys,
+            keyHint: keyResult.keyHint || null,
+          }))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ ok: false, error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // POST /api/v2/auth/lock — 锁定（清除 AuthStore）
+    if (_req.method === "POST" && _req.url === "/api/v2/auth/lock") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      if (!provided) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: "缺少 session token" }))
+        return
+      }
+      authStore.delete(provided)
+      chatDb.deleteSession(provided)
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify({ ok: true }))
+      return
+    }
+
+    // validateSession helper for chat routes
+    function validateChatSession(token: string): { ok: boolean; userId?: number; username?: string; error?: string; status?: number } {
+      if (!token) return { ok: false, error: "缺少 Authorization token", status: 401 }
+      // First check AuthStore (fast, has decrypted creds)
+      const memSession = authStore.get(token)
+      if (memSession) {
+        // Also validate against DB
+        const dbCheck = chatDb.validateSession(token)
+        if (!dbCheck.ok) {
+          authStore.delete(token)
+          return { ok: false, error: dbCheck.error, status: 401 }
+        }
+        return { ok: true, userId: memSession.userId, username: memSession.username }
+      }
+      // Not in memory — session expired or server restarted
+      const dbCheck = chatDb.validateSession(token)
+      if (!dbCheck.ok) return { ok: false, error: dbCheck.error || "会话无效", status: 401 }
+      return { ok: true, userId: dbCheck.userId, username: dbCheck.username }
+    }
+
+    // GET /api/v2/auth/status — 检查认证状态
+    if (_req.method === "GET" && _req.url === "/api/v2/auth/status") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ authenticated: false, error: session.error }))
+        return
+      }
+      const keyInfo = chatDb.hasApiKey(session.userId!)
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify({
+        authenticated: true,
+        username: session.username,
+        hasKeys: keyInfo.hasKeys,
+        keyHint: keyInfo.keyHint || null,
+      }))
+      return
+    }
+
+    // PUT /api/v2/auth/keys — 绑定/更新 OKX API Key
+    if (_req.method === "PUT" && _req.url === "/api/v2/auth/keys") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", () => {
+        try {
+          const { apiKey, secret, passphrase, isDemo, pin } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!apiKey || !secret || !passphrase) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify({ ok: false, error: "缺少 apiKey / secret / passphrase" }))
+            return
+          }
+          if (!pin) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify({ ok: false, error: "需要 PIN 以加密存储" }))
+            return
+          }
+          const result = chatDb.saveApiKey(session.userId!, { apiKey, secret, passphrase, isDemo: !!isDemo }, pin)
+          if (result.ok) {
+            // 清除旧会话中的 Auth（Key 已更新）
+            authStore.deleteByUserId(session.userId!)
+            // 重新解密并设置 AuthStore
+            const newKey = chatDb.getDecryptedKeys(session.userId!, pin)
+            if (newKey.ok && newKey.cred) {
+              authStore.set(provided, {
+                userId: session.userId!,
+                username: session.username!,
+                cred: newKey.cred,
+              })
+            }
+          }
+          res.writeHead(result.ok ? 200 : 400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify(result))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ ok: false, error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // GET /api/v2/auth/keys — 查看 Key 状态
+    if (_req.method === "GET" && _req.url === "/api/v2/auth/keys") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+      const keyInfo = chatDb.hasApiKey(session.userId!)
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(keyInfo))
+      return
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // /api/v2/chat/* — 聊天路由
+    // ═══════════════════════════════════════════════════════════
+
+    // POST /api/v2/chat/stream — SSE 流式聊天
+    if (_req.method === "POST" && _req.url === "/api/v2/chat/stream") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+
+      if (!chatLLM.isAvailable()) {
+        res.writeHead(503, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "AI 服务暂未配置，请稍后再试" }))
+        return
+      }
+
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", async () => {
+        try {
+          const { messages, conversationId } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!messages || !Array.isArray(messages)) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify({ error: "缺少 messages 数组" }))
+            return
+          }
+
+          // Get user auth for tool execution
+          const memSession = authStore.get(provided)
+          const userAuth = (memSession?.cred?.apiKey)
+            ? { apiKey: memSession.cred.apiKey, secret: memSession.cred.secret, passphrase: memSession.cred.passphrase, isDemo: memSession.cred.isDemo }
+            : undefined
+
+          // Set SSE headers
+          res.writeHead(200, {
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+          })
+
+          // Stream chat events as SSE
+          let doneFired = false
+          try {
+            for await (const event of chatLLM.streamChat({ messages, userAuth })) {
+              if (doneFired) break
+              if (event.type === "done" || event.type === "error") doneFired = true
+              res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`)
+
+              // Persist assistant/tool messages after done
+              if (event.type === "done" && conversationId) {
+                try {
+                  chatDb.saveMessage({
+                    conversationId,
+                    role: "assistant",
+                    content: event.text || "",
+                    tokenIn: event.tokens?.input,
+                    tokenOut: event.tokens?.output,
+                    model: event.model,
+                  })
+                } catch { /* 非关键 */ }
+              }
+            }
+          } catch (streamErr: any) {
+            if (!doneFired) {
+              res.write(`event: error\ndata: ${JSON.stringify({ message: streamErr.message || "流中断" })}\n\n`)
+            }
+          }
+
+          res.end()
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // POST /api/v2/chat/history/save — 保存单条消息
+    if (_req.method === "POST" && _req.url === "/api/v2/chat/history/save") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", () => {
+        try {
+          const { conversationId, role, content } = JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+          if (!conversationId || !role || !content) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+            res.end(JSON.stringify({ ok: false, error: "缺少参数" }))
+            return
+          }
+          chatDb.saveMessage({ conversationId, role, content })
+          res.writeHead(201, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ ok: true }))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ ok: false, error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // GET /api/v2/chat/history — 获取对话历史
+    if (_req.method === "GET" && _req.url?.startsWith("/api/v2/chat/history")) {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+      const url = new URL(_req.url, `http://${host}:${webPort}`)
+      const conversationId = url.searchParams.get("conversationId") || ""
+      if (!conversationId) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "缺少 conversationId" }))
+        return
+      }
+      const msgs = chatDb.loadMessages(conversationId)
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(msgs))
+      return
+    }
+
+    // POST /api/v2/chat/sessions — 新建对话
+    if (_req.method === "POST" && _req.url === "/api/v2/chat/sessions") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+      const chunks: Buffer[] = []
+      _req.on("data", (c: Buffer) => chunks.push(c))
+      _req.on("end", () => {
+        try {
+          const { title } = JSON.parse(Buffer.concat(chunks).toString("utf-8") || "{}")
+          const result = chatDb.createConversation(session.userId!, title)
+          res.writeHead(result.ok ? 201 : 500, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify(result))
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+          res.end(JSON.stringify({ ok: false, error: "JSON 解析失败" }))
+        }
+      })
+      return
+    }
+
+    // GET /api/v2/chat/sessions — 对话列表
+    if (_req.method === "GET" && _req.url === "/api/v2/chat/sessions") {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+      const convs = chatDb.listConversations(session.userId!)
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify(convs))
+      return
+    }
+
+    // DELETE /api/v2/chat/history — 删除对话
+    if (_req.method === "DELETE" && _req.url?.startsWith("/api/v2/chat/history")) {
+      const provided = _req.headers["authorization"]?.replace(/^Bearer\s+/i, "") || ""
+      const session = validateChatSession(provided)
+      if (!session.ok) {
+        res.writeHead(session.status || 401, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ ok: false, error: session.error }))
+        return
+      }
+      const url = new URL(_req.url, `http://${host}:${webPort}`)
+      const conversationId = url.searchParams.get("conversationId") || ""
+      if (!conversationId) {
+        res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" })
+        res.end(JSON.stringify({ error: "缺少 conversationId" }))
+        return
+      }
+      chatDb.deleteConversation(conversationId)
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" })
+      res.end(JSON.stringify({ ok: true }))
       return
     }
 
@@ -947,6 +1368,15 @@ const costTracker = new HubCosts(costsPath)
 agentHub.setCostTracker(costTracker)
 log.info(`💰 成本追踪: ${costsPath}`)
 
+// 聊天助手持久化
+const chatDbPath = flag("chat-db") || process.env.HUB_CHAT_DB || ".hub/chat.db"
+const chatDb = new ChatDB(chatDbPath)
+if (chatDb.open()) {
+  const cs = chatDb.stats()
+  log.info(`💬 ChatDB: ${cs.userCount} users, ${cs.sessionCount} sessions, ${cs.conversationCount} conversations`)
+}
+authStore.startCleanup(60_000) // 每分钟清理过期会话
+
 // 启动 HTTP 仪表盘
 startHttpServer()
 
@@ -979,11 +1409,28 @@ function shutdown() {
   agentHub.close()
   db.close()
   memory.close()
+  chatDb.close()
+  authStore.stopCleanup()
   process.exit(0)
 }
 
 process.on("SIGINT", shutdown)
 process.on("SIGTERM", shutdown)
+
+// ── 全局异常捕获（防止静默崩溃）──────────────────────────────────────────
+
+process.on("uncaughtException", (err: Error) => {
+  log.error(`💥 未捕获异常: ${err.message}\n${err.stack}`)
+  // 不退出 — 记录后让 PM2 决定是否重启
+  setTimeout(() => process.exit(1), 1000)
+})
+
+process.on("unhandledRejection", (reason: unknown, promise: Promise<unknown>) => {
+  const msg = reason instanceof Error ? reason.message : String(reason)
+  const stack = reason instanceof Error ? reason.stack : ""
+  log.error(`💥 未处理 Promise 拒绝: ${msg}\n${stack}`)
+  // 不退出 — 记录后继续运行
+})
 
 // ── 保活 ──────────────────────────────────────────────────────────────────
 

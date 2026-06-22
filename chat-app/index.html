@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>hvip AI · 交易助手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f5f7; --surface: #fff; --elevated: #f9f9fb;
+  --border: #e7e8ec; --text: #17171f; --text2: #4d4d5c; --muted: #8b8b9a;
+  --accent: #6366f1; --accent-hover: #4f46e5;
+  --success: #16a34a; --danger: #dc2626; --warning: #f59e0b;
+  --shadow: 0 0 0 1px rgba(0,0,0,.03),0 1px 3px rgba(0,0,0,.04);
+  --radius: 12px; --radius-sm: 8px;
+}
+[data-theme="dark"] {
+  --bg: #131316; --surface: #1c1c22; --elevated: #24242b;
+  --border: #2c2c34; --text: #eaeaef; --text2: #b0b0bc; --muted: #6b6b78;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:Inter,system-ui,sans-serif;
+  font-size:13.5px;line-height:1.6;
+  color:var(--text2);background:var(--bg);
+  display:flex;flex-direction:column;
+}
+
+/* ── Auth Screen ── */
+#auth-screen{display:flex;flex:1;align-items:center;justify-content:center;padding:16px}
+.auth-card{
+  width:100%;max-width:360px;
+  background:var(--surface);border-radius:var(--radius);
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  padding:28px 24px;text-align:center;
+}
+.auth-card .icon{
+  width:52px;height:52px;border-radius:14px;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;margin:0 auto 14px;color:#fff;
+}
+.auth-card h2{font-size:17px;font-weight:700;color:var(--text);margin-bottom:4px}
+.auth-card .sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.auth-card .field{margin-bottom:12px;text-align:left}
+.auth-card .field label{display:block;font-size:10.5px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.auth-card .field input{
+  width:100%;padding:9px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:13px;font-family:inherit;
+  outline:none;transition:border-color .15s;
+}
+.auth-card .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #6366f110}
+.auth-card .field .pw-wrap{position:relative}
+.auth-card .field .pw-wrap input{padding-right:36px}
+.auth-card .field .pw-wrap .toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:16px;user-select:none}
+.auth-card .error{font-size:11.5px;color:var(--danger);background:#dc262610;padding:8px 12px;border-radius:6px;margin-bottom:12px;display:none}
+.auth-card .error.show{display:block}
+.auth-card button{
+  width:100%;padding:10px;border-radius:var(--radius-sm);
+  border:none;background:var(--accent);color:#fff;
+  font-size:13.5px;font-weight:600;cursor:pointer;
+  transition:all .15s;font-family:inherit;margin-top:4px;
+}
+.auth-card button:hover{background:var(--accent-hover)}
+.auth-card button:disabled{opacity:.4;cursor:default}
+.auth-card .switch{font-size:11.5px;color:var(--muted);margin-top:14px}
+.auth-card .switch a{color:var(--accent);cursor:pointer;font-weight:500}
+.auth-card .switch a:hover{text-decoration:underline}
+.auth-card .user-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.auth-card .user-chips span{
+  font-size:10.5px;padding:3px 10px;border-radius:14px;
+  border:1px solid var(--border);cursor:pointer;
+  color:var(--text2);transition:all .15s;
+}
+.auth-card .user-chips span:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Key Bind Screen ── */
+#key-screen{display:none;flex:1;align-items:center;justify-content:center;padding:16px}
+.key-card{
+  width:100%;max-width:380px;
+  background:var(--surface);border-radius:var(--radius);
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  padding:28px 24px;text-align:center;
+}
+.key-card h2{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.key-card .sub{font-size:11.5px;color:var(--muted);margin-bottom:16px}
+.key-card .sub a{color:var(--accent)}
+.key-card .field{margin-bottom:10px;text-align:left}
+.key-card .field label{display:block;font-size:10.5px;font-weight:600;color:var(--text2);margin-bottom:3px}
+.key-card .field input{
+  width:100%;padding:8px 11px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:12.5px;font-family:monospace;
+  outline:none;transition:border-color .15s;
+}
+.key-card .field input:focus{border-color:var(--accent)}
+.key-card .ok{font-size:11.5px;color:var(--success);margin-bottom:12px;display:none}
+.key-card .ok.show{display:block}
+.key-card .skip{font-size:11.5px;color:var(--muted);margin-top:8px;cursor:pointer}
+.key-card .skip:hover{color:var(--text)}
+
+/* ── Chat Screen ── */
+#chat-screen{display:none;flex:1;flex-direction:column;overflow:hidden}
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 14px;background:var(--surface);
+  border-bottom:1px solid var(--border);z-index:2;min-height:46px;
+}
+header .profile{display:flex;align-items:center;gap:8px}
+header .profile .avatar{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:12px;font-weight:700;
+}
+header .profile .name{font-size:13px;font-weight:600;color:var(--text)}
+header .profile .key-badge{
+  font-size:9px;padding:1px 7px;border-radius:10px;
+  border:1px solid #16a34a40;color:var(--success);
+  background:#16a34a10;margin-left:2px;display:none;
+}
+header .actions{display:flex;gap:6px}
+header .actions button{
+  background:none;border:1px solid var(--border);
+  cursor:pointer;padding:4px 10px;border-radius:6px;
+  color:var(--muted);font-size:12px;transition:all .15s;
+  font-family:inherit;
+}
+header .actions button:hover{border-color:var(--accent);color:var(--accent)}
+header .actions button.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+main#msg-list{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+
+/* Messages */
+.msg{max-width:88%;padding:9px 13px;border-radius:var(--radius);line-height:1.55;font-size:12.5px;animation:in .2s ease;word-break:break-word}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,#6366f112,#8b5cf610);border:1px solid #6366f120;border-bottom-right-radius:4px;color:var(--text)}
+.msg.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;box-shadow:var(--shadow)}
+.msg .sender{font-size:9.5px;font-weight:600;margin-bottom:3px}
+.msg.user .sender{color:var(--accent)}
+.msg.ai .sender{color:var(--muted)}
+.msg .body{white-space:pre-wrap}
+.msg .body strong{color:var(--text)}
+.msg .body code{background:var(--elevated);padding:1px 5px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px}
+.msg .cursor{display:inline-block;width:5px;height:14px;background:var(--accent);vertical-align:middle;margin-left:1px;animation:pulse .8s infinite;border-radius:1px}
+
+/* Tool cards */
+.tool-cards{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+.tool-card{
+  font-size:10px;padding:7px 10px;border-radius:8px;
+  border-left:2px solid var(--accent);background:var(--elevated);
+  transition:all .2s;
+}
+.tool-card.done{border-left-color:var(--success);background:#16a34a08}
+.tool-card.error{border-left-color:var(--danger);background:#dc262608}
+.tool-card .tc-header{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.tool-card .tc-header .tc-name{font-family:monospace;font-weight:600;color:var(--text);font-size:10px}
+.tool-card .tc-header .tc-time{font-size:9px;color:var(--muted);margin-left:auto}
+.tool-card .tc-input{font-size:9.5px;color:var(--muted);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tool-card .tc-result{font-size:9.5px;color:var(--text2);max-height:48px;overflow:hidden}
+.tool-card .tc-error{font-size:9.5px;color:var(--danger)}
+.tool-card .spinner{display:inline-block;width:10px;height:10px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+
+/* Welcome */
+.welcome{text-align:center;color:var(--muted);margin-top:32px}
+.welcome .w-icon{font-size:40px;margin-bottom:12px;opacity:.8}
+.welcome h2{font-size:16px;margin-bottom:4px;color:var(--text);font-weight:700}
+.welcome p{font-size:11.5px;margin-bottom:4px}
+.welcome .hints{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:14px}
+.welcome .hints button{
+  font-size:11px;padding:6px 13px;border-radius:18px;
+  border:1px solid var(--border);background:var(--surface);
+  color:var(--text2);cursor:pointer;transition:all .15s;
+  font-family:inherit;box-shadow:var(--shadow);
+}
+.welcome .hints button:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+
+/* Footer */
+footer{
+  padding:8px 14px;background:var(--surface);
+  border-top:1px solid var(--border);display:flex;gap:8px;
+  align-items:flex-end;z-index:2;
+}
+footer .input-wrap{flex:1;position:relative}
+footer textarea{
+  width:100%;padding:9px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg);
+  color:var(--text);font-size:13px;resize:none;outline:none;
+  line-height:1.45;max-height:110px;font-family:inherit;
+  transition:border-color .15s;
+}
+footer textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px #6366f110}
+footer .status{font-size:9px;color:var(--muted);margin-top:3px;text-align:right}
+footer button{
+  padding:9px 14px;border-radius:var(--radius-sm);
+  border:none;background:var(--accent);color:#fff;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .15s;font-family:inherit;
+}
+footer button:hover{background:var(--accent-hover)}
+footer button:disabled{opacity:.4;cursor:default}
+
+/* History Sidebar */
+#history-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:10;animation:fadeIn .15s}
+#history-panel{position:fixed;top:0;left:0;bottom:0;width:280px;background:var(--surface);border-right:1px solid var(--border);z-index:11;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .2s ease}
+#history-panel.open{transform:translateX(0)}
+#history-panel .h-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+#history-panel .h-head h3{font-size:14px;font-weight:700;color:var(--text)}
+#history-panel .h-head button{background:none;border:none;font-size:16px;cursor:pointer;color:var(--muted);padding:4px 8px;border-radius:4px}
+#history-panel .h-head button:hover{background:var(--elevated)}
+#history-panel .h-list{flex:1;overflow-y:auto;padding:8px}
+#history-panel .h-item{padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px;transition:all .15s;display:flex;align-items:center;justify-content:space-between}
+#history-panel .h-item:hover{background:var(--elevated)}
+#history-panel .h-item.active{background:var(--accent);color:#fff}
+#history-panel .h-item .h-title{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+#history-panel .h-item .h-time{font-size:9px;color:var(--muted);margin-left:8px;flex-shrink:0}
+#history-panel .h-item.active .h-time{color:rgba(255,255,255,0.7)}
+#history-panel .h-item .h-del{font-size:14px;color:var(--muted);margin-left:4px;opacity:0;transition:opacity .15s;cursor:pointer;background:none;border:none;padding:2px}
+#history-panel .h-item:hover .h-del{opacity:1}
+#history-panel .h-item .h-del:hover{color:var(--danger)}
+#history-panel .h-new{margin:8px;padding:8px;border-radius:8px;border:1px dashed var(--border);text-align:center;font-size:12px;color:var(--accent);cursor:pointer;transition:all .15s}
+#history-panel .h-new:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+/* Animations */
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body data-theme="light">
+
+<!-- ═══ Auth Screen ═══ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="icon">🤖</div>
+    <h2 id="auth-title">解锁账户</h2>
+    <p class="sub" id="auth-sub">输入 PIN 解锁，开始 AI 交易</p>
+    <div class="field">
+      <label>用户名</label>
+      <input id="auth-username" placeholder="输入用户名（3-20字符）" maxlength="20" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>PIN</label>
+      <div class="pw-wrap">
+        <input id="auth-pin" type="password" placeholder="至少 4 位数字" maxlength="20" autocomplete="off">
+        <span class="toggle" id="pin-toggle">👁</span>
+      </div>
+    </div>
+    <div class="error" id="auth-error"></div>
+    <button id="auth-btn" onclick="handleAuth()">解锁</button>
+    <p class="switch">没有账户？ <a id="switch-link" onclick="toggleAuthMode()">去注册</a></p>
+  </div>
+</div>
+
+<!-- ═══ Key Binding Screen ═══ -->
+<div id="key-screen">
+  <div class="key-card">
+    <h2>🔑 绑定 OKX API Key</h2>
+    <p class="sub">在 OKX 官网「个人中心 → <a href="https://www.okx.com/account/api" target="_blank">API</a>」创建</p>
+    <div class="field"><label>API Key</label><input id="key-apikey" placeholder="例如: 0b52..." autocomplete="off"></div>
+    <div class="field"><label>Secret Key</label><input id="key-secret" type="password" placeholder="例如: 5A4F..." autocomplete="off"></div>
+    <div class="field"><label>Passphrase</label><input id="key-passphrase" type="password" placeholder="创建 API 时设置的密码" autocomplete="off"></div>
+    <div class="field"><label>再次输入 PIN 以加密保存</label><input id="key-pin" type="password" placeholder="你的 PIN" autocomplete="off"></div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-bottom:10px">
+      <input type="checkbox" id="key-demo"> 模拟盘（Demo Trading）
+    </label>
+    <div class="error" id="key-error"></div>
+    <div class="ok" id="key-ok">✅ Key 已加密保存</div>
+    <button id="key-btn" onclick="handleSaveKeys()">加密保存</button>
+    <div class="skip" onclick="skipKeys()">跳过，仅用公开行情（可后续绑定）</div>
+  </div>
+</div>
+
+<!-- ═══ Chat Screen ═══ -->
+<div id="chat-screen">
+  <header>
+    <div class="profile">
+      <button onclick="toggleHistory()" title="历史会话" style="background:none;border:none;cursor:pointer;font-size:16px;padding:2px 4px">📋</button>
+      <div class="avatar" id="chat-avatar">?</div>
+      <span class="name" id="chat-name"></span>
+      <span class="key-badge" id="key-badge">🔐 Key</span>
+    </div>
+    <div class="actions">
+      <button onclick="bindKeys()" title="绑定OKX Key" id="btn-bindkey">🔑</button>
+      <button onclick="toggleTheme()" id="theme-btn">🌙</button>
+      <button class="danger" onclick="lock()">🔒 锁定</button>
+    </div>
+  </header>
+
+  <!-- History Sidebar -->
+  <div id="history-overlay" onclick="closeHistory()"></div>
+  <div id="history-panel">
+    <div class="h-head">
+      <h3>历史会话</h3>
+      <button onclick="closeHistory()">✕</button>
+    </div>
+    <div class="h-new" onclick="newChat()">＋ 新建对话</div>
+    <div class="h-list" id="history-list"></div>
+  </div>
+
+  <main id="msg-list">
+    <div class="welcome" id="welcome">
+      <div class="w-icon">🤖</div>
+      <h2>AI 交易助手</h2>
+      <p id="welcome-status">374 个 OKX 工具就绪 · 直接提问</p>
+      <div class="hints">
+        <button onclick="quickAsk('BTC 现在什么价格？')">₿ BTC 价格</button>
+        <button onclick="quickAsk('ETH 资金费率多少？')">Ξ ETH 费率</button>
+        <button onclick="quickAsk('市场情绪怎么样？')">📊 市场情绪</button>
+        <button onclick="quickAsk('BTC RSI 超买还是超卖？')">📈 RSI 分析</button>
+        <button onclick="quickAsk('最近有什么热门币？')">🔥 热门币种</button>
+        <button onclick="quickAsk('帮我分析一下现在的交易机会')">💡 交易机会</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="input-wrap">
+      <textarea id="chat-input" rows="1" placeholder="输入消息，Enter 发送..." onkeydown="onInputKey(event)"></textarea>
+      <div class="status" id="chat-status"></div>
+    </div>
+    <button id="send-btn" onclick="send()">发送</button>
+  </footer>
+</div>
+
+<script>
+
+
+// ═══ State ═══
+let state = {
+  token: null, username: null, hasKeys: false, keyHint: null,
+  authMode: 'unlock', messages: [], streaming: false, abortController: null,
+  currentConvId: null
+};
+const $ = id => document.getElementById(id);
+const show = (el, d) => { el.style.display = d || 'flex'; };
+const hide = el => { el.style.display = 'none'; };
+
+// ═══ Theme ═══
+function toggleTheme() {
+  var d = document.documentElement;
+  var is = d.getAttribute('data-theme') === 'dark';
+  d.setAttribute('data-theme', is ? 'light' : 'dark');
+}
+(function(){});
+
+(function(){ var s=localStorage.getItem('chat-theme'); if(s) document.documentElement.setAttribute('data-theme',s); })();
+
+// ═══ Auth ═══
+var pinVisible = false;
+document.getElementById('pin-toggle').addEventListener('click', function(){
+  pinVisible = !pinVisible;
+  document.getElementById('auth-pin').type = pinVisible ? 'text' : 'password';
+});
+
+function toggleAuthMode() {
+  state.authMode = state.authMode === 'unlock' ? 'register' : 'unlock';
+  if (state.authMode === 'register') {
+    $('auth-title').textContent = '创建账户';
+    $('auth-btn').textContent = '创建并解锁';
+    $('switch-link').textContent = '已有账户？去解锁';
+  } else {
+    $('auth-title').textContent = '解锁账户';
+    $('auth-btn').textContent = '解锁';
+    $('switch-link').textContent = '没有账户？去注册';
+  }
+  $('auth-error').classList.remove('show');
+}
+
+async function handleAuth() {
+  var username = $('auth-username').value.trim();
+  var pin = $('auth-pin').value;
+  var errEl = $('auth-error');
+  if (!username || username.length < 3) { errEl.textContent = '用户名至少 3 个字符'; errEl.classList.add('show'); return; }
+  if (!pin || pin.length < 4) { errEl.textContent = 'PIN 至少 4 位'; errEl.classList.add('show'); return; }
+  $('auth-btn').disabled = true;
+  errEl.classList.remove('show');
+  try {
+    if (state.authMode === 'register') {
+      var r1 = await fetch('/api/v2/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:username,pin:pin}) });
+      var d1 = await r1.json();
+      if (!d1.ok) { errEl.textContent = d1.error || '注册失败'; errEl.classList.add('show'); $('auth-btn').disabled = false; return; }
+    }
+    var r2 = await fetch('/api/v2/auth/unlock', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:username,pin:pin}) });
+    var d2 = await r2.json();
+    if (!d2.ok) { errEl.textContent = d2.error || '解锁失败'; errEl.classList.add('show'); $('auth-btn').disabled = false; return; }
+    state.token = d2.sessionToken; state.username = d2.username; state.hasKeys = d2.hasKeys; state.keyHint = d2.keyHint;
+    if (!d2.hasKeys) { showKeyBinding(); } else { showChat(); }
+  } catch(e) { errEl.textContent = '网络错误'; errEl.classList.add('show'); }
+  $('auth-btn').disabled = false;
+}
+document.getElementById('auth-username').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('auth-pin').focus(); });
+document.getElementById('auth-pin').addEventListener('keydown', function(e){ if(e.key==='Enter') handleAuth(); });
+
+// ═══ Key Binding ═══
+function showKeyBinding() { hide($('auth-screen')); hide($('chat-screen')); show($('key-screen')); $('key-pin').value=''; $('key-error').classList.remove('show'); $('key-ok').classList.remove('show'); }
+function skipKeys() { state.hasKeys = false; showChat(); }
+function bindKeys() { showKeyBinding(); }
+
+async function handleSaveKeys() {
+  var apiKey = $('key-apikey').value.trim();
+  var secret = $('key-secret').value.trim();
+  var pp = $('key-passphrase').value.trim();
+  var pin = $('key-pin').value;
+  var demo = $('key-demo').checked;
+  var errEl = $('key-error');
+  if (!apiKey || !secret || !pp) { errEl.textContent = '请填写完整的 OKX API 信息'; errEl.classList.add('show'); return; }
+  if (!pin || pin.length < 4) { errEl.textContent = '请输入 PIN 以加密存储'; errEl.classList.add('show'); return; }
+  $('key-btn').disabled = true; errEl.classList.remove('show');
+  try {
+    var r = await fetch('/api/v2/auth/keys', { method:'PUT', headers:{'Content-Type':'application/json', Authorization:'Bearer '+state.token}, body:JSON.stringify({apiKey:apiKey,secret:secret,passphrase:pp,isDemo:demo,pin:pin}) });
+    var d = await r.json();
+    if (!d.ok) { errEl.textContent = d.error || '保存失败'; errEl.classList.add('show'); $('key-btn').disabled = false; return; }
+    state.hasKeys = true; state.keyHint = apiKey.slice(0,4)+'****';
+    $('key-ok').classList.add('show');
+    setTimeout(showChat, 800);
+  } catch(e) { errEl.textContent = '网络错误'; errEl.classList.add('show'); }
+  $('key-btn').disabled = false;
+}
+
+// ═══ Chat ═══
+async function showChat() {
+  hide($('auth-screen')); hide($('key-screen')); show($('chat-screen'), 'flex');
+  $('chat-name').textContent = state.username;
+  $('chat-avatar').textContent = state.username[0].toUpperCase();
+  $('key-badge').style.display = state.hasKeys ? 'inline' : 'none';
+  $('btn-bindkey').style.display = state.hasKeys ? 'none' : 'inline-block';
+  $('welcome-status').textContent = state.hasKeys ? 'OKX 工具就绪' : '公开行情可用';
+  try {
+    var cr = await fetch('/api/v2/chat/sessions', { method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+state.token}, body:JSON.stringify({title:'新的对话'}) });
+    if (cr.ok) { var cd = await cr.json(); state.currentConvId = cd.id; }
+  } catch(e) {}
+  $('chat-input').focus();
+}
+
+async function lock() {
+  if (state.token) { await fetch('/api/v2/auth/lock', { method:'POST', headers:{Authorization:'Bearer '+state.token} }).catch(function(){}); }
+  state.token = null; state.username = null; state.hasKeys = false;
+  state.messages = []; state.streaming = false; state.currentConvId = null;
+  $('msg-list').innerHTML = '<div class="welcome" id="welcome"><div class="w-icon">🤖</div><h2>AI 交易助手</h2><p id="welcome-status">公开行情可用</p><div class="hints">'+getHintBtns()+'</div></div>';
+  hide($('chat-screen')); show($('auth-screen')); $('auth-pin').value = '';
+}
+
+function getHintBtns() {
+  var btns = ["₿ BTC 价格","Ξ ETH 费率","📊 市场情绪","📈 RSI 分析","🔥 热门币种","💡 交易机会"];
+  var qs = ["BTC 现在什么价格？","ETH 资金费率多少？","市场情绪怎么样？","BTC RSI 超买还是超卖？","最近有什么热门币？","帮我分析一下现在的交易机会"];
+  var h = "";
+  for (var i = 0; i < btns.length; i++) {
+    h += "<button onclick=quickAsk('" + qs[i] + "')>" + btns[i] + "</button>";
+  }
+  return h;
+}
+
+function quickAsk(text) { $('chat-input').value = text; send(); }
+function onInputKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+document.getElementById('chat-input').addEventListener('input', function(){ this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,110)+'px'; });
+
+// ═══ SSE Chat ═══
+async function send() {
+  var text = $('chat-input').value.trim();
+  if (!text || state.streaming) return;
+  $('chat-input').value = ''; $('chat-input').style.height = 'auto';
+  $('send-btn').disabled = true; state.streaming = true;
+  $('chat-status').textContent = '';
+  var welcome = $('welcome'); if (welcome) welcome.remove();
+  addMsg('user', text);
+  persistMsg({role:'user',content:text});
+  var aiId = addMsg('ai', '', true);
+
+  var history = state.messages.slice(-6).filter(function(m){return m.content}).map(function(m){return {role:m.role,content:m.content}});
+  history.push({role:'user', content:text});
+
+  var ctrl = new AbortController(); state.abortController = ctrl;
+  try {
+    var r = await fetch('/api/v2/chat/stream', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+state.token}, body:JSON.stringify({messages:history}), signal:ctrl.signal });
+    if (!r.ok) { var et=await r.text(); var em='HTTP '+r.status; try{em=JSON.parse(et).error||em}catch(e){} throw new Error(em); }
+    var reader = r.body.getReader(); var dec = new TextDecoder(); var buf = '';
+    while (true) {
+      var part = await reader.read(); if (part.done) break;
+      buf += dec.decode(part.value, {stream:true});
+      while (buf.includes('\n\n')) {
+        var idx = buf.indexOf('\n\n'); var frame = buf.slice(0,idx); buf = buf.slice(idx+2);
+        var em = frame.match(/^event:\s*(.+)$/m); var dm = frame.match(/^data:\s*(.+)$/m);
+        if (!em || !dm) continue;
+        var type = em[1].trim(); var data;
+        try { data = JSON.parse(dm[1]); } catch(e) { continue; }
+        handleSSE(type, data, aiId);
+      }
+    }
+  } catch(e) {
+    if (e.name !== 'AbortError') {
+      updateMsg(aiId, function(el){ var b=el.querySelector('.body'); b.textContent=(b.textContent||'')+'\n❌ 服务暂不可用'; el.classList.remove('streaming'); });
+    }
+  }
+  state.streaming = false; state.abortController = null;
+  $('send-btn').disabled = false; $('chat-status').textContent = '';
+  updateMsg(aiId, function(el){ el.classList.remove('streaming'); });
+}
+
+function handleSSE(type, data, aiId) {
+  if (type === 'text') {
+    updateMsg(aiId, function(el){ el.querySelector('.body').textContent += data.delta || ''; scrollBottom(); });
+  } else if (type === 'done') {
+    updateMsg(aiId, function(el){
+      var body = el.querySelector('.body');
+      var m = state.messages.filter(function(x){return x.elId===aiId}).pop();
+      if (m) m.content = body ? body.textContent : (data.text || '');
+    });
+    persistMsg({role:'assistant',content:data.text||''});
+  } else if (type === 'error') {
+    updateMsg(aiId, function(el){ var b=el.querySelector('.body'); if(!b.textContent) b.textContent='❌ '+data.message; });
+  }
+}
+
+async function persistMsg(msg) {
+  if (!state.currentConvId) return;
+  try { await fetch('/api/v2/chat/history/save', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+state.token}, body:JSON.stringify({conversationId:state.currentConvId,role:msg.role,content:msg.content}) }); } catch(e) {}
+}
+
+// ═══ History Sidebar ═══
+function toggleHistory() {
+  var panel = $('history-panel'), overlay = $('history-overlay');
+  if (panel.classList.contains('open')) { closeHistory(); }
+  else { loadConversations(); panel.classList.add('open'); overlay.style.display='block'; }
+}
+function closeHistory() { $('history-panel').classList.remove('open'); $('history-overlay').style.display='none'; }
+
+async function loadConversations() {
+  var list = $('history-list');
+  list.innerHTML = '<div style="text-align:center;font-size:11px;color:var(--muted);padding:20px">加载中...</div>';
+  try {
+    var r = await fetch('/api/v2/chat/sessions', { headers:{Authorization:'Bearer '+state.token} });
+    if (!r.ok) { list.innerHTML='<div style="text-align:center;font-size:11px;color:var(--muted);padding:20px">暂无历史</div>'; return; }
+    var chats = await r.json();
+    if (!Array.isArray(chats) || chats.length===0) { list.innerHTML='<div style="text-align:center;font-size:11px;color:var(--muted);padding:20px">暂无历史</div>'; return; }
+    list.innerHTML = chats.map(function(c){
+      var t = c.title || '未命名';
+      var time = c.created_at ? c.created_at.slice(5,16).replace('T',' ') : '';
+      return '<div class="h-item'+(c.id===state.currentConvId?' active':'')+'" onclick="switchChat(\''+c.id+'\')">'+
+        '<span class="h-title">'+esc(t)+'</span>'+
+        '<span class="h-time">'+time+'</span>'+
+        '<button class="h-del" onclick="event.stopPropagation();deleteChat(\''+c.id+'\')" title="删除">🗑</button></div>';
+    }).join('');
+  } catch(e) { list.innerHTML='<div style="text-align:center;font-size:11px;color:var(--muted);padding:20px">加载失败</div>'; }
+}
+
+async function switchChat(id) {
+  if (id === state.currentConvId) { closeHistory(); return; }
+  try {
+    var r = await fetch('/api/v2/chat/history?conversationId='+id, { headers:{Authorization:'Bearer '+state.token} });
+    if (r.ok) {
+      var msgs = await r.json();
+      state.currentConvId = id; state.messages = [];
+      var lst = $('msg-list'); var w = $('welcome'); lst.innerHTML = '';
+      if (w) lst.appendChild(w);
+      if (Array.isArray(msgs)) { msgs.forEach(function(m){ if (m.role==='user'||m.role==='assistant') addMsg(m.role, m.content||''); }); }
+    }
+  } catch(e) {}
+  closeHistory(); loadConversations();
+}
+
+async function newChat() {
+  try {
+    var r = await fetch('/api/v2/chat/sessions', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+state.token}, body:JSON.stringify({title:'新的对话'}) });
+    if (r.ok) {
+      var d = await r.json(); state.currentConvId = d.id; state.messages = [];
+      var lst = $('msg-list'); lst.innerHTML = '';
+      var w = document.createElement('div'); w.className='welcome'; w.id='welcome';
+      w.innerHTML = '<div class="w-icon">🤖</div><h2>AI 交易助手</h2><p>直接提问即可</p><div class="hints">'+getHintBtns()+'</div>';
+      lst.appendChild(w);
+    }
+  } catch(e) {}
+  closeHistory(); loadConversations();
+}
+
+async function deleteChat(id) {
+  if (!confirm('删除此会话？')) return;
+  try {
+    await fetch('/api/v2/chat/history?conversationId='+id, { method:'DELETE', headers:{Authorization:'Bearer '+state.token} });
+    if (id === state.currentConvId) { newChat(); }
+  } catch(e) {}
+  loadConversations();
+}
+
+// ═══ UI ═══
+function addMsg(role, content, streaming) {
+  var el = document.createElement('div'); el.className = 'msg ' + role;
+  if (streaming) { el.classList.add('streaming'); }
+  el.innerHTML = '<div class="sender">'+(role==='user'?'👤 你':'🤖 hvip AI')+'</div><div class="body">'+esc(content)+'</div>';
+  if (streaming) { var cr = document.createElement('span'); cr.className='cursor'; el.querySelector('.body').appendChild(cr); }
+  $('msg-list').appendChild(el); scrollBottom();
+  var id = 'msg-'+Date.now()+'-'+Math.random().toString(36).slice(2,6); el.id = id;
+  state.messages.push({role:role, content:content, elId:id});
+  return id;
+}
+function updateMsg(id, fn) { var el = document.getElementById(id); if (el) fn(el); }
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function scrollBottom() { $('msg-list').scrollTop = $('msg-list').scrollHeight; }
+
+</script>
+</body>
+</html>

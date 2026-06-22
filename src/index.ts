@@ -33,7 +33,7 @@ import { registerAgentHubTools } from "./tools/agent-hub.js"
 import { registerCodeGraphTools } from "./tools/codegraph.js"
 import { startAgentHub } from "./adapters/agent-hub.js"
 import { getApiCredits, CREDIT_COST } from "./adapters/api-credits.js"
-import { getAuth, classifyRisk, type RiskLevel } from "./tools/shared.js"
+import { getAuth, classifyRisk, type RiskLevel, authStore } from "./tools/shared.js"
 import { privateApi } from "./adapters/okx.js"
 
 type TransportMode = "stdio" | "http"
@@ -186,11 +186,6 @@ async function startHttp(
   const adminToken = process.env.MCP_AUTH_TOKEN || ""  // 管理员 PSK，不限流
   const creditsEnabled = process.env.MCP_CREDITS !== "false" && process.env.MCP_CREDITS !== "0"
   const credits = creditsEnabled ? getApiCredits() : null
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined, // stateless
-  })
-
-  await server.connect(transport)
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     // ── Auth guard: 支持管理员 Key + 多租户积分 Key ──
@@ -280,6 +275,7 @@ async function startHttp(
     }
 
     // ── POST /mcp ──
+    // 官方 stateless 模式：每次请求 new McpServer + new transport
     if (req.method === "POST" && req.url === "/mcp") {
       const chunks: Buffer[] = []
       req.on("data", (chunk: Buffer) => chunks.push(chunk))
@@ -287,10 +283,40 @@ async function startHttp(
         try {
           const body = Buffer.concat(chunks).toString("utf-8")
           const parsed = body ? JSON.parse(body) : undefined
-          await transport.handleRequest(req, res, parsed)
+
+          // Per-user auth
+          const userAuth = (req.headers["x-okx-api-key"] && req.headers["x-okx-secret"])
+            ? { apiKey: req.headers["x-okx-api-key"] as string, secret: req.headers["x-okx-secret"] as string, passphrase: req.headers["x-okx-passphrase"] as string, isDemo: req.headers["x-okx-demo"] === "true" }
+            : null
+
+          // 按官方示例：stateless 每次 new server + new transport
+          const reqServer = new McpServer({
+            name: "hvip-mcp",
+            version,
+            description: "hvip MCP Server — 374 工具",
+          })
+          registerAllTools(reqServer, auth, readOnly)
+
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: undefined,
+          })
+          await reqServer.connect(transport)
+
+          try {
+            if (userAuth) {
+              await authStore.run(userAuth, () => transport.handleRequest(req, res, parsed))
+            } else {
+              await transport.handleRequest(req, res, parsed)
+            }
+          } finally {
+            await transport.close().catch(() => {})
+            await reqServer.close().catch(() => {})
+          }
         } catch {
-          res.writeHead(400, { "Content-Type": "application/json" })
-          res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null }))
+          if (!res.headersSent) {
+            res.writeHead(400, { "Content-Type": "application/json" })
+            res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null }))
+          }
         }
       })
       return
