@@ -10,7 +10,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "ws_xlayer_subscribe",
     "READ",
-    "[D:WebSocket] X Layer链上",
+    "[D:WebSocket] X Layer链上订阅：新区块头或合约日志实时推送 | type=newHeads/logs address=合约地址 topics=日志主题 | 拉取用 ws_xlayer_events → 取消用 ws_xlayer_unsubscribe",
     {
       type:    z.enum(["newHeads","logs"]).describe("订阅类型。newHeads=新区块头, logs=合约日志"),
       address: z.string().optional().describe("合约地址，logs类型可用（多个地址用逗号分隔）"),
@@ -42,7 +42,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "ws_xlayer_events",
     "READ",
-    "[D:WebSocket] X Layer链上",
+    "[D:WebSocket] X Layer拉取缓存事件（拉取后自动清空） | subscriptionId=订阅ID | 订阅用 ws_xlayer_subscribe → 取消用 ws_xlayer_unsubscribe",
     {
       subscriptionId: z.string().describe("订阅ID，由 xlayer_subscribe 返回"),
     },
@@ -76,7 +76,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "ws_xlayer_unsubscribe",
     "READ",
-    "[D:WebSocket] X Layer链上",
+    "[D:WebSocket] 取消X Layer链上订阅 | subscriptionId=要取消的订阅ID | 订阅用 ws_xlayer_subscribe → 查看订阅列表用 ws_xlayer_subscriptions",
     {
       subscriptionId: z.string().describe("要取消的订阅ID"),
     },
@@ -93,7 +93,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "ws_xlayer_call",
     "WRITE",
-    "[D:WebSocket] X Layer链上",
+    "[D:WebSocket] X Layer JSON-RPC调用：eth_blockNumber/eth_getBalance/eth_getLogs等 | method=RPC方法名 params=JSON参数数组 | 订阅事件用 ws_xlayer_subscribe",
     {
       method: z.string().describe("JSON-RPC 方法名。常用: eth_blockNumber, eth_getBlockByNumber, eth_getBalance, eth_getTransactionReceipt, eth_call, eth_getLogs"),
       params: z.string().optional().describe("JSON-RPC 参数数组，JSON 字符串。如 '[\\\"0xabc123\\\", false]'。留空表示传空数组"),
@@ -120,7 +120,7 @@ export function registerXLayerWSTools(server: McpServer): void {
     server,
     "ws_xlayer_subscriptions",
     "READ",
-    "[D:WebSocket] X Layer链上",
+    "[D:WebSocket] 查看所有X Layer链上订阅列表及状态 | 无需参数 | 订阅用 ws_xlayer_subscribe → 取消用 ws_xlayer_unsubscribe",
     {},
     async () => {
       try {

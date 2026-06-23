@@ -24,7 +24,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     description: "adapter wrapper 已有，只需注册 registerTool + zod schema + 描述",
     prefix: "C",
     fields: [
-      { key: "toolName", label: "工具名", placeholder: "如 okx_get_market_depth", required: true },
+      { key: "toolName", label: "工具名", placeholder: "如 market_ticker", required: true },
       { key: "apiMethod", label: "adapter 函数名", placeholder: "如 privateApi.getMarketDepth", required: true },
       { key: "instId", label: "产品ID", placeholder: "BTC-USDT" },
       { key: "refFile", label: "参考文件", placeholder: "src/tools/trading.ts", required: true },
@@ -54,7 +54,7 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
   registerTool(server,
     "${p.toolName}",
     "READ",  // 或 "WRITE" 如果需要交易权限
-    "CAT:[${p.category}] | → 请先调用 agent_catalog",
+    "[D:${p.category}] 功能描述 | 参数提示 | 关联引导，详细看 sys_catalog",
     {
       ${p.extraParams || `instId: z.string().describe("产品ID")`}
     },
@@ -327,8 +327,8 @@ CONCLUSION: <一句话交易建议>
 - 重点: ${p.focus || '全面分析'}
 
 ## 操作步骤
-1. 调用 okx_quick_market 获取最新行情数据
-2. 调用 okx_get_funding_rate 查看资金费率
+1. 调用 market_quick 获取最新行情数据
+2. 调用 market_funding_rate 查看资金费率
 3. 结合知识库中的历史模式 (FOMC 反弹、ETF 流入等) 做判断
 4. 输出结构化分析报告
 

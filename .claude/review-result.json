@@ -1,0 +1,97 @@
+{
+  "type": "task:review",
+  "taskId": "feat-chat-assistant-v1",
+  "verdict": "BLOCKED",
+  "timestamp": "2026-06-22T00:00:00Z",
+  "summary": "12 commits · 75 files · 3 P0 blocking · 5 P1 high · 3 P2 nit · 8 passed",
+  "p0": [
+    {
+      "id": "P0-1",
+      "title": "340+工具描述为占位文本",
+      "files": "src/tools/market.ts, trading.ts, account.ts, algo.ts, funding.ts, finance.ts, signal.ts, copy.ts, bot.ts, spread.ts, subaccount.ts, stats.ts, agent-hub.ts, codegraph.ts",
+      "detail": "全部使用未完成的占位描述。market.ts 15个工具全是 [D:Market] 行情数据：；trading.ts 10个工具全是 [D:Trading] place order（含cancel/amend）；account.ts 36个工具全是 [D:Account] get balance（含positions/config/valuation）",
+      "fix": "按 agent-utils.ts 格式补齐每个工具的完整描述： [D:Domain] 功能描述 | 参数提示 | 关联引导",
+      "verifiedBy": "Agent Team Explore"
+    },
+    {
+      "id": "P0-2",
+      "title": "Chat模块全部使用旧工具名",
+      "files": "src/adapters/chat-llm.ts:83-188, chat-server/server.js:99-120",
+      "detail": "CURATED_TOOLS 和 TOOLS 数组中20个工具全部用 okx_get_*/agent_* 旧名。运行时 MCP 返回 tool_not_found。",
+      "fix": "替换为 tool-name-map.json 中的新名称（market_ticker, trade_place, account_balance 等）",
+      "verifiedBy": "Agent Team Explore"
+    },
+    {
+      "id": "P0-3",
+      "title": "hub-templates.ts 使用旧 CAT:[X] 格式",
+      "files": "src/adapters/hub-templates.ts:57,330-331",
+      "detail": "仍使用 CAT:[X] 描述格式和旧工具名 okx_quick_market",
+      "fix": "替换为 [D:Domain] 格式和新工具名",
+      "verifiedBy": "Agent Team Explore"
+    }
+  ],
+  "p1": [
+    {
+      "id": "P1-1",
+      "title": "双次LLM调用浪费Token",
+      "detail": "chat-llm.ts 和 server.js 在streaming拿到tool_use后立即用stream:false重发同一messages，每轮tool call双倍计费input tokens。根因为未处理 input_json_delta 事件。",
+      "files": "src/adapters/chat-llm.ts:340+394, chat-server/server.js:179+191",
+      "verifiedBy": "Agent Team Code Review"
+    },
+    {
+      "id": "P1-2",
+      "title": "无请求体大小限制(DoS)",
+      "detail": "chat-server/server.js 全部6个POST端点无Content-Length检查，攻击者可发送无限大数据包耗尽内存",
+      "files": "chat-server/server.js:257,270,317,353,376,411",
+      "verifiedBy": "Agent Team Security"
+    },
+    {
+      "id": "P1-3",
+      "title": "PIN暴力破解零防护",
+      "detail": "/api/v2/auth/unlock 无速率限制、无失败计数、无账户锁定",
+      "files": "chat-server/server.js:269-293",
+      "verifiedBy": "Agent Team Security"
+    },
+    {
+      "id": "P1-4",
+      "title": "OKX凭证明文内存存储",
+      "detail": "解密后的apiKey+secret+passphrase以明文对象存入Map，存活30分钟，任何内存dump可窃取",
+      "files": "src/adapters/chat-auth-store.ts:26,33-38",
+      "verifiedBy": "Agent Team Security"
+    },
+    {
+      "id": "P1-5",
+      "title": "CORS wildcard 全开",
+      "detail": "mcp-gateway.ts 和 chat-server/server.js 使用 Access-Control-Allow-Origin: *",
+      "files": "src/mcp-gateway.ts:133,284, chat-server/server.js:225,357",
+      "verifiedBy": "Agent Team Security"
+    }
+  ],
+  "p2": [
+    {
+      "id": "P2-1",
+      "title": "Token Bucket无并发保护",
+      "files": "src/mcp-gateway.ts:104-116"
+    },
+    {
+      "id": "P2-2",
+      "title": "chat-app临时脚本混入dist",
+      "files": "chat-app/_test.js, _test2.js, fix-final.js, fix-line121.js"
+    },
+    {
+      "id": "P2-3",
+      "title": "三处.env重复解析逻辑",
+      "files": "chat-llm.ts:16-27, chat-server/server.js:11-27, hub-server.ts:38-49"
+    }
+  ],
+  "passed": [
+    "tool-name-map.json 373条目正确且全部符合域前缀规范",
+    "npm run build 通过 (16产物)",
+    "agent-utils.ts 22个描述100%合规（可作为格式基准）",
+    "加密模块 AES-256-GCM + PBKDF2 100K迭代 正确实现",
+    "circuit-breaker v2 指数退避 1→2→4→8 capping 5min",
+    "ai-sdk.ts 超时保护 (per-step 120s + total 600s)",
+    "index.ts stateless MCP 架构正确",
+    "shared.ts 埋点+错误分类+风险分级 正确"
+  ]
+}

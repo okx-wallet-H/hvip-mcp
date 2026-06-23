@@ -364,7 +364,7 @@ function buildMarketPrompt(title: string): string {
     `你的任务: ${title}`,
     ``,
     `## 指令`,
-    `1. 使用 hvip MCP 工具（如 okx_get_ticker, okx_get_tickers, okx_get_candles, okx_get_funding_rate, okx_get_orderbook 等）查询所需数据`,
+    `1. 使用 hvip MCP 工具（如 market_ticker, market_tickers, market_candles, market_funding_rate, market_orderbook 等）查询所需数据`,
     `2. 把结果整理成清晰的中文回复（价格、涨跌幅、成交量、关键支撑阻力位等）`,
     `3. 不要写代码、不要改文件、不要 git 操作`,
     `4. 完成后用简洁的一段话总结核心结论`,

@@ -27,7 +27,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     server,
     "market_funding_rate",
     "READ",
-    "[D:Market] 永续合约当前资金费率 | instId如BTC-USDT-SWAP | 历史趋势用 market_funding_rate_history → 极端费率扫 agent_market_scan",
+    "[D:Market] 永续合约当前资金费率 | instId如BTC-USDT-SWAP | 历史趋势用 market_funding_rate_history → 极端费率扫 scan_market",
     { instId: z.string().describe("永续合约产品ID，如 BTC-USDT-SWAP") },
     async ({ instId }) => {
       try {
@@ -186,7 +186,7 @@ export function registerPublicTools(server: McpServer, auth: Auth | null): void 
     "READ",
     "[D:System] OKX公告列表 | annType?, lang?默认中文 | 公告类型用 sys_announcement_types",
     {
-      annType: z.string().optional().describe("公告类型ID，不填返回全部。可先调用 okx_get_announcement_types 查询可用类型"),
+      annType: z.string().optional().describe("公告类型ID，不填返回全部。可先调用 sys_announcement_types 查询可用类型"),
       lang:    z.enum(["zh-Hans","en-US"]).optional().describe("语言，默认中文"),
     },
     async ({ annType, lang }) => {

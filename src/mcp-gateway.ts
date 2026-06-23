@@ -101,18 +101,31 @@ interface Bucket {
 
 const buckets = new Map<string, Bucket>()
 
+// Per-bucket locks to prevent concurrent read-modify-write (P2-1)
+const bucketLocks = new Map<string, Promise<void>>()
+
 function getBucket(merchantId: number, key: string, rateLimit: number): Bucket {
   let b = buckets.get(key)
   if (!b) {
     b = { tokens: rateLimit, lastRefill: Date.now(), limit: rateLimit }
     buckets.set(key, b)
   }
-  // Refill
+  // Refill — synchronous code in Node.js is atomic, but guard with a lock
+  // for async paths where checkRateLimit yields between check and modify.
   const now = Date.now()
   const elapsed = (now - b.lastRefill) / 1000
   b.tokens = Math.min(b.limit, b.tokens + elapsed * (b.limit / 60))
   b.lastRefill = now
   return b
+}
+
+async function withBucketLock<T>(key: string, fn: () => T | Promise<T>): Promise<T> {
+  while (bucketLocks.has(key)) {
+    await bucketLocks.get(key)!.catch(() => {})
+  }
+  const promise = (async () => { try { return await fn() } finally { bucketLocks.delete(key) } })()
+  bucketLocks.set(key, promise)
+  return promise
 }
 
 // Cleanup stale buckets every 10 minutes
@@ -130,7 +143,7 @@ setInterval(() => {
 function json(res: ServerResponse, code: number, data: any) {
   res.writeHead(code, {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "http://localhost:3100",
     "Access-Control-Allow-Headers": "Content-Type, X-API-Key",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   })
@@ -281,7 +294,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
       res.writeHead(result.status, {
         "Content-Type": result.contentType,
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": process.env.ALLOWED_ORIGIN || "http://localhost:3100",
         "X-Gateway-Elapsed": String(dur),
         "X-RateLimit-Remaining": String(Math.floor(bucket.tokens)),
       })

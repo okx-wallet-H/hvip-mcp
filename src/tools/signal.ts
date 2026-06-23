@@ -48,7 +48,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     "READ",
     "[D:Strategy] 当前活跃信号机器人 | algoOrdType?",
     {
-      algoId: z.string().describe("信号机器人ID（从 okx_get_signal_bots_pending 获取）"),
+      algoId: z.string().describe("信号机器人ID（从 strategy_signal_bots_active 获取）"),
     },
     async ({ algoId }) => {
       if (!auth) return toError(AUTH_REQUIRED)
@@ -65,7 +65,7 @@ export function registerSignalTools(server: McpServer, auth: Auth | null): void 
     "READ",
     "[D:Strategy] 当前活跃信号机器人 | algoOrdType?",
     {
-      algoId: z.string().describe("信号机器人ID（从 okx_get_signal_bots_history 获取）"),
+      algoId: z.string().describe("信号机器人ID（从 strategy_signal_bots_history 获取）"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
     },
     async ({ algoId, limit }) => {

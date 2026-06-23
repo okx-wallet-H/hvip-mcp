@@ -8,23 +8,10 @@
 import Anthropic from "@anthropic-ai/sdk"
 import type { Tool, MessageParam, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages"
 import { logger } from "../utils/logger.js"
-import { readFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
 
-// 确保 .env 在模块初始化前加载
-const envPath = join(process.cwd(), ".env")
-if (existsSync(envPath)) {
-  readFileSync(envPath, "utf-8").split(/\r?\n/).forEach(line => {
-    const hashIdx = line.indexOf("#")
-    if (hashIdx >= 0) line = line.substring(0, hashIdx)
-    const m = line.match(/^\s*([^#\s=]+)\s*=\s*(.*)$/)
-    if (m) {
-      const val = m[2].trim()
-      if (!val) { delete process.env[m[1]] }
-      else if (!process.env[m[1]]) { process.env[m[1]] = val }
-    }
-  })
-}
+// 共享 .env 加载
+import { loadEnv } from "../utils/load-env.js"
+loadEnv()
 
 const log = logger("ChatLLM")
 
@@ -82,106 +69,106 @@ const SYSTEM_PROMPT = `你是 hvip AI 交易助手。
 
 const CURATED_TOOLS: ToolDef[] = [
   {
-    name: "okx_get_ticker",
+    name: "market_ticker",
     description: "查询单个产品实时行情：最新价/24h最高/24h最低/成交量/涨跌幅。查任意币种实时价格时必用。",
     inputSchema: { type: "object", properties: { instId: { type: "string", description: "产品ID，如BTC-USDT" } }, required: ["instId"] },
   },
   {
-    name: "okx_quick_market",
+    name: "market_quick",
     description: "单产品综合行情：最新价+买卖深度+资金费率。比分别调用多个工具更快。",
     inputSchema: { type: "object", properties: { instId: { type: "string", description: "如BTC-USDT-SWAP" } }, required: ["instId"] },
   },
   {
-    name: "okx_get_funding_rate",
+    name: "market_funding_rate",
     description: "获取永续合约当前资金费率。",
     inputSchema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] },
   },
   {
-    name: "okx_get_candles",
+    name: "market_candles",
     description: "获取K线(OHLCV)数据，用于技术分析、判断趋势。",
     inputSchema: { type: "object", properties: { instId: { type: "string" }, bar: { type: "string", description: "1m/5m/15m/1H/4H/1D" }, limit: { type: "number" } }, required: ["instId"] },
   },
   {
-    name: "okx_indicator",
+    name: "indicator_calc",
     description: "技术指标：RSI/MACD/布林带/EMA/SMA/ATR/超级趋势/形态识别等。分析超买超卖时必用。",
     inputSchema: { type: "object", properties: { instId: { type: "string" }, indicator: { type: "string", enum: ["rsi","macd","bb","atr","stoch","ema","sma","supertrend","pattern"] }, bar: { type: "string" } }, required: ["instId","indicator"] },
   },
   {
-    name: "agent_market_sentiment",
+    name: "scan_sentiment",
     description: "市场情绪仪表盘(0-100)：多空比+PCR+成交量+OI+资金费率综合打分。",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   {
-    name: "agent_market_scan",
+    name: "scan_market",
     description: "市场异动扫描：涨幅/跌幅/成交量异常/费率异常的币种。",
     inputSchema: { type: "object", properties: { sortBy: { type: "string", enum: ["change","vol","fundingRate"] }, topN: { type: "number" } }, required: [] },
   },
   {
-    name: "okx_get_orderbook",
+    name: "market_orderbook",
     description: "获取订单簿深度数据：买一卖一价格+深度档位。",
     inputSchema: { type: "object", properties: { instId: { type: "string" }, sz: { type: "number" } }, required: ["instId"] },
   },
   {
-    name: "okx_get_instruments",
+    name: "market_instruments",
     description: "获取可用交易对列表。找交易对时使用。",
     inputSchema: { type: "object", properties: { instType: { type: "string", enum: ["SPOT","SWAP","FUTURES","OPTION"] } }, required: ["instType"] },
   },
   // ── 账户（需OKX Key）──
   {
-    name: "okx_account_overview",
+    name: "account_overview",
     description: "账户全景：总权益+各币种余额+全部持仓+账户配置。查仓位/余额时必用。",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   {
-    name: "okx_get_balance",
+    name: "account_balance",
     description: "获取账户余额：各币种可用/冻结数量。",
     inputSchema: { type: "object", properties: { ccy: { type: "string", description: "币种，如USDT" } }, required: [] },
   },
   {
-    name: "okx_get_positions",
+    name: "account_positions",
     description: "获取当前持仓：数量/开仓价/标记价/未实现盈亏/杠杆率。",
     inputSchema: { type: "object", properties: { instType: { type: "string" }, instId: { type: "string" } }, required: [] },
   },
   {
-    name: "agent_risk_overview",
+    name: "risk_overview",
     description: "风险仪表盘：保证金率/风险度/强平价格预估/持仓集中度。",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   // ── 交易（需OKX Key）──
   {
-    name: "okx_place_order",
+    name: "trade_place",
     description: "下单交易：市价/限价，开多/开空/平多/平空。交易前务必确认用户意图。",
     inputSchema: { type: "object", properties: { instId: { type: "string" }, tdMode: { type: "string", enum: ["isolated","cross","cash"] }, side: { type: "string", enum: ["buy","sell"] }, ordType: { type: "string", enum: ["market","limit"] }, sz: { type: "string" }, posSide: { type: "string", enum: ["long","short"] } }, required: ["instId","tdMode","side","ordType","sz"] },
   },
   {
-    name: "okx_get_order",
+    name: "trade_order",
     description: "查询订单状态：是否成交/部分成交。",
     inputSchema: { type: "object", properties: { instId: { type: "string" }, ordId: { type: "string" } }, required: ["instId"] },
   },
   {
-    name: "okx_cancel_order",
+    name: "trade_cancel",
     description: "撤销未成交订单。",
     inputSchema: { type: "object", properties: { instId: { type: "string" }, ordId: { type: "string" } }, required: ["instId","ordId"] },
   },
   {
-    name: "agent_quick_trade",
+    name: "trade_quick",
     description: "一键智能交易：自动查余额/算最大可开/查费率/下限价单。适合'买入0.1个'的场景。",
     inputSchema: { type: "object", properties: { instId: { type: "string" }, side: { type: "string", enum: ["buy","sell"] }, sz: { type: "string" }, posSide: { type: "string", enum: ["long","short"] }, tdMode: { type: "string", enum: ["isolated","cross"] } }, required: ["instId","side","sz"] },
   },
   // ── 资金 ──
   {
-    name: "agent_funding_overview",
+    name: "account_asset_center",
     description: "资金总览：各账户余额+最近资金流水。",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   // ── 导航 ──
   {
-    name: "agent_catalog",
+    name: "sys_catalog",
     description: "全局工具导航——列出所有可用工具的分类。不确定用哪个工具时先调这个。",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   {
-    name: "okx_get_mark_price",
+    name: "market_mark_price",
     description: "获取标记价格（合约强平参考价）。",
     inputSchema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] },
   },
@@ -332,11 +319,12 @@ export class ChatLLM {
     let finalText = ""
 
     for (let step = 0; step < maxSteps; step++) {
-      let toolUses: ToolUseBlock[] = []
+      // { index → { name, id, inputJson } } — accumulated from streaming deltas
+      const toolBlocks = new Map<number, { name: string; id: string; inputJson: string }>()
       const textChunks: string[] = []
 
       try {
-        // Streaming
+        // Streaming — accumulate tool_use input via input_json_delta (no 2nd call)
         const stream = await this.client.messages.create({
           model: this.model,
           max_tokens: 4096,
@@ -354,13 +342,22 @@ export class ChatLLM {
               break
             case "content_block_start":
               if (event.content_block.type === "tool_use") {
-                toolUses.push(event.content_block as unknown as ToolUseBlock)
+                const idx = (event as any).index ?? toolBlocks.size
+                toolBlocks.set(idx, {
+                  name: event.content_block.name,
+                  id: event.content_block.id,
+                  inputJson: "",
+                })
               }
               break
             case "content_block_delta":
               if (event.delta.type === "text_delta" && event.delta.text) {
                 textChunks.push(event.delta.text)
                 yield { type: "text", delta: event.delta.text }
+              } else if (event.delta.type === "input_json_delta") {
+                const idx = (event as any).index
+                const block = toolBlocks.get(idx)
+                if (block) block.inputJson += (event.delta as any).partial_json
               }
               break
             case "message_delta":
@@ -372,7 +369,7 @@ export class ChatLLM {
         finalText += textChunks.join("")
 
         // No tool calls → done
-        if (toolUses.length === 0) {
+        if (toolBlocks.size === 0) {
           yield {
             type: "done",
             text: finalText,
@@ -389,30 +386,23 @@ export class ChatLLM {
         return
       }
 
-      // Re-fetch non-streaming for full tool_use blocks
+      // Parse accumulated tool inputs from streaming (no 2nd API call)
       try {
-        const complete = await this.client.messages.create({
-          model: this.model,
-          max_tokens: 4096,
-          temperature: 0.3,
-          system: SYSTEM_PROMPT,
-          messages: anthroMessages,
-          tools: this.tools,
-          stream: false,
-        })
+        const fullToolUses: ToolUseBlock[] = []
+        for (const [, block] of toolBlocks) {
+          try {
+            const input = block.inputJson ? JSON.parse(block.inputJson) : {}
+            fullToolUses.push({ type: "tool_use", id: block.id, name: block.name, input } as unknown as ToolUseBlock)
+          } catch {
+            fullToolUses.push({ type: "tool_use", id: block.id, name: block.name, input: {} } as unknown as ToolUseBlock)
+          }
+        }
 
-        totalInput += complete.usage.input_tokens
-        totalOutput += complete.usage.output_tokens
-
-        const fullToolUses = complete.content.filter((b): b is ToolUseBlock => b.type === "tool_use")
-        if (fullToolUses.length === 0) break
-
-        // Build assistant content
-        const assistantContent: any[] = complete.content.map(b => {
-          if (b.type === "text") return { type: "text" as const, text: b.text }
-          if (b.type === "tool_use") return { type: "tool_use" as const, id: b.id, name: b.name, input: (b as ToolUseBlock).input }
-          return { type: "text" as const, text: "" }
-        })
+        // Build assistant content from accumulated blocks
+        const assistantContent: any[] = [
+          ...(finalText ? [{ type: "text" as const, text: finalText }] : []),
+          ...fullToolUses.map(tu => ({ type: "tool_use" as const, id: tu.id, name: tu.name, input: (tu as any).input })),
+        ]
         anthroMessages.push({ role: "assistant", content: assistantContent })
 
         // Execute tools sequentially

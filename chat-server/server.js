@@ -97,26 +97,26 @@ const llmClient = LLM_KEY ? new Anthropic({ apiKey: LLM_KEY, baseURL: LLM_URL })
 console.log(llmClient ? `LLM: ${LLM_MODEL} @ ${LLM_URL}` : "WARN: LLM未配置")
 
 const TOOLS = [
-  { name: "okx_get_ticker", description: "查任意币种实时价格：最新价/24h高低/成交量。", input_schema: { type: "object", properties: { instId: { type: "string", description: "如BTC-USDT" } }, required: ["instId"] } },
-  { name: "okx_quick_market", description: "单产品综合行情：价格+深度+资金费率。", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] } },
-  { name: "okx_get_funding_rate", description: "永续合约当前资金费率。", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] } },
-  { name: "okx_get_candles", description: "K线(OHLCV)数据。", input_schema: { type: "object", properties: { instId: { type: "string" }, bar: { type: "string", description: "1m/5m/15m/1H/4H/1D" }, limit: { type: "number" } }, required: ["instId"] } },
-  { name: "okx_indicator", description: "技术指标：RSI/MACD/布林带/EMA/超级趋势。", input_schema: { type: "object", properties: { instId: { type: "string" }, indicator: { type: "string", enum: ["rsi","macd","bb","ema","supertrend","pattern"] }, bar: { type: "string" } }, required: ["instId","indicator"] } },
-  { name: "agent_market_sentiment", description: "市场情绪仪表盘(0-100)综合打分。", input_schema: { type: "object", properties: {}, required: [] } },
-  { name: "agent_market_scan", description: "市场异动扫描：涨跌/成交量/费率异常。", input_schema: { type: "object", properties: { sortBy: { type: "string", enum: ["change","vol","fundingRate"] }, topN: { type: "number" } }, required: [] } },
-  { name: "okx_get_orderbook", description: "订单簿深度：买一卖一+档位。", input_schema: { type: "object", properties: { instId: { type: "string" }, sz: { type: "number" } }, required: ["instId"] } },
-  { name: "okx_get_instruments", description: "可用交易对列表。", input_schema: { type: "object", properties: { instType: { type: "string", enum: ["SPOT","SWAP","FUTURES","OPTION"] } }, required: ["instType"] } },
-  { name: "okx_account_overview", description: "账户全景：总权益+余额+持仓。(需Key)", input_schema: { type: "object", properties: {}, required: [] } },
-  { name: "okx_get_balance", description: "账户余额：各币种可用/冻结。(需Key)", input_schema: { type: "object", properties: { ccy: { type: "string" } }, required: [] } },
-  { name: "okx_get_positions", description: "当前持仓：数量/开仓价/盈亏。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: [] } },
-  { name: "okx_place_order", description: "下单：市价/限价。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, tdMode: { type: "string", enum: ["isolated","cross","cash"] }, side: { type: "string", enum: ["buy","sell"] }, ordType: { type: "string", enum: ["market","limit"] }, sz: { type: "string" }, posSide: { type: "string", enum: ["long","short"] } }, required: ["instId","tdMode","side","ordType","sz"] } },
-  { name: "okx_get_order", description: "查询订单状态。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, ordId: { type: "string" } }, required: ["instId"] } },
-  { name: "okx_cancel_order", description: "撤销未成交订单。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, ordId: { type: "string" } }, required: ["instId","ordId"] } },
-  { name: "agent_quick_trade", description: "一键智能交易。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, side: { type: "string", enum: ["buy","sell"] }, sz: { type: "string" }, posSide: { type: "string", enum: ["long","short"] }, tdMode: { type: "string", enum: ["isolated","cross"] } }, required: ["instId","side","sz"] } },
-  { name: "agent_risk_overview", description: "风险仪表盘。(需Key)", input_schema: { type: "object", properties: {}, required: [] } },
-  { name: "agent_funding_overview", description: "资金总览。(需Key)", input_schema: { type: "object", properties: {}, required: [] } },
-  { name: "agent_catalog", description: "全局工具导航。", input_schema: { type: "object", properties: {}, required: [] } },
-  { name: "okx_get_mark_price", description: "标记价格（合约强平参考）。", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] } },
+  { name: "market_ticker", description: "查任意币种实时价格：最新价/24h高低/成交量。", input_schema: { type: "object", properties: { instId: { type: "string", description: "如BTC-USDT" } }, required: ["instId"] } },
+  { name: "market_quick", description: "单产品综合行情：价格+深度+资金费率。", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] } },
+  { name: "market_funding_rate", description: "永续合约当前资金费率。", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] } },
+  { name: "market_candles", description: "K线(OHLCV)数据。", input_schema: { type: "object", properties: { instId: { type: "string" }, bar: { type: "string", description: "1m/5m/15m/1H/4H/1D" }, limit: { type: "number" } }, required: ["instId"] } },
+  { name: "indicator_calc", description: "技术指标：RSI/MACD/布林带/EMA/超级趋势。", input_schema: { type: "object", properties: { instId: { type: "string" }, indicator: { type: "string", enum: ["rsi","macd","bb","ema","supertrend","pattern"] }, bar: { type: "string" } }, required: ["instId","indicator"] } },
+  { name: "scan_sentiment", description: "市场情绪仪表盘(0-100)综合打分。", input_schema: { type: "object", properties: {}, required: [] } },
+  { name: "scan_market", description: "市场异动扫描：涨跌/成交量/费率异常。", input_schema: { type: "object", properties: { sortBy: { type: "string", enum: ["change","vol","fundingRate"] }, topN: { type: "number" } }, required: [] } },
+  { name: "market_orderbook", description: "订单簿深度：买一卖一+档位。", input_schema: { type: "object", properties: { instId: { type: "string" }, sz: { type: "number" } }, required: ["instId"] } },
+  { name: "market_instruments", description: "可用交易对列表。", input_schema: { type: "object", properties: { instType: { type: "string", enum: ["SPOT","SWAP","FUTURES","OPTION"] } }, required: ["instType"] } },
+  { name: "account_overview", description: "账户全景：总权益+余额+持仓。(需Key)", input_schema: { type: "object", properties: {}, required: [] } },
+  { name: "account_balance", description: "账户余额：各币种可用/冻结。(需Key)", input_schema: { type: "object", properties: { ccy: { type: "string" } }, required: [] } },
+  { name: "account_positions", description: "当前持仓：数量/开仓价/盈亏。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: [] } },
+  { name: "trade_place", description: "下单：市价/限价。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, tdMode: { type: "string", enum: ["isolated","cross","cash"] }, side: { type: "string", enum: ["buy","sell"] }, ordType: { type: "string", enum: ["market","limit"] }, sz: { type: "string" }, posSide: { type: "string", enum: ["long","short"] } }, required: ["instId","tdMode","side","ordType","sz"] } },
+  { name: "trade_order", description: "查询订单状态。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, ordId: { type: "string" } }, required: ["instId"] } },
+  { name: "trade_cancel", description: "撤销未成交订单。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, ordId: { type: "string" } }, required: ["instId","ordId"] } },
+  { name: "trade_quick", description: "一键智能交易。(需Key)", input_schema: { type: "object", properties: { instId: { type: "string" }, side: { type: "string", enum: ["buy","sell"] }, sz: { type: "string" }, posSide: { type: "string", enum: ["long","short"] }, tdMode: { type: "string", enum: ["isolated","cross"] } }, required: ["instId","side","sz"] } },
+  { name: "risk_overview", description: "风险仪表盘。(需Key)", input_schema: { type: "object", properties: {}, required: [] } },
+  { name: "account_asset_center", description: "资金总览。(需Key)", input_schema: { type: "object", properties: {}, required: [] } },
+  { name: "sys_catalog", description: "全局工具导航。", input_schema: { type: "object", properties: {}, required: [] } },
+  { name: "market_mark_price", description: "标记价格（合约强平参考）。", input_schema: { type: "object", properties: { instId: { type: "string" } }, required: ["instId"] } },
 ]
 
 const SYSTEM_PROMPT = `你是 hvip AI 交易助手。用户问什么答什么，没提币种别查行情，没要分析别写报告。
@@ -173,29 +173,36 @@ async function* streamChat(messages, userAuth) {
 
   let totalIn = 0, totalOut = 0, finalText = ""
   for (let step = 0; step < 5; step++) {
-    let toolUses = []
+    const toolBlocks = new Map()  // index → { name, id, inputJson }
     const textChunks = []
     try {
       const stream = await llmClient.messages.create({ model: LLM_MODEL, max_tokens: 4096, temperature: 0.3, system: SYSTEM_PROMPT, messages: anthroMsgs, tools: TOOLS, stream: true })
       for await (const ev of stream) {
         if (ev.type === "message_start") totalIn += ev.message.usage.input_tokens
-        else if (ev.type === "content_block_start" && ev.content_block.type === "tool_use") toolUses.push(ev.content_block)
-        else if (ev.type === "content_block_delta" && ev.delta.type === "text_delta" && ev.delta.text) { textChunks.push(ev.delta.text); yield { type: "text", delta: ev.delta.text } }
+        else if (ev.type === "content_block_start" && ev.content_block.type === "tool_use") {
+          const idx = ev.index ?? toolBlocks.size
+          toolBlocks.set(idx, { name: ev.content_block.name, id: ev.content_block.id, inputJson: "" })
+        }
+        else if (ev.type === "content_block_delta") {
+          if (ev.delta.type === "text_delta" && ev.delta.text) { textChunks.push(ev.delta.text); yield { type: "text", delta: ev.delta.text } }
+          else if (ev.delta.type === "input_json_delta") {
+            const block = toolBlocks.get(ev.index)
+            if (block) block.inputJson += ev.delta.partial_json
+          }
+        }
         else if (ev.type === "message_delta") totalOut += ev.usage.output_tokens
       }
     } catch (e) { yield { type: "error", message: e.message }; return }
     finalText += textChunks.join("")
-    if (!toolUses.length) { yield { type: "done", text: finalText, tokens: { input: totalIn, output: totalOut }, model: LLM_MODEL }; return }
+    if (!toolBlocks.size) { yield { type: "done", text: finalText, tokens: { input: totalIn, output: totalOut }, model: LLM_MODEL }; return }
 
-    // Re-fetch for full tool blocks
-    const complete = await llmClient.messages.create({ model: LLM_MODEL, max_tokens: 4096, temperature: 0.3, system: SYSTEM_PROMPT, messages: anthroMsgs, tools: TOOLS, stream: false })
-    totalIn += complete.usage.input_tokens; totalOut += complete.usage.output_tokens
-    const fullTools = complete.content.filter(b => b.type === "tool_use")
-    const asstContent = complete.content.map(b => {
-      if (b.type === "text") return { type: "text", text: b.text }
-      if (b.type === "tool_use") return { type: "tool_use", id: b.id, name: b.name, input: b.input }
-      return { type: "text", text: "" }
-    })
+    // Parse accumulated tool inputs from streaming (no 2nd API call)
+    const fullTools = []
+    for (const [, block] of toolBlocks) {
+      try { fullTools.push({ type: "tool_use", id: block.id, name: block.name, input: block.inputJson ? JSON.parse(block.inputJson) : {} }) }
+      catch { fullTools.push({ type: "tool_use", id: block.id, name: block.name, input: {} }) }
+    }
+    const asstContent = [...(finalText ? [{ type: "text", text: finalText }] : []), ...fullTools.map(t => ({ type: "tool_use", id: t.id, name: t.name, input: t.input }))]
     anthroMsgs.push({ role: "assistant", content: asstContent })
 
     const toolResults = []
@@ -221,8 +228,35 @@ async function* streamChat(messages, userAuth) {
 // ═══════════════════════════════════════════════════════════
 // HTTP Server
 // ═══════════════════════════════════════════════════════════
+const MAX_BODY_SIZE = parseInt(process.env.MAX_BODY_SIZE || "1048576", 10) // 1MB default
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "http://localhost:3100"
+const PIN_MAX_ATTEMPTS = 5       // lock after 5 failures
+const PIN_LOCK_MINUTES = 15      // lock duration
+const PIN_RATE_WINDOW_MS = 60000 // 1 minute window for rate limiting
+const PIN_MAX_PER_WINDOW = 10    // max attempts per window per IP
+
+// Rate-limit state: { ip: { count, windowStart }, username: { fails, lockedUntil } }
+const rateState = new Map()
+setInterval(() => { // periodic cleanup
+  const now = Date.now()
+  for (const [k, v] of rateState) { if (now - v.windowStart > PIN_RATE_WINDOW_MS * 2) rateState.delete(k) }
+}, 300_000)
+
+function readBody(req, res, cb) {
+  const len = parseInt(req.headers["content-length"] || "0", 10)
+  if (len > MAX_BODY_SIZE) { json(res, 413, { ok: false, error: `请求体过大，最大 ${MAX_BODY_SIZE / 1024 / 1024}MB` }); return }
+  let body = "", size = 0
+  req.on("data", c => { size += c.length; if (size > MAX_BODY_SIZE) { req.destroy(); return }; body += c })
+  req.on("end", () => { if (size <= MAX_BODY_SIZE) cb(body); else json(res, 413, { ok: false, error: "请求体过大" }) })
+}
+
 function json(res, code, data) {
-  res.writeHead(code, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS" })
+  res.writeHead(code, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  })
   res.end(JSON.stringify(data))
 }
 
@@ -254,7 +288,7 @@ const server = http.createServer(async (req, res) => {
 
   // POST /api/v2/auth/register
   if (req.method === "POST" && req.url === "/api/v2/auth/register") {
-    let body = ""; req.on("data", c => body += c); req.on("end", () => {
+    readBody(req, res, (body) => {
       try { const { username, pin } = JSON.parse(body)
         if (!username || !pin || username.length < 3 || pin.length < 4) { json(res, 400, { ok: false, error: "用户名3-20字符，PIN至少4位" }); return }
         const { hash, salt } = hashPin(pin)
@@ -267,11 +301,48 @@ const server = http.createServer(async (req, res) => {
 
   // POST /api/v2/auth/unlock
   if (req.method === "POST" && req.url === "/api/v2/auth/unlock") {
-    let body = ""; req.on("data", c => body += c); req.on("end", () => {
+    readBody(req, res, (body) => {
       try { const { username, pin } = JSON.parse(body)
+        if (!username || !pin) { json(res, 400, { ok: false, error: "用户名和PIN必填" }); return }
+
+        // Rate limit per IP
+        const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown"
+        const ipKey = `ip:${ip}`
+        let ipState = rateState.get(ipKey)
+        const now = Date.now()
+        if (!ipState || now - ipState.windowStart > PIN_RATE_WINDOW_MS) {
+          ipState = { count: 0, windowStart: now }
+          rateState.set(ipKey, ipState)
+        }
+        ipState.count++
+        if (ipState.count > PIN_MAX_PER_WINDOW) {
+          json(res, 429, { ok: false, error: "请求过于频繁，请稍后再试" }); return
+        }
+
+        // Check account lock
+        const unameKey = `user:${username}`
+        let lockState = rateState.get(unameKey)
+        if (lockState && lockState.lockedUntil && now < lockState.lockedUntil) {
+          const remaining = Math.ceil((lockState.lockedUntil - now) / 60000)
+          json(res, 423, { ok: false, error: `账户已锁定，${remaining}分钟后重试` }); return
+        }
+
         const u = dbGet("SELECT id, pin_hash, pin_salt FROM users WHERE username = ?", username)
         if (!u) { json(res, 401, { ok: false, error: "用户不存在" }); return }
-        if (!verifyPin(pin, u.pin_hash, u.pin_salt)) { json(res, 401, { ok: false, error: "PIN错误" }); return }
+        if (!verifyPin(pin, u.pin_hash, u.pin_salt)) {
+          // Track failures
+          if (!lockState) { lockState = { fails: 0 }; rateState.set(unameKey, lockState) }
+          lockState.fails++
+          if (lockState.fails >= PIN_MAX_ATTEMPTS) {
+            lockState.lockedUntil = now + PIN_LOCK_MINUTES * 60 * 1000
+            json(res, 423, { ok: false, error: `PIN错误次数过多，账户锁定${PIN_LOCK_MINUTES}分钟` }); return
+          }
+          json(res, 401, { ok: false, error: `PIN错误，还剩${PIN_MAX_ATTEMPTS - lockState.fails}次机会` }); return
+        }
+
+        // Success — clear failure state
+        rateState.delete(unameKey)
+
         // Decrypt keys
         const k = dbGet("SELECT enc_data, iv, tag, key_salt, key_hint FROM api_keys WHERE user_id = ?", u.id)
         let hasKeys = false, keyHint = null, cred = null
@@ -314,7 +385,7 @@ const server = http.createServer(async (req, res) => {
     const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "")
     const s = validateSession(token)
     if (!s) { json(res, 401, { ok: false, error: "会话无效" }); return }
-    let body = ""; req.on("data", c => body += c); req.on("end", () => {
+    readBody(req, res, (body) => {
       try { const { apiKey, secret, passphrase, isDemo, pin } = JSON.parse(body)
         if (!apiKey || !secret || !passphrase || !pin) { json(res, 400, { ok: false, error: "缺少参数" }); return }
         // Verify PIN
@@ -350,11 +421,11 @@ const server = http.createServer(async (req, res) => {
     const mem = authStore.get(token)
     const userAuth = (mem?.cred?.apiKey) ? mem.cred : undefined
 
-    let body = ""; req.on("data", c => body += c); req.on("end", async () => {
+    readBody(req, res, async (body) => {
       try {
         const { messages, conversationId } = JSON.parse(body)
         if (!Array.isArray(messages)) { json(res, 400, { error: "缺少messages" }); return }
-        res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive", "Access-Control-Allow-Origin": "*" })
+        res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache", "Connection": "keep-alive", "Access-Control-Allow-Origin": ALLOWED_ORIGIN })
         try {
           for await (const ev of streamChat(messages, userAuth)) {
             res.write(`event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`)
@@ -373,7 +444,7 @@ const server = http.createServer(async (req, res) => {
     const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "")
     const s = validateSession(token)
     if (!s) { json(res, 401, { ok: false, error: "会话无效" }); return }
-    let body = ""; req.on("data", c => body += c); req.on("end", () => {
+    readBody(req, res, (body) => {
       try { const { title } = JSON.parse(body)
         const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)
         dbRun("INSERT INTO conversations (id, user_id, title) VALUES (?, ?, ?)", id, s.userId, title || "新对话")
@@ -408,7 +479,7 @@ const server = http.createServer(async (req, res) => {
     const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "")
     const s = validateSession(token)
     if (!s) { json(res, 401, { ok: false }); return }
-    let body = ""; req.on("data", c => body += c); req.on("end", () => {
+    readBody(req, res, (body) => {
       try { const { conversationId, role, content, toolCalls } = JSON.parse(body)
         dbRun("INSERT INTO messages (conversation_id, role, content, tool_calls) VALUES (?, ?, ?, ?)", conversationId, role, content || "", toolCalls || null)
         json(res, 201, { ok: true })

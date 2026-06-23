@@ -4,7 +4,7 @@
   "market_orderbook": "[D:Market] 订单簿深度(买卖盘) | instId, depth?默认20最大400 | 全套深度用 market_orderbook_full",
   "market_candles": "[D:Market] K线OHLCV(数组自动转对象) | instId, bar?默认1H, limit?默认100 | → indicator_calc 算指标 → VBT信号 indicator_batch",
   "market_trades": "[D:Market] 最新成交记录 | instId, limit?默认20 | 历史成交用 market_trades_history",
-  "market_candles_history": "[D:Market] 历史K线(支持before/after翻页) | instId, bar?, after?, before?, limit? | 回测数据源 → agent_technical_report",
+  "market_candles_history": "[D:Market] 历史K线(支持before/after翻页) | instId, bar?, after?, before?, limit? | 回测数据源 → indicator_report",
   "market_trades_history": "[D:Market] 历史成交记录 | instId, limit?默认100 | 配合 market_candles 量价分析",
   "sys_status": "[D:System] OKX系统状态(正常/维护/异常) | 无需参数 | 交易前先查 → 异常时避免下单",
   "market_block_tickers": "[D:Market] 大宗行情(top20) | instType | 大宗交易用 trade_rfq_* 系列",

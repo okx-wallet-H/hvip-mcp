@@ -10,6 +10,8 @@
  * 与 v1 的区别:
  *   v1: hub spawn CLI 进程 → pipe stdout
  *   v2: 常驻进程 → Anthropic SDK → streaming + tool loop
+ *
+ * 🔧 自愈修复 v6.1: 添加任务级超时保护，防止 AgentLoop 卡死不退出
  */
 
 import { WebSocket } from "ws"
@@ -30,6 +32,8 @@ const WORKER_ID = `worker-${process.pid}-${Date.now()}`
 const WORKER_NAME = process.env.WORKER_NAME || `Worker·${WORKER_ID.slice(0, 12)}`
 const MAX_TOKENS = parseInt(process.env.WORKER_MAX_TOKENS || "8000", 10)
 const MAX_STEPS = parseInt(process.env.WORKER_MAX_STEPS || "15", 10)
+// 🔧 FIX: 任务级超时 — 防止 AgentLoop 卡死不退出，默认 10 分钟
+const TASK_TIMEOUT_MS = parseInt(process.env.WORKER_TASK_TIMEOUT || "600000", 10)
 
 const log = logger(`Worker-${WORKER_ID.slice(0, 8)}`)
 const agent = new AgentLoop()
@@ -195,13 +199,12 @@ const TOOLS: Record<string, AgentTool> = {
         const filter = str(input.filter)
         const limit = Math.min(num(input.limit, 20), 100)
         let url = ""
-        if (type === "tasks") url = `http://127.0.0.1:3000/api/status`  // 获取全部任务状态
+        if (type === "tasks") url = `http://127.0.0.1:3000/api/status`
         else if (type === "memory") url = `http://127.0.0.1:3000/api/memory/search?q=${encodeURIComponent(filter)}`
         else if (type === "stats") url = `http://127.0.0.1:3000/api/memory/stats`
         else return { error: `未知查询类型: ${type}` }
         const resp = await fetch(url).then(r => r.json()).catch(() => null)
         if (!resp) return { error: "查询失败" }
-        // 精简输出
         if (type === "tasks") {
           const tasks = (resp.tasks || []).slice(0, limit)
           return { type, tasks: tasks.map((t: any) => ({ taskId: t.taskId, title: t.title, status: t.status, assignedTo: t.assignedTo })), count: tasks.length }
@@ -228,11 +231,9 @@ const TOOLS: Record<string, AgentTool> = {
         const limit = Math.min(num(input.limit, 20), 50)
         let cmd = `git log --oneline --no-decorate -${limit}`
         if (file) {
-          // Use -- separator to prevent path injection
           cmd += ` -- ${file}`
         }
         if (input.author) {
-          // Sanitize author: only allow alphanumeric, spaces, hyphens, dots, underscores, @
           const author = String(input.author).replace(/[^a-zA-Z0-9\s._@-]/g, "")
           if (author) cmd += ` --author=${author}`
         }
@@ -261,7 +262,6 @@ const TOOLS: Record<string, AgentTool> = {
         const resp = await circuitBreaker.wrap("web-fetch", () => fetch(url, { signal: controller.signal }))
         clearTimeout(timer)
         const text = await resp.text()
-        // 简单提取文本（去掉 HTML 标签用于 AI 阅读）
         const plain = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
           .replace(/<[^>]+>/g, " ")
@@ -289,7 +289,6 @@ function connect() {
 
   ws.on("open", () => {
     log.info(`已连接 Hub，注册为 ${WORKER_NAME}`)
-    // 能力标签: 工具列表 + 专长标记
     const caps = [...Object.keys(TOOLS)]
     const profile = process.env.WORKER_PROFILE || "general"
     if (profile === "quant") caps.push("quant")
@@ -341,7 +340,6 @@ async function handleMessage(msg: Record<string, unknown>) {
 
       if (currentTaskId) {
         log.warn(`已在执行 ${currentTaskId}，拒绝 ${taskId}`)
-        // 通知 Hub/Chronos 释放任务，让其他 Worker 接管
         send({ type: "task:reject", taskId, agentId: WORKER_ID, reason: `Worker busy: executing ${currentTaskId}` })
         return
       }
@@ -349,16 +347,42 @@ async function handleMessage(msg: Record<string, unknown>) {
       currentTaskId = taskId
       log.info(`📋 接收任务: ${taskId} "${title}"`)
 
+      // 🔧 FIX: 任务级超时保护 — 防止 AgentLoop 卡死不退出
+      let taskTimedOut = false
+      let taskTimer: ReturnType<typeof setTimeout> | undefined
+      if (TASK_TIMEOUT_MS > 0) {
+        taskTimer = setTimeout(() => {
+          taskTimedOut = true
+          log.error(`⏰ 任务超时 (${TASK_TIMEOUT_MS/1000}s)，强制终止: ${taskId}`)
+          // 发送失败通知，释放任务让 Chronos 重试
+          send({
+            type: "task:done",
+            taskId,
+            agentId: WORKER_ID,
+            result: `❌ (超时 ${TASK_TIMEOUT_MS/1000}s) ${title} — Worker 任务级超时保护触发`,
+            error: `Worker 任务超时: 执行超过 ${TASK_TIMEOUT_MS/1000}s`,
+          })
+          // 清理状态
+          currentTaskId = null
+        }, TASK_TIMEOUT_MS)
+      }
+
       // Claim the task
       send({ type: "task:claim", taskId, agentId: WORKER_ID })
 
       try {
+        // 如果已超时，跳过执行
+        if (taskTimedOut) return
+
         // Execute with AgentLoop
         const result = await agent.run(prompt, TOOLS, {
           model: "claude-sonnet-4-6",
           maxTokens: MAX_TOKENS,
           maxSteps: MAX_STEPS,
           temperature: 0.3,
+          // 🔧 FIX: 传递更短的超时给 AgentLoop，使每步和总超时更激进
+          timeout: 120_000,         // 每步 API 调用超时 2 分钟
+          totalTimeout: Math.min(TASK_TIMEOUT_MS - 10000, 580000), // 总超时略短于任务超时
           system: `你是 Agent Hub 的 AI 工程师。你在一个 Git 仓库中工作: ${REPO_PATH}。\n\n你可以使用以下工具完成用户的任务:\n- read_file: 读取文件\n- write_file: 写入文件\n- run_command: 执行安全的命令 (npm build, git, ls, cat, python scripts/)\n- okx_public: 查询 OKX 行情\n- memory_search: 搜索知识库\n\n操作原则:\n1. 先理解再动手 — 先 read_file 查看现有代码\n2. 最小改动 — 只改必要的部分\n3. 改完后用 run_command 验证\n4. 完成后总结你做了什么`,
           onText: (delta) => {
             send({ type: "task:progress", taskId, delta })
@@ -367,6 +391,9 @@ async function handleMessage(msg: Record<string, unknown>) {
             send({ type: "task:tool", taskId, tool: name, args: input })
           },
         })
+
+        // 如果已超时（taskTimer 已触发），不再发送完成通知
+        if (taskTimedOut) return
 
         // Report completion
         send({
@@ -379,6 +406,8 @@ async function handleMessage(msg: Record<string, unknown>) {
         })
         log.info(`✅ 完成: ${taskId} (${result.inputTokens}+${result.outputTokens} tokens, ${result.steps} steps)`)
       } catch (e: unknown) {
+        // 如果已超时，超时通知已发送，不重复发送
+        if (taskTimedOut) return
         const errMsg = e instanceof Error ? e.message : String(e)
         log.error(`❌ 执行失败: ${taskId} — ${errMsg}`)
         send({
@@ -389,6 +418,7 @@ async function handleMessage(msg: Record<string, unknown>) {
           error: errMsg,
         })
       } finally {
+        if (taskTimer) clearTimeout(taskTimer)
         currentTaskId = null
       }
       break

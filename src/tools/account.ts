@@ -50,7 +50,7 @@ export function registerAccountTools(server: McpServer, auth: Auth | null): void
     }
   )
 
-  // okx_get_order 已在 trading.ts 注册，此处不再重复
+  // trade_order 已在 trading.ts 注册，此处不再重复
 
   registerTool(
     server,

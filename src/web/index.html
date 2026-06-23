@@ -152,14 +152,14 @@ input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventD
 
 // ── Tools (OpenAI format) ──
 function getToolsOAI(){return[
-{type:'function',function:{name:'agent_catalog',description:'全局工具导航——第一个应调用的工具',parameters:{type:'object',properties:{},required:[]}}},
-{type:'function',function:{name:'okx_quick_market',description:'单产品行情+深度+资金费率',parameters:{type:'object',properties:{instId:{type:'string',description:'如BTC-USDT-SWAP'}},required:['instId']}}},
-{type:'function',function:{name:'okx_indicator',description:'技术指标:rsi/macd/bb/atr/stoch/ema/sma/wr/cci/obv/vwap/adx/mfi/cmf/supertrend/keltner/pattern',parameters:{type:'object',properties:{instId:{type:'string'},indicator:{type:'string',enum:['rsi','macd','bb','atr','stoch','ema','sma','wr','cci','obv','vwap','adx','mfi','cmf','supertrend','keltner','pattern']},period:{type:'number'},bar:{type:'string'}},required:['instId','indicator']}}},
-{type:'function',function:{name:'agent_market_sentiment',description:'市场情绪仪表盘(0-100)',parameters:{type:'object',properties:{instFamily:{type:'string',description:'如BTC-USD'}},required:[]}}},
-{type:'function',function:{name:'agent_market_scan',description:'市场异动扫描：涨幅/跌幅/成交量/费率异常',parameters:{type:'object',properties:{instType:{type:'string',enum:['SPOT','SWAP','FUTURES']},topN:{type:'number'},sortBy:{type:'string',enum:['change','vol','fundingRate']}},required:[]}}},
-{type:'function',function:{name:'okx_get_ticker',description:'获取产品实时行情',parameters:{type:'object',properties:{instId:{type:'string',description:'如BTC-USDT'}},required:['instId']}}},
-{type:'function',function:{name:'okx_get_funding_rate',description:'获取资金费率',parameters:{type:'object',properties:{instId:{type:'string'}},required:['instId']}}},
-{type:'function',function:{name:'okx_account_overview',description:'账户全景：余额+持仓+配置(需OKX Key)',parameters:{type:'object',properties:{},required:[]}}},
+{type:'function',function:{name:'sys_catalog',description:'全局工具导航——第一个应调用的工具',parameters:{type:'object',properties:{},required:[]}}},
+{type:'function',function:{name:'market_quick',description:'单产品行情+深度+资金费率',parameters:{type:'object',properties:{instId:{type:'string',description:'如BTC-USDT-SWAP'}},required:['instId']}}},
+{type:'function',function:{name:'indicator_calc',description:'技术指标:rsi/macd/bb/atr/stoch/ema/sma/wr/cci/obv/vwap/adx/mfi/cmf/supertrend/keltner/pattern',parameters:{type:'object',properties:{instId:{type:'string'},indicator:{type:'string',enum:['rsi','macd','bb','atr','stoch','ema','sma','wr','cci','obv','vwap','adx','mfi','cmf','supertrend','keltner','pattern']},period:{type:'number'},bar:{type:'string'}},required:['instId','indicator']}}},
+{type:'function',function:{name:'scan_sentiment',description:'市场情绪仪表盘(0-100)',parameters:{type:'object',properties:{instFamily:{type:'string',description:'如BTC-USD'}},required:[]}}},
+{type:'function',function:{name:'scan_market',description:'市场异动扫描：涨幅/跌幅/成交量/费率异常',parameters:{type:'object',properties:{instType:{type:'string',enum:['SPOT','SWAP','FUTURES']},topN:{type:'number'},sortBy:{type:'string',enum:['change','vol','fundingRate']}},required:[]}}},
+{type:'function',function:{name:'market_ticker',description:'获取产品实时行情',parameters:{type:'object',properties:{instId:{type:'string',description:'如BTC-USDT'}},required:['instId']}}},
+{type:'function',function:{name:'market_funding_rate',description:'获取资金费率',parameters:{type:'object',properties:{instId:{type:'string'}},required:['instId']}}},
+{type:'function',function:{name:'account_overview',description:'账户全景：余额+持仓+配置(需OKX Key)',parameters:{type:'object',properties:{},required:[]}}},
 ]}
 </script>
 </body>

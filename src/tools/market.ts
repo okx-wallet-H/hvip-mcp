@@ -8,7 +8,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_ticker",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 单个产品实时行情：最新价/24h涨跌幅/成交量 | instId如BTC-USDT，支持逗号批量 | 批量扫用market_tickers → 深度用market_orderbook",
     { instId: z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。支持逗号分隔批量查询，如 BTC-USDT,ETH-USDT,SOL-USDT") },
     async ({ instId }) => {
       try {
@@ -31,7 +31,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_tickers",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 全部产品行情列表：按产品类型获取所有ticker | instType如SPOT/SWAP/FUTURES/OPTION | 单个用market_ticker → 深度用market_orderbook",
     { instType: z.enum(INST_TYPE_MARKET).describe("产品类型") },
     async ({ instType }) => {
       try {
@@ -51,7 +51,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_orderbook",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 产品深度订单簿：合并档位买卖盘口 | instId必填，depth档位默认20最大400 | 全量深度用market_orderbook_full → 最新行情用market_ticker",
     {
       instId: z.string().describe("产品ID"),
       depth: z.number().int().min(1).max(400).optional().describe("深度档位，默认20，最大400"),
@@ -82,7 +82,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_candles",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] K线数据：OHLCV历史K线 | instId必填，bar周期1m-1W默认1H，limit最大300 | 历史K线用market_candles_history → 指数K线用market_index_candles",
     {
       instId: z.string().describe("产品ID"),
       bar: z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -111,7 +111,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_trades",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 最新成交记录：产品最近成交明细 | instId必填，limit最大100默认20 | 历史成交用market_trades_history → K线用market_candles",
     {
       instId: z.string().describe("产品ID"),
       limit: z.number().int().min(1).max(100).optional().describe("返回条数，默认20"),
@@ -132,7 +132,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_candles_history",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 历史K线数据：带翻页的历史OHLCV | instId必填，bar/after/before翻页，limit最大100 | 最新K线用market_candles → 指数历史K线用market_index_candles_history",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT"),
       bar:     z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -163,7 +163,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_trades_history",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 历史成交记录：带翻页的历史成交明细 | instId必填，limit最大100 | 最新成交用market_trades → K线用market_candles",
     {
       instId: z.string().describe("产品ID"),
       limit:  z.number().int().min(1).max(100).optional().describe("返回条数，默认100"),
@@ -184,7 +184,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "sys_status",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:System] 系统状态查询：OKX API系统维护状态 | 无需参数 | 各模块状态用对应工具返回的tsIso判断",
     {},
     async () => {
       try {
@@ -198,7 +198,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_block_tickers",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 大宗交易行情列表：按产品类型获取大宗交易ticker列表 | instType如SPOT/SWAP必填 | 单个大宗用market_block_ticker → 普通ticker用market_tickers",
     {
       instType: z.enum(INST_TYPE_MARKET).describe("产品类型"),
     },
@@ -220,7 +220,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_orderbook_full",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 全量深度数据：完整订单簿买卖盘口（L2级别） | instId必填，depth限制档位 | 合并深度用market_orderbook → 最新行情用market_ticker",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT"),
       depth:  z.number().int().min(1).max(400).optional().describe("深度档位，默认全量，可选限制"),
@@ -251,7 +251,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_index_tickers",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 指数行情：指数价格/涨跌幅/24h量 | quoteCcy或instId筛选 | 指数K线用market_index_candles → 普通ticker用market_ticker",
     {
       quoteCcy: z.string().optional().describe("计价币种，如 USDT、USD、BTC"),
       instId:   z.string().optional().describe("产品ID，如 BTC-USDT"),
@@ -272,7 +272,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_index_candles",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 指数K线数据：指数OHLCV历史K线 | instId必填，bar/after/before翻页，limit最大300 | 历史指数K线用market_index_candles_history → 普通K线用market_candles",
     {
       instId: z.string().describe("指数产品ID，如 BTC-USDT"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -305,7 +305,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_block_ticker",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 单个产品大宗交易行情 | instId如BTC-USDT必填 | 批量大宗用market_block_tickers → 普通ticker用market_ticker",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT。必填"),
     },
@@ -325,7 +325,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_index_candles_history",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 指数历史K线数据：带翻页的指数OHLCV | instId必填，bar/after/before翻页，limit最大300 | 最新指数K线用market_index_candles → 标记价历史K线用market_mark_candles_history",
     {
       instId: z.string().describe("指数产品ID，如 BTC-USDT。必填"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -354,7 +354,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_mark_candles_history",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 标记价历史K线：带翻页的标记价格OHLCV | instId如BTC-USDT-SWAP必填，bar/after/before翻页 | 最新标记价K线用market_mark_candles → 指数历史K线用market_index_candles_history",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -383,7 +383,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_mark_candles",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 标记价K线数据：标记价格OHLCV历史K线 | instId如BTC-USDT-SWAP必填，bar/after/before翻页 | 标记价历史K线用market_mark_candles_history → 指数K线用market_index_candles",
     {
       instId: z.string().describe("产品ID，如 BTC-USDT-SWAP。必填"),
       bar:    z.enum(["1m","3m","5m","15m","30m","1H","4H","1D","1W"]).optional().describe("K线周期，默认1H"),
@@ -412,7 +412,7 @@ export function registerMarketTools(server: McpServer): void {
     server,
     "market_spread_candles_history",
     "READ",
-    "[D:Market] 行情数据：",
+    "[D:Market] 价差合约历史K线：价差产品的OHLCV历史数据 | sprdId必填，bar/after/before翻页，limit最大300 | 价差交易用sprd模块 → 普通K线用market_candles",
     {
       sprdId: z.string().describe("价差合约ID。必填"),
       bar:    z.enum(["1m","5m","15m","30m","1H","4H","1D"]).optional().describe("K线周期，默认1H"),

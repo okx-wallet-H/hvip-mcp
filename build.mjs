@@ -95,7 +95,6 @@ console.log("✅ dist/mcp-gateway.js built")
 
 // ── Copy web assets to dist/ ──
 const webFiles = [
-  "dashboard.html",
   "index.html",
 ]
 const distWeb = join("dist", "web")
@@ -121,12 +120,14 @@ if (existsSync(mapSrc)) {
 }
 
 // ── Copy chat-app to dist/ ──
+const chatAppExclude = new Set(["_test.js", "_test2.js", "fix-final.js", "fix-line121.js", "_clean.js", "rebuild.js"])
 const chatAppDir = join("chat-app")
 const distChatApp = join("dist", "chat-app")
 if (existsSync(chatAppDir)) {
   if (!existsSync(distChatApp)) mkdirSync(distChatApp, { recursive: true })
   const chatFiles = readdirSync(chatAppDir)
   for (const f of chatFiles) {
+    if (chatAppExclude.has(f)) { console.log(`⏭️  dist/chat-app/${f} skipped (temp script)`); continue }
     const src = join(chatAppDir, f)
     const dst = join(distChatApp, f)
     if (statSync(src).isFile()) {

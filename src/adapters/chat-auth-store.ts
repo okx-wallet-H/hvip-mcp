@@ -19,8 +19,15 @@ export interface SessionData {
   lastActivity: number
 }
 
-// Session expires after 30 min of inactivity
-const SESSION_TTL_MS = 30 * 60_000
+// Session expires after 15 min of inactivity (P1-4: reduced from 30min)
+const SESSION_TTL_MS = 15 * 60_000
+
+function scrubCred(cred: OkxCredentials): void {
+  // Overwrite sensitive fields to prevent memory-dump leaks
+  (cred as any).apiKey = "[REDACTED]"
+  ;(cred as any).secret = "[REDACTED]"
+  ;(cred as any).passphrase = "[REDACTED]"
+}
 
 export class AuthStore {
   private store = new Map<string, SessionData>()
@@ -56,8 +63,10 @@ export class AuthStore {
 
   delete(sessionToken: string): void {
     const data = this.store.get(sessionToken)
+    // Scrub credentials from memory before deleting
+    if (data?.cred) scrubCred(data.cred)
     this.store.delete(sessionToken)
-    if (data) log.info(`AuthStore: ${data.username} 已锁定`)
+    if (data) log.info(`AuthStore: ${data.username} 已锁定（凭据已清除）`)
   }
 
   /**
@@ -65,7 +74,10 @@ export class AuthStore {
    */
   deleteByUserId(userId: number): void {
     for (const [token, data] of this.store.entries()) {
-      if (data.userId === userId) this.store.delete(token)
+      if (data.userId === userId) {
+        if (data.cred) scrubCred(data.cred)
+        this.store.delete(token)
+      }
     }
   }
 
@@ -83,6 +95,7 @@ export class AuthStore {
       let cleaned = 0
       for (const [token, data] of this.store.entries()) {
         if (now - data.lastActivity > SESSION_TTL_MS) {
+          if (data.cred) scrubCred(data.cred)
           this.store.delete(token)
           cleaned++
         }

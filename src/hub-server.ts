@@ -33,26 +33,12 @@ import { authStore } from "./adapters/chat-auth-store.js"
 import { chatLLM } from "./adapters/chat-llm.js"
 import type { OkxCredentials } from "./adapters/chat-encryption.js"
 
-// ── 加载 .env ──
-const envPath = join(process.cwd(), ".env")
-if (existsSync(envPath)) {
-  readFileSync(envPath, "utf-8").split(/\r?\n/).forEach(line => {
-    // 去掉行内注释
-    const hashIdx = line.indexOf("#")
-    if (hashIdx >= 0) line = line.substring(0, hashIdx)
-    const m = line.match(/^\s*([^#\s=]+)\s*=\s*(.*)$/)
-    if (m) {
-      const val = m[2].trim()
-      if (!val) { delete process.env[m[1]] }
-      else if (!process.env[m[1]]) { process.env[m[1]] = val }
-    }
-  })
-}
+// 共享 .env 加载
+import { loadEnv } from "./utils/load-env.js"
+loadEnv()
 
 const VERSION = "0.6.1"
 
-// ── 仪表盘 HTML — 从文件读取 ──
-function getDashboardHtml(host, port){const paths=[join(__dirname,"web","dashboard.html"),join(__dirname,"..","src","web","dashboard.html")];for(const p of paths){if(existsSync(p))return readFileSync(p,"utf-8").replace("HUB_HOST",host).replace("WS_PORT = 0","WS_PORT = "+port)}return "<html><body><h2>dashboard.html not found</h2></body></html>"}
 const taskMeta=new Map()
 
 // ── CLI 参数 ──────────────────────────────────────────────────────────────
@@ -147,47 +133,15 @@ function startHttpServer(): void {
       return
     }
 
-    // GET / — 仪表盘
+    // GET / — Chat 助手
     if (_req.method === "GET" && (_req.url === "/" || _req.url === "/index.html")) {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
-      res.end(getDashboardHtml(host, wsPort))
-      return
-    }
-
-    // GET /v2 → /v2/ redirect (required for correct relative asset resolution)
-    if (_req.method === "GET" && _req.url === "/v2") {
-      res.writeHead(301, { "Location": "/v2/" })
-      res.end()
-      return
-    }
-
-    // GET /v2/ /v2/* — shadcn/ui React Dashboard（新版仪表盘）
-    if (_req.method === "GET" && _req.url?.startsWith("/v2/")) {
-      const v2Dir = join(__dirname, "..", "dashboard-v2", "dist")
-      let filePath: string
-      if (_req.url === "/v2/") {
-        filePath = join(v2Dir, "index.html")
+      const chatHtml = join(__dirname, "..", "chat-app", "index.html")
+      if (existsSync(chatHtml)) {
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(readFileSync(chatHtml, "utf-8"))
       } else {
-        const relative = _req.url!.replace(/^\/v2\//, "")
-        if (relative.includes("..") || relative.includes("~") || relative.includes("\\")) {
-          res.writeHead(403); res.end("Forbidden"); return
-        }
-        filePath = join(v2Dir, relative)
-      }
-
-      // Serve the file if it exists, otherwise fall back to index.html (SPA)
-      if (!existsSync(filePath) || !filePath.includes(".")) {
-        filePath = join(v2Dir, "index.html")
-      }
-
-      if (existsSync(filePath)) {
-        const ext = filePath.split(".").pop() || "html"
-        const mime: Record<string,string> = { html:"text/html; charset=utf-8", js:"application/javascript", css:"text/css", svg:"image/svg+xml", png:"image/png", ico:"image/x-icon" }
-        res.writeHead(200, { "Content-Type": mime[ext] || "application/octet-stream" })
-        res.end(readFileSync(filePath))
-      } else {
-        res.writeHead(404)
-        res.end("dashboard-v2 not found")
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+        res.end("<!DOCTYPE html><html lang=zh><head><meta charset=UTF-8><title>hvip AI · 交易助手</title></head><body style='font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh'><div style='text-align:center'><h2>hvip AI 交易助手</h2><p>chat-app/index.html 未找到</p></div></body></html>")
       }
       return
     }

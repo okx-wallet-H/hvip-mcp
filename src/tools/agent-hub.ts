@@ -10,7 +10,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "sys_hub_status",
     "READ",
-    "[D:System] Agent集群管理",
+    "[D:System] Agent Hub 集群状态：在线Agent数+任务队列+房间数 | 无需参数 | 派任务用 sys_hub_dispatch → 看协作 sys_room_view",
     {},
     async () => {
       try {
@@ -24,7 +24,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "sys_hub_dispatch",
     "READ",
-    "[D:System] Agent集群管理",
+    "[D:System] 派发任务到指定Agent或自动匹配空闲Agent | taskId(T-001~T-006), agentId? | 先 sys_hub_status 看谁在线 → sys_room_view 看进度",
     {
       taskId:  z.enum(["T-001","T-002","T-003","T-004","T-005","T-006"]).describe("任务编号"),
       agentId: z.string().optional().describe("目标 Agent ID。不填则自动匹配有对应技能的 Agent"),
@@ -80,7 +80,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "sys_hub_review",
     "READ",
-    "[D:System] Agent集群管理",
+    "[D:System] 审核Agent提交的任务结果：通过/驳回 | taskId, verdict(approved/rejected), feedback? | 驳回→Agent在房间收到反馈 → sys_room_view 看讨论",
     {
       taskId:   z.enum(["T-001","T-002","T-003","T-004","T-005","T-006"]).describe("任务编号"),
       verdict:  z.enum(["approved","rejected"]).describe("审核结果"),
@@ -119,7 +119,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "sys_room_send",
     "READ",
-    "[D:System] Agent集群管理",
+    "[D:System] 向指定房间发送消息 | roomId(#lobby/#review/#task-xx), text | sys_room_view 看历史 → sys_hub_status 看全局",
     {
       roomId: z.string().describe("房间ID。#lobby / #review / #task-T-003"),
       text:   z.string().describe("消息内容"),
@@ -142,7 +142,7 @@ export function registerAgentHubTools(server: McpServer): void {
     server,
     "sys_room_view",
     "READ",
-    "[D:System] Agent集群管理",
+    "[D:System] 查看房间消息历史或列出所有房间 | roomId?(不填列全部), limit? | sys_room_send 发消息 → sys_hub_status 看集群状态",
     {
       roomId: z.string().optional().describe("房间ID，不填列出所有"),
       limit:  z.number().int().min(1).max(200).optional().describe("消息条数，默认30"),

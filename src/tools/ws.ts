@@ -68,7 +68,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "ws_subscribe",
     "READ",
-    "[D:WebSocket] WebSocket实时数据",
+    "[D:WebSocket] 订阅公开频道：行情/深度/K线/公共数据/预警等33个频道 | channel=频道名 instId=产品ID instType=产品类型 | 拉取用 ws_events → 私有用 ws_subscribe_private",
     {
       instId:  z.string().describe("产品ID，如 BTC-USDT、ETH-USDT-SWAP。纯全局频道（status/instruments/economic-calendar）可传空字符串"),
       channel: z.string().describe("频道名。公开频道共 33 个，支持 tickers/trades/candle1m~1D/books5/books/funding-rate/open-interest/price-limit/instruments/mark-price/mark-price-candles/index-tickers/index-candles/option-summary/estimated-price/liquidation-orders/adl-warning/event-contract-markets/economic-calendar/status/sprd系列/public-block-trades系列/block-tickers"),
@@ -101,7 +101,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "ws_subscribe_private",
     "READ",
-    "[D:WebSocket] WebSocket实时数据",
+    "[D:WebSocket] 订阅私有频道：账户/持仓/订单/成交/网格/资金等22个频道 | channel=频道名 instId=产品ID(可选) | 公开用 ws_subscribe → 拉取用 ws_events",
     {
       instId:  z.string().optional().describe("产品ID。账户级频道可不传（如 account/positions/balances）"),
       channel: z.string().describe("私有频道名。共 22 个: account / positions / balance_and_position / position-risk-warning / account-greeks / orders / fills / algo-orders / advance-algo-orders / spot-grid-algo-orders / contract-grid-algo-orders / grid-positions / grid-sub-orders / recurring-buy-orders / lead-trading-notification / deposit-info / withdrawal-info / rfqs / quotes / structure-block-trades / sprd/orders / sprd/trades"),
@@ -139,7 +139,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "ws_events",
     "READ",
-    "[D:WebSocket] WebSocket实时数据",
+    "[D:WebSocket] 拉取WebSocket事件缓存（拉取后自动清空） | subscriptionId=订阅ID(可选) limit=返回条数 filter=关键词过滤 | 订阅用 ws_subscribe → 私有用 ws_subscribe_private",
     {
       subscriptionId: z.string().optional().describe("订阅ID"),
       limit: z.number().int().min(1).max(50).default(20).describe("最大返回条数"),
@@ -168,7 +168,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "ws_status",
     "READ",
-    "[D:WebSocket] WebSocket实时数据",
+    "[D:WebSocket] 查看当前WebSocket订阅状态及缓冲数据量 | 无需参数 | 订阅用 ws_subscribe → 关闭用 ws_close",
     {},
     async () => {
       try {
@@ -186,7 +186,7 @@ export function registerWsTools(server: McpServer, auth: Auth | null): void {
     server,
     "ws_close",
     "READ",
-    "[D:WebSocket] WebSocket实时数据",
+    "[D:WebSocket] 关闭WebSocket订阅（不传参数则关闭全部连接） | subscriptionId=订阅ID，留空关闭全部 | 订阅用 ws_subscribe → 状态用 ws_status",
     {
       subscriptionId: z.string().optional().describe("订阅ID，不传关闭所有"),
     },

@@ -18,7 +18,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
     server,
     "smart_leaderboard",
     "READ",
-    "[D:SmartMoney] 聪明钱",
+    "[D:SmartMoney] 交易员排行榜：按收益率/总收益/跟单人数排序 | instType=产品类型 sortBy=排序字段 topN=返回条数(3-50) | 详情用 smart_trader_detail",
     {
       instType: z.enum(["SPOT","SWAP"]).optional().describe("产品类型，默认SPOT"),
       sortBy:   z.enum(["pnl","totalPnl","followers"]).optional().describe("排序。pnl=收益率, totalPnl=总收益, followers=跟单人数"),
@@ -74,7 +74,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
     server,
     "smart_trader_detail",
     "READ",
-    "[D:SmartMoney] 聪明钱",
+    "[D:SmartMoney] 交易员详情：收益率/胜率/持仓/PnL曲线 | uniqueCode=交易员唯一码 instType=产品类型 | 排行榜用 smart_leaderboard",
     {
       uniqueCode: z.string().describe("交易员唯一码（如 A12345678）"),
       instType:   z.enum(["SPOT","SWAP"]).optional().describe("产品类型，默认SPOT"),
@@ -143,7 +143,7 @@ export function registerSmartMoneyTools(server: McpServer, auth: Auth | null): v
     server,
     "smart_sentiment",
     "READ",
-    "[D:SmartMoney] 聪明钱",
+    "[D:SmartMoney] 市场情绪综合评分：多空比/PCR/资金费率/Top交易员方向聚合 | instFamily=产品族如BTC-USD | 多空比用 stats_long_short_ratio → 费率用 public_funding_rate",
     {
       instFamily: z.string().optional().describe("产品族，如 BTC-USD、ETH-USD。默认 BTC-USD"),
     },
