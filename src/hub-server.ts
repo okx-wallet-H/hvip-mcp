@@ -37,7 +37,7 @@ import type { OkxCredentials } from "./adapters/chat-encryption.js"
 import { loadEnv } from "./utils/load-env.js"
 loadEnv()
 
-const VERSION = "0.6.1"
+const VERSION = "0.6.2"
 
 const taskMeta=new Map()
 
