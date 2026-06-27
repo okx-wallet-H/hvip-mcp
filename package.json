@@ -24,7 +24,8 @@
   "license": "MIT",
   "bin": {
     "hvip-mcp": "dist/index.js",
-    "hvip-mcp-server": "dist/hub-server.js"
+    "hvip-mcp-server": "dist/index.js",
+    "hvip-hub": "dist/hub-server.js"
   },
   "files": [
     "dist/index.js",
